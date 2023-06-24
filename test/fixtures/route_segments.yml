@@ -1,0 +1,15 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  route_id: 1
+  airport_id: 1
+  order: 1
+  arrival_time: 2023-06-23 00:15:04
+  departing_time: 2023-06-23 00:15:04
+
+two:
+  route_id: 1
+  airport_id: 1
+  order: 1
+  arrival_time: 2023-06-23 00:15:04
+  departing_time: 2023-06-23 00:15:04

@@ -1,0 +1,15 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  airport_id: 1
+  runway_name: MyString
+  heading: 9.99
+  length: 9.99
+  width: 9.99
+
+two:
+  airport_id: 1
+  runway_name: MyString
+  heading: 9.99
+  length: 9.99
+  width: 9.99

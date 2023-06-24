@@ -1,0 +1,17 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  name: MyString
+  country: MyString
+  icao_callsign: MyString
+  iata_callsign: MyString
+  positioning_callsign_pattern: MyString
+  charter_callsign_pattern: MyString
+
+two:
+  name: MyString
+  country: MyString
+  icao_callsign: MyString
+  iata_callsign: MyString
+  positioning_callsign_pattern: MyString
+  charter_callsign_pattern: MyString
