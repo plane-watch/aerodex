@@ -83,3 +83,5 @@ gem "excon", "~> 0.100.0"
 gem "table_print", "~> 1.5"
 
 gem "meilisearch-rails", "~> 0.9.1"
+
+gem "paper_trail", "~> 14.0"

@@ -4,4 +4,6 @@ class RouteSegment < ApplicationRecord
   has_one :flight_information_region, through: :airport
   has_one :operator, through: :route
 
+  has_paper_trail
+
 end
