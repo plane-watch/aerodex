@@ -67,6 +67,9 @@ group :development do
 
   # Speed up commands on slow machines / big apps [https://github.com/rails/spring]
   # gem "spring"
+
+  # Annotate the rails models with the db schema
+  gem 'annotate'
 end
 
 group :test do

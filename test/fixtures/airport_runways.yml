@@ -1,4 +1,16 @@
-# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+# == Schema Information
+#
+# Table name: airport_runways
+#
+#  id          :bigint           not null, primary key
+#  heading     :decimal(, )
+#  length      :decimal(, )
+#  runway_name :string
+#  width       :decimal(, )
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#  airport_id  :integer
+#
 
 one:
   airport_id: 1

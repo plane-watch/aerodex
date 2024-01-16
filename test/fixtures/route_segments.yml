@@ -1,4 +1,16 @@
-# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+# == Schema Information
+#
+# Table name: route_segments
+#
+#  id             :bigint           not null, primary key
+#  arrival_time   :time
+#  departing_time :time
+#  order          :integer
+#  created_at     :datetime         not null
+#  updated_at     :datetime         not null
+#  airport_id     :integer
+#  route_id       :integer
+#
 
 one:
   route_id: 1

@@ -1,4 +1,15 @@
-# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+# == Schema Information
+#
+# Table name: flight_information_regions
+#
+#  id         :bigint           not null, primary key
+#  bounds     :polygon
+#  country    :string
+#  icao_code  :string
+#  region     :string
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#
 
 one:
   icao_code: MyString

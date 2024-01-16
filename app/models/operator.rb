@@ -1,3 +1,19 @@
+# == Schema Information
+#
+# Table name: operators
+#
+#  id                           :bigint           not null, primary key
+#  charter_callsign_pattern     :string
+#  country                      :string
+#  iata_callsign                :string
+#  icao_callsign                :string
+#  name                         :string
+#  positioning_callsign_pattern :string
+#  created_at                   :datetime         not null
+#  updated_at                   :datetime         not null
+
+## Notes:
+## Consider normalising the call sign patterns into a separate table
 class Operator < ApplicationRecord
   include MeiliSearch::Rails
 
