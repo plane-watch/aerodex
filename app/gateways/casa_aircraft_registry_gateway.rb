@@ -27,7 +27,6 @@ class CASAAircraftRegistryGateway < AircraftGateway
     'Engine model' => {
       field: :engine_model,
     },
-
   }
 
   def self.search(registration)
