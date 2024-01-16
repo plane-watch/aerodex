@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-white">
+<head>
+  <meta charset="UTF-8">
+  <meta content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no" name="viewport">
+  <title>Aerodex - Democratising Aviation Data</title>
+
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+
+  <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+  <%= javascript_include_tag "application", "data-turbo-track": "reload", defer: true %>
+</head>
+
+<body class="h-full bg-pw-background-inverted">
+<div class="flex min-h-full bg-pw-background-inverted">
+  <div class="flex flex-1 flex-col bg-slate-800 justify-center py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
+    <div class="mx-auto w-full max-w-sm lg:w-96">
+      <div>
+        <%#= render partial: 'shared/logo_dark' %>
+      </div>
+      <div id="flash">
+        <% flash.each do |role, message| %>
+          <%= render partial: 'shared/flash', locals: { role: role, message: message } %>
+        <% end %>
+      </div>
+      <%= yield %>
+    </div>
+  </div>
+  <div class="relative hidden w-0 flex-1 lg:block bg-black/50">
+    <%= image_tag 'https://www.nats.aero/wp-content/uploads/slider9/uk24.jpg', class: 'absolute inset-0 h-full w-full object-cover brightness-50' %>
+  </div>
+</div>
+</body>
+</html>
