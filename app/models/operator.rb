@@ -24,8 +24,8 @@ class Operator < ApplicationRecord
   has_many :route_segments, through: :routes
 
   validates :name, presence: true, allow_blank: false
-  validates :icao_callsign, presence: true, allow_blank: false, format: { with: /\AA-Z{4}\z/ }, uniqueness: { case_sensitive: false } #, scope: :active }
-  validates :icao_callsign, presence: true, allow_blank: false, format: { with: /\AA-Z{3}\z/ }, uniqueness: { case_sensitive: false } #, scope: :active }
+  validates :icao_callsign, presence: true, allow_blank: false, format: { with: /\A[A-Z]{3}\z/ }, uniqueness: { case_sensitive: false } #, scope: :active }
+  validates :iata_callsign, presence: true, allow_blank: false, format: { with: /\A[A-Z]{2}\z/ }
   validates :positioning_callsign_pattern, callsign_pattern: true, allow_blank: true
   validates :charter_callsign_pattern, callsign_pattern: true, allow_blank: true
 
@@ -36,4 +36,6 @@ class Operator < ApplicationRecord
     attribute :iata_callsign
     attribute :country
   end
+
+
 end

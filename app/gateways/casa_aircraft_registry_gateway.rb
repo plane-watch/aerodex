@@ -1,5 +1,7 @@
 class CASAAircraftRegistryGateway < AircraftGateway
 
+  CHARACTER_SET = ('A'..'Z').to_a + ('0'..'9').to_a
+
   TRANSFORM_DATA = {
     'Aircraft model' => {
       function: ->(v) { self.get_aircraft_model(v) },
@@ -32,7 +34,8 @@ class CASAAircraftRegistryGateway < AircraftGateway
   def self.search(registration)
     data = {
       registration: registration,
-      icao: registration_to_hex(registration)
+      icao: reg_to_hex(registration),
+      registration_country: 'Australia'
     }
 
     search_param = registration.gsub(/^VH-/, '')
@@ -84,7 +87,6 @@ class CASAAircraftRegistryGateway < AircraftGateway
   def self.get_aircraft_model(model)
     search_term = model.dup
     AIRCRAFT_MODEL_TO_FAMILY.each { |p| search_term.gsub!(p[0], p[1]) }
-    puts "Searching for: #{search_term}"
     _aircraft_type_obj = Rails.cache.fetch("aircraft_model_#{search_term}") do
       AircraftType.find_by(name: search_term)
     end
@@ -99,50 +101,64 @@ class CASAAircraftRegistryGateway < AircraftGateway
     name
   end
 
-  def self.hex_to_rego(hex_code)
+  def self.hex_to_reg(hex_code)
+    # Remove the 7C prefix
     hex_code.sub!(/^7c/i, '')
-
+    # Return false if the hex code is invalid
     return false if hex_code =~ /^[cf]/i
 
-    dec = hex_code.to_i(16)
+    # Convert the hex code to an integer
+    hex_as_int = hex_code.to_i(16)
 
-    l1, l1_dec, l2, l2_dec, l23_dec, l3, l3_dec = ''
+    # Define the integer factors for each character
+    # The character set is 36 bits, so define the
+    # factors as 36^3, 36^2, 36^1
+    factors = [1296, 36, 1]
 
-    if dec >= 1296
-      l1_dec = dec / 1296
-      l23_dec = dec - (1296 * l1_dec)
-      l1 = (65 + l1_dec).chr
-    else
-      l1 = 'A'
-      l23_dec = dec
+    # Define an array to store the characters
+    chars = []
+
+    factors.each do |factor|
+      # If the hex code is greater than the factor
+      # then divide the hex code by the factor and
+      # store the remainder
+      # Otherwise, set the index to 0
+      if hex_as_int >= factor
+        index = hex_as_int / factor
+        hex_as_int -= (factor * index)
+      else
+        index = 0
+      end
+
+      # the resulting amount is the index of the
+      # character in the character set
+      # so, add the character to the array
+      chars << CHARACTER_SET[index]
     end
 
-    if l23_dec >= 36
-      l2_dec = l23_dec / 36
-      l3_dec = l23_dec - (36 * l2_dec)
-      l2 = (65 + l2_dec).chr
-    else
-      l2 = 'A'
-      l3_dec = l23_dec
-    end
-
-    l3 = (65 + l3_dec).chr
-
-    "VH-#{l1}#{l2}#{l3}"
+    # return the complete registration
+    "VH-#{chars.join('')}"
   end
 
-  def self.registration_to_hex(registration)
-    return false unless registration =~ /^VH\-[A-Z]{3}$/
+  def self.reg_to_hex(registration)
+    return false unless registration =~ /^VH\-[A-Z0-9]{3}$/
 
-    l1, l2, l3 = registration[3..-1].chars.map { |c| c.ord - 65 }
+    # Start with 0!
+    dec = 0
 
-    l1_dec = l1 * 1296
-    l2_dec = l2 * 36
-    l3_dec = l3
+    # Define the integer factors for each character
+    # The character set is 36 bits, so define the
+    # factors as 36^3, 36^2, 36^1
+    factors = [1296, 36, 1]
 
-    dec = l1_dec + l2_dec + l3_dec
-    hex_code = dec.to_s(16).upcase
+    # step through each character in the registration
+    # and add the value of the character to the
+    # decimal value, multiplied by the factor
+    registration[3..-1].chars.each_with_index do |char, index|
+      dec += CHARACTER_SET.index(char) * factors[index]
+    end
 
-    "7C#{hex_code}"
+    # convert the decimal value to hex, 0 padded to 4 characters
+    sprintf("7C%04X", dec)
   end
 end
