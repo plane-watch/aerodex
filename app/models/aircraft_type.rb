@@ -19,4 +19,8 @@ class AircraftType < ApplicationRecord
   meilisearch do
     attribute :name
   end
+
+  def full_name
+    "#{manufacturer.name} #{name}"
+  end
 end

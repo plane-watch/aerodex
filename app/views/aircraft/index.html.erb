@@ -26,21 +26,24 @@
           <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
             Owner
           </th>
+          <th scope="col" class="py-3.5 text-left text-sm font-semibold text-gray-900 sm:pl-0">
+            Status
+          </th>
           <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-0">
             <span class="sr-only">Edit</span>
           </th>
         </tr>
         </thead>
         <tbody class="divide-y divide-gray-200 bg-white">
-        <tr>
+        <%= render partial: 'aircraft', collection: @aircraft %>
+        <tr class="hover:bg-purple-50">
           <td class="whitespace-nowrap py-5 pl-4 pr-3 text-sm sm:pl-0">
             <div class="flex items-center">
-              <div class="size-14 flex-shrink-0">
-                <img class="object-cover size-14 rounded-2xl" src="https://www.aeroboek.nl/429/57464_VH8LL_1C.png" alt="">
+              <div class="size-14 ml-1 flex-shrink-0">
+                <img class="object-cover size-14 rounded-2xl border-2 border-purple-700 shadow-xl" src="https://www.aeroboek.nl/429/57464_VH8LL_1C.png" alt="">
               </div>
               <div class="ml-4">
                 <span class="font-medium text-gray-900">VH-8LL</span>
-                <span class="ml-2 inline-flex items-center rounded-md bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">New</span>
                 <div class="mt-1 text-gray-500">7CADB7</div>
               </div>
             </div>
@@ -53,7 +56,6 @@
             <div class="text-gray-900">B429</div>
             <div class="mt-1 text-gray-500">2x PW207D1 (Turboshaft)</div>
           </td>
-
           <td class="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
             <div class="text-gray-900">Prime Flight Pty Ltd</div>
             <div class="mt-1 text-gray-500">&nbsp;</div>
@@ -62,18 +64,26 @@
             <div class="text-gray-900">Prime Flight Pty Ltd</div>
             <div class="mt-1 text-gray-500">Perth, WA, Australia</div>
           </td>
+          <td class="whitespace-nowrap py-5">
+            <%= aircraft_status_badge('Active') %>
+          </td>
+          <td>
+            <div class="grid grid-cols-3 gap-x-3 text-left">
+              <i class="fa-solid fa-magnifying-glass text-blue-500"></i>
+              <i class="fa-solid fa-flag text-yellow-500"></i>
+              <i class="fa-regular fa-pen-to-square text-gray-700"></i>
+            </div>
+          </td>
         </tr>
-
-        <tr>
+        <tr class="hover:bg-purple-50">
           <td class="whitespace-nowrap py-5 pl-4 pr-3 text-sm sm:pl-0">
             <div class="flex items-center">
-              <div class="size-14 flex-shrink-0">
-                <img class="size-14 rounded-2xl" src="https://cdn.jetphotos.com/full/5/1231293_1703494746.jpg" alt="">
+              <div class="size-14 ml-1 flex-shrink-0">
+                <img class="size-14 rounded-2xl border-2 border-purple-700 shadow-xl" src="https://cdn.jetphotos.com/full/5/1231293_1703494746.jpg" alt="">
               </div>
               <div class="ml-4">
-                <span class="font-medium text-gray-900">VH-X4A</span>
-                <span class="ml-2 inline-flex items-center rounded-md bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">New</span>
-                <div class="mt-1 text-gray-500">7C78A8</div>
+                <span class="font-medium text-gray-900">VH-X4B</span>
+                <div class="mt-1 text-gray-500">7C78A9</div>
               </div>
             </div>
           </td>
@@ -94,7 +104,77 @@
             <div class="text-gray-900">Qantas Airways Limited</div>
             <div class="mt-1 text-gray-500">Mascot, NSW, Australia</div>
           </td>
+          <td class="whitespace-nowrap py-5">
+            <%= aircraft_status_badge('Active') %>
+          </td>
+          <td>
+            <div class="grid grid-cols-3 gap-x-3 text-left">
+              <i class="fa-solid fa-magnifying-glass text-blue-500"></i>
+              <i class="fa-solid fa-flag text-yellow-500"></i>
+              <i class="fa-regular fa-pen-to-square text-gray-700"></i>
+            </div>
+          </td>
         </tr>
+        <tr>
+          <td class="whitespace-nowrap py-5 pl-4 pr-3 text-sm sm:pl-0">
+            <div class="flex items-center">
+              <div class="size-14 flex-shrink-0">
+                <img class="size-14 rounded-2xl" src="https://cdn.jetphotos.com/full/5/1231293_1703494746.jpg" alt="">
+              </div>
+              <div class="ml-4">
+                <span class="font-medium text-gray-900">VH-X4A</span>
+                <div class="mt-1 text-gray-500">7C78A8</div>
+              </div>
+            </div>
+          </td>
+          <td class="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
+            <div class="text-gray-900">
+              Airbus A220-300
+            </div>
+            <div class="mt-1 text-gray-500">
+              BCS3 (A236), MSN: 55253
+            </div>
+          </td>
+          <td class="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
+            <div>
+              <span class="text-gray-500"><%= cabin_configuration('C10Y127').join(', ') %></span>
+            </div>
+            <div class="mt-1 text-gray-500">2x Pratt & Whitney PW1524G-3 (Geared Turbofan)</div>
+          </td>
+
+          <td class="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
+            <div>
+              <span class="text-gray-900">
+                QantasLink / National Jet Systems
+              </span>
+              <span class="text-gray-500">
+                (QJE/QF)
+              </span>
+            </div>
+            <div class="mt-1">
+
+              <span class="text-gray-500 italic">
+                as &quot;Minyma Kutjara Tjukurpa&quot;
+              </span>
+            </div>
+
+          </td>
+          <td class="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
+            <div class="text-gray-900">Qantas Airways Limited</div>
+            <div class="mt-1 text-gray-500">Mascot, NSW, Australia</div>
+          </td>
+          <td class="whitespace-nowrap py-5">
+            <%= aircraft_status_badge('Active') %>
+          </td>
+          <td>
+            <div class="grid grid-cols-3 gap-x-3 text-left">
+              <i class="fa-solid fa-magnifying-glass text-blue-500"></i>
+              <i class="fa-solid fa-flag text-yellow-500"></i>
+              <i class="fa-regular fa-pen-to-square text-gray-700"></i>
+            </div>
+          </td>
+        </tr>
+
         </tbody>
       </table>
     </div>

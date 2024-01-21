@@ -141,7 +141,7 @@ class CASAAircraftRegistryGateway < AircraftGateway
   end
 
   def self.reg_to_hex(registration)
-    return false unless registration =~ /^VH\-[A-Z0-9]{3}$/
+    return false unless registration =~ /^VH-[A-Z0-9]{3}$/
 
     # Start with 0!
     dec = 0

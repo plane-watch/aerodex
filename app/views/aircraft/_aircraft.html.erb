@@ -1,0 +1,61 @@
+<tr class="hover:bg-purple-50">
+  <td class="whitespace-nowrap py-5 pl-4 pr-3 text-sm sm:pl-0">
+    <div class="flex items-center">
+      <div class="size-14 ml-1 bg-gray-500 border-2 border-purple-700 rounded-2xl overflow-hidden flex items-center">
+        <i class="fa-solid fa-plane size-10 mx-auto text-purple-400 -rotate-45"></i>
+      </div>
+      <div class="ml-4">
+        <span class="font-medium text-gray-900"><%= aircraft.registration %></span>
+        <div class="mt-1 text-gray-500"><%= aircraft.icao %></div>
+      </div>
+    </div>
+  </td>
+  <td class="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
+    <div class="text-gray-900">
+      <%= aircraft.aircraft_type.full_name %>
+    </div>
+    <div class="mt-1 text-gray-500">
+      <%= aircraft.aircraft_type.type_code %> (<%= aircraft.model %>), MSN: <%= aircraft.serial_number %>
+    </div>
+  </td>
+  <td class="whitespace-nowrap px-3 py-5 text-sm">
+    <div>
+      <span class="text-gray-900">
+        <%= aircraft.cabin_configuration&.present? ? cabin_configuration(aircraft.cabin_configuration).join(', ') : 'Unknown Cabin Configuration' %>
+      </span>
+    </div>
+    <div class="mt-1 text-gray-500"><%= aircraft.engine_count -%>x <%= aircraft.engine_model %></div>
+  </td>
+
+  <td class="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
+    <div>
+      <span class="text-gray-900">
+        <%= aircraft.operator.name %>
+      </span>
+      <span class="text-gray-500">
+        (<%= aircraft.operator.icao_callsign %>/<%= aircraft.operator.iata_callsign %>)
+      </span>
+    </div>
+    <div class="mt-1">
+      <% if aircraft.aircraft_name %>
+        <span class="text-gray-500 italic">
+          as &quot;<%= aircraft.aircraft_name %>&quot;
+        </span>
+      <% end %>
+    </div>
+
+  </td>
+  <td class="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
+    <div class="text-gray-900"><%= aircraft.owner.titleize || "Unknown Owner" %></div>
+  </td>
+  <td class="whitespace-nowrap py-5">
+    <%= aircraft_status_badge(aircraft.status) %>
+  </td>
+  <td>
+    <div class="grid grid-cols-3 gap-x-3 text-left">
+      <i class="fa-solid fa-magnifying-glass text-blue-500"></i>
+      <i class="fa-solid fa-flag text-yellow-500"></i>
+      <i class="fa-regular fa-pen-to-square text-gray-700"></i>
+    </div>
+  </td>
+</tr>
