@@ -1,35 +1,36 @@
 require 'csv'
 
-class StandingDataOperatorGateway < OperatorGateway
+class VRSDataOperatorProcessor < OperatorProcessor
 
-  TRANSFORM_DATA = {
+  @@TRANSFORM_DATA = {
     'Name' => {
       function: ->(value) { normalise_name(value) },
-      field: :name
+      field: 'name'
     },
     'ICAO' => {
-      function: ->(value) { value&.strip },
-      field: :icao_callsign,
+      function: ->(value) { value.blank? ? nil : value.strip },
+      field: 'icao_code',
     },
     'IATA' => {
       function: ->(value) { value&.strip },
-      field: :iata_callsign,
+      field: 'iata_code',
     },
     'PositioningFlightPattern' => {
       function: ->(value) { value.blank? ? nil : value.strip },
-      field: :positioning_callsign_pattern,
+      field: 'positioning_callsign_pattern',
     },
     'CharterFlightPattern' => {
       function: ->(value) { value.blank? ? nil : value.strip },
-      field: :charter_callsign_pattern,
+      field: 'charter_callsign_pattern',
     }
   }
 
   def self.import
     csv_data = Excon.get('https://raw.githubusercontent.com/vradarserver/standing-data/main/airlines/schema-01/airlines.csv')&.body
-    # csv_data.gsub!("\xEF\xBB\xBF".force_encoding("ASCII-8BIT"), '')
 
     csv = CSV.parse(csv_data, headers: true, encoding: "utf-8:utf-8")
+
+    batch_import_timestamp = DateTime.now()
 
     csv&.each do |row|
       attributes = {}
@@ -39,29 +40,18 @@ class StandingDataOperatorGateway < OperatorGateway
 
         attributes[transformed_data[:key]] = transformed_data[:value]
       end
-      operator = Operator.find_or_initialize_by(icao_callsign: attributes[:icao_callsign])
-      operator.attributes = attributes
-      operator.save
 
+      search_params = attributes.dup.slice *%w(icao_code iata_code name)
+      search_params.except!(*%w(name iata_code)) if search_params['icao_code']
+
+      record = VRSDataOperatorSource.find_unique_operator(search_params).first_or_initialize
+
+      record.data = attributes
+      record.icao_code = attributes['icao_code']
+      record.iata_code = attributes['iata_code']
+      record.name = attributes['name']
+      record.import_date = batch_import_timestamp if record.new_record? || record.changed?
+      record.save!
     end
   end
-
-  def self.normalise_name(name)
-    OPERATOR_REWRITE_PATTERNS.each { |p| name.gsub!(p[0], p[1]) }
-    name
-  end
-
-  def self.transform_field(key, value)
-
-    if TRANSFORM_DATA[key].nil?
-      return nil
-    end
-
-    {
-      key: TRANSFORM_DATA[key][:field] || key,
-      value: TRANSFORM_DATA[key][:function] ? TRANSFORM_DATA[key][:function].call(value) : value
-    }
-
-  end
-
 end

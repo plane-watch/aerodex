@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_06_25_082527) do
+ActiveRecord::Schema[7.0].define(version: 2024_01_26_115208) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -79,6 +79,18 @@ ActiveRecord::Schema[7.0].define(version: 2023_06_25_082527) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "operator_sources", force: :cascade do |t|
+    t.string "icao_code"
+    t.string "iata_code"
+    t.string "name"
+    t.string "type", null: false
+    t.datetime "import_date", null: false
+    t.jsonb "data", default: "{}", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["data"], name: "index_operator_sources_on_data", using: :gin
+  end
+
   create_table "operators", force: :cascade do |t|
     t.string "name"
     t.string "country"
@@ -103,6 +115,13 @@ ActiveRecord::Schema[7.0].define(version: 2023_06_25_082527) do
   create_table "routes", force: :cascade do |t|
     t.string "call_sign"
     t.string "operator_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "source_changes", force: :cascade do |t|
+    t.string "type"
+    t.string "changed"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
