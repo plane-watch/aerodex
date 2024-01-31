@@ -18,7 +18,7 @@
 #
 class OperatorSource < ApplicationRecord
   validate :icao_or_iata_code
-  serialize :data, JsonbSerializer
+  serialize :data, coder: JsonbSerializer
 
   scope :with_icao, ->(icao_code) { where(icao_code: icao_code) unless icao_code.nil? }
   scope :with_iata, ->(iata_code) { where(iata_code: iata_code) unless iata_code.nil? }
