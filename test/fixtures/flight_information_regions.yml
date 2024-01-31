@@ -15,10 +15,8 @@ one:
   icao_code: MyString
   country: MyString
   region: MyString
-  bounds: MyString
 
 two:
   icao_code: MyString
   country: MyString
   region: MyString
-  bounds: MyString

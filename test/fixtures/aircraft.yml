@@ -20,7 +20,7 @@
 
 one:
   icao: MyString
-  type_code_id: 1
+  aircraft_type_id: 1
   serial_number: MyString
   manufacture_year: 1
   owner: MyString
@@ -33,7 +33,7 @@ one:
 
 two:
   icao: MyString
-  type_code_id: 1
+  aircraft_type_id: 1
   serial_number: MyString
   manufacture_year: 1
   owner: MyString

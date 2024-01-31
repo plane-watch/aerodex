@@ -1,0 +1,24 @@
+# == Schema Information
+#
+# Table name: source_import_reports
+#
+#  id                :bigint           not null, primary key
+#  import_errors     :jsonb
+#  importer_type     :string
+#  records_processed :integer
+#  success           :boolean
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#
+
+one:
+  importer_type: 
+  import_errors: 
+  success: true
+  records_processed: 1
+
+two:
+  importer_type: 
+  import_errors: 
+  success: false
+  records_processed: 1

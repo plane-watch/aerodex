@@ -17,24 +17,31 @@
 #  index_operator_sources_on_data  (data) USING gin
 #
 class OperatorSource < ApplicationRecord
-    validate :icao_or_iata_code
-    serialize :data, JsonbSerializer
+  validate :icao_or_iata_code
+  serialize :data, JsonbSerializer
 
-    scope :with_icao, ->(icao_code) { where(icao_code: icao_code) unless icao_code.nil? }
-    scope :with_iata, ->(iata_code) { where(iata_code: iata_code) unless iata_code.nil? }
-    scope :with_icao_name, -> (icao_code, name) { where(icao_code: icao_code, name: name) unless icao_code.nil? || name.nil?}
-    scope :with_iata_name, ->(iata_code, name) { where(iata_code: iata_code, name: name) unless iata_code.nil? || name.nil? }
+  scope :with_icao, ->(icao_code) { where(icao_code: icao_code) unless icao_code.nil? }
+  scope :with_iata, ->(iata_code) { where(iata_code: iata_code) unless iata_code.nil? }
+  scope :with_icao_and_name, lambda { |icao_code, name|
+                               where(icao_code: icao_code, name: name) unless icao_code.nil? || name.nil?
+                             }
+  scope :with_iata_and_name, lambda { |iata_code, name|
+                               where(iata_code: iata_code, name: name) unless iata_code.nil? || name.nil?
+                             }
 
-    scope :find_unique_operator, ->(args) do
-        raise ArgumentError.new('ICAO and IATA/Name must be exclusive') if args['icao_code'] && (args['iata_code'] || args['name'])
-        unscoped
-            .with_icao(args['icao_code'])
-            .with_iata_name(args['iata_code'], args['name'])
+  scope :find_unique_operator, lambda { |args|
+    if args['icao_code'] && (args['iata_code'] || args['name'])
+      raise ArgumentError, 'ICAO and IATA/Name must be exclusive'
     end
 
-    private
+    unscoped
+      .with_icao(args['icao_code'])
+      .with_iata_and_name(args['iata_code'], args['name'])
+  }
 
-    def icao_or_iata_code
-        errors.add(:missing_code, "Record must have one of ICAO or IATA code.") unless self.icao_code || self.iata_code
-    end
+  private
+
+  def icao_or_iata_code
+    errors.add(:missing_code, 'Record must have one of ICAO or IATA code.') unless icao_code || iata_code
+  end
 end

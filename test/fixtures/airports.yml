@@ -25,7 +25,7 @@ one:
   iata_code: MyString
   icao_code: MyString
   wmo_code: MyString
-  fir_id: 1
+  flight_information_region_id: 1
   latitude: 9.99
   longitude: 9.99
   altitude: 9.99
@@ -38,7 +38,7 @@ two:
   iata_code: MyString
   icao_code: MyString
   wmo_code: MyString
-  fir_id: 1
+  flight_information_region_id: 1
   latitude: 9.99
   longitude: 9.99
   altitude: 9.99

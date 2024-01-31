@@ -1,4 +1,4 @@
-class OperatorProcessor
+class OperatorProcessor < Processor
   OPERATOR_REWRITE_PATTERNS = [
     [/Royal Flying Doctor Service.*/, 'Royal Flying Doctor Service'],
     [/State Of New South Wales Represented By Nsw Police Force/, 'NSW Police Force'],
@@ -6,7 +6,7 @@ class OperatorProcessor
     [/State Of Western Australia - Represented By Commissioner Of Police/, 'Western Australia Police Force'],
   ]
 
-  @@TRANSFORM_DATA = {}
+  @transform_data = {}
 
   def self.normalise_name(name)
     OPERATOR_REWRITE_PATTERNS.each { |p| name.gsub!(p[0], p[1]) }
@@ -14,13 +14,13 @@ class OperatorProcessor
   end
 
   def self.transform_field(key, value)
-    if @@TRANSFORM_DATA[key].nil?
+    if @transform_data[key].nil?
       return nil
     end
 
     {
-      key: @@TRANSFORM_DATA[key][:field] || key,
-      value: @@TRANSFORM_DATA[key][:function] ? @@TRANSFORM_DATA[key][:function].call(value) : value
+      key: @transform_data[key][:field] || key,
+      value: @transform_data[key][:function] ? @transform_data[key][:function].call(value) : value
     }
   end
 end

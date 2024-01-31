@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_01_26_115208) do
+ActiveRecord::Schema[7.0].define(version: 2024_01_28_072323) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -122,6 +122,15 @@ ActiveRecord::Schema[7.0].define(version: 2024_01_26_115208) do
   create_table "source_changes", force: :cascade do |t|
     t.string "type"
     t.string "changed"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "source_import_reports", force: :cascade do |t|
+    t.string "importer_type"
+    t.jsonb "import_errors"
+    t.integer "records_processed"
+    t.boolean "success"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
