@@ -12,7 +12,7 @@ ActiveSupport::Inflector.inflections(:en) do |inflect|
   inflect.acronym "FIR"
   inflect.acronym 'ACARS'
   inflect.acronym 'CASA'
-
+  inflect.acronym 'VRS'
   inflect.uncountable %w(aircraft)
 end
 

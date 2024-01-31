@@ -83,6 +83,18 @@ ActiveRecord::Schema[7.1].define(version: 2024_01_20_073845) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "operator_sources", force: :cascade do |t|
+    t.string "icao_code"
+    t.string "iata_code"
+    t.string "name"
+    t.string "type", null: false
+    t.datetime "import_date", null: false
+    t.jsonb "data", default: "{}", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["data"], name: "index_operator_sources_on_data", using: :gin
+  end
+
   create_table "operators", force: :cascade do |t|
     t.string "name"
     t.string "country"
@@ -107,6 +119,22 @@ ActiveRecord::Schema[7.1].define(version: 2024_01_20_073845) do
   create_table "routes", force: :cascade do |t|
     t.string "call_sign"
     t.string "operator_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "source_changes", force: :cascade do |t|
+    t.string "type"
+    t.string "changed"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "source_import_reports", force: :cascade do |t|
+    t.string "importer_type"
+    t.jsonb "import_errors"
+    t.integer "records_processed"
+    t.boolean "success"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end

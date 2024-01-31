@@ -1,5 +1,4 @@
-class CASAAircraftRegistryGateway < AircraftGateway
-
+class CASAAircraftRegistryProcessor < AircraftProcessor
   CHARACTER_SET = ('A'..'Z').to_a + ('0'..'9').to_a
 
   TRANSFORM_DATA = {

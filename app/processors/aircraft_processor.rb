@@ -1,4 +1,4 @@
-class AircraftGateway
+class AircraftProcessor
   MANUFACTURER_REPLACEMENT_PATTERNS = [
     [/The Boeing Company/i, "Boeing"],
     [/Airbus Industrie/i, "Airbus"],

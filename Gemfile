@@ -70,6 +70,8 @@ group :development do
 
   # Annotate the rails models with the db schema
   gem 'annotate'
+
+  gem 'rubocop'
 end
 
 group :test do
@@ -77,6 +79,8 @@ group :test do
   gem "capybara"
   gem "selenium-webdriver"
   gem "webdrivers"
+
+  gem 'rubocop'
 end
 
 gem "devise", "~> 4.9"
