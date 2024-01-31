@@ -2,105 +2,92 @@
 
 # This processor is used to import aircraft data from the CASA aircraft registry
 # https://www.casa.gov.au/aircraft-register-search
-
-class CASAAircraftRegistryProcessor < AircraftProcessor
-  CHARACTER_SET = ('A'..'Z').to_a + ('0'..'9').to_a
+# The CSV file is downloaded from the above link and then processed using this
+# processor.
+class CASAAircraftCsvProcessor < CASAAircraftRegistryProcessor
 
   @transform_data = {
-    'Aircraft model' => {
+    'model' => {
       function: ->(model) { normalise_model(model) },
       field: :model,
     },
-    'ICAO type designator' => {
+    'icaotypedesig' => {
       function: ->(v) { get_aircraft_type(v) },
       field: :aircraft_type_id,
     },
-    'Date first registered' => {
+    'datefirstreg' => {
       function: ->(v) { Date.parse(v) },
       field: :registration_date,
     },
-    'Serial' => {
-      field: :serial_number,
-      function: ->(v) { v.to_s },
+    'serial' => {
+      field: :serial_number
     },
-    'Registration holder' => {
+    'regholdname' => {
       function: ->(v) { normalise_name(v) },
       field: :owner,
     },
-    'Registered operator' => {
+    'regopname' => {
       function: ->(v) { normalise_and_find_operator(v) },
       field: :operator,
     },
-    'Number of engines' => {
+    'engnum' => {
       function: ->(v) { v.to_i },
       field: :engine_count,
     },
-    'Engine model' => {
+    'engmodel' => {
       field: :engine_model,
     },
   }
 
-  def self.bulk_import(registrations: [])
+  def self.bulk_import(file_path)
+    missing_types = []
     errors = []
     success = []
-    registrations.each do |reg|
-      reg = "VH-#{reg}" unless reg =~ /^VH-/
-      puts reg
-      aircraft = nil
-      begin
-        aircraft = CASAAircraftRegistryProcessor.search(reg)
-      rescue ActiveRecord::RecordNotFound
-        errors << { registration: reg, errors: 'Aircraft type not found' }
+    CSV.foreach(file_path, headers: true, header_converters: :symbol, converters: :all).each do |row|
+      data = {
+        registration: "VH-#{row[:mark]}",
+        icao: reg_to_hex("VH-#{row[:mark]}"),
+      }
+      row.each do |k, v|
+        begin
+          transformed_data = transform_row(k.to_s, v)
+          next if transformed_data.nil?
+        rescue ActiveRecord::RecordNotFound
+          errors << { registration: data[:registration], errors: "Aircraft type not found #{row[:icaotypedesig]}" }
+          missing_types << row[:icaotypedesig] unless missing_types.include?(row[:icaotypedesig])
+          next
+        end
+        data[transformed_data[:key]] = transformed_data[:value]
       end
-      puts aircraft.inspect
-      next if aircraft.nil? || aircraft[:registration].nil?
 
       obj = Aircraft.find_or_initialize_by(
-        registration: aircraft[:registration],
-        serial_number: aircraft[:serial_number],
-        aircraft_type_id: aircraft[:aircraft_type_id])
-      obj.assign_attributes(aircraft)
+        registration: data[:registration],
+        serial_number: data[:serial_number],
+        aircraft_type_id: data[:aircraft_type_id]
+      )
+
+      obj.assign_attributes(data)
       begin
         obj.save!
-        success << reg
+        success << "VH-#{row[:mark]}"
       rescue ActiveRecord::RecordInvalid
-        errors << { registration: aircraft[:registration], errors: obj.errors.full_messages }
-        next
+        errors << { registration: data[:registration], errors: obj.errors.full_messages }
       end
     end
-    { success: success, errors: errors }
-  end
 
-  def self.search(registration)
-    search_param = registration.gsub(/^VH-/, '')
-    data = {}
-    url = "https://www.casa.gov.au/search-centre/aircraft-register/#{search_param.downcase}"
-
-    response = Rails.cache.fetch("CasaAircraftRegistryProcessor#search/#{search_param}") do
-      Excon.get(url)
-    end
-
-    document = Nokogiri.parse(response.body)
-    document.css('fieldset > div > div.field > div').each_slice(2) do |a, b|
-      transformed_data = transform_row(a, b)
-      next if transformed_data.nil?
-
-      data[transformed_data[:key].to_sym] = transformed_data[:value]
-    end
-    data.merge({
-                 registration: registration,
-                 icao: reg_to_hex(registration),
-                 registration_country: 'Australia'
-               })
-
+    { success: success, errors: errors, missing_types: missing_types }
   end
 
   def self.transform_row(a, b)
-    key = a&.text&.strip&.gsub(/:$/, '')
-    value = b&.text&.strip
+    key = a.to_s
+    value = b
+    value.strip! if value.is_a?(String)
 
     return nil if key.nil? || value.nil?
-    return nil if @transform_data[key].nil?
+
+    if @transform_data[key].nil?
+      return nil
+    end
 
     {
       key: @transform_data[key][:field] || key,
@@ -162,11 +149,11 @@ class CASAAircraftRegistryProcessor < AircraftProcessor
     # step through each character in the registration
     # and add the value of the character to the
     # decimal value, multiplied by the factor
-    registration[3..-1].chars.each_with_index do |char, index|
+    registration[3..].chars.each_with_index do |char, index|
       dec += CHARACTER_SET.index(char) * factors[index]
     end
 
     # convert the decimal value to hex, 0 padded to 4 characters
-    sprintf("7C%04X", dec)
+    format('7C%04X', dec)
   end
 end

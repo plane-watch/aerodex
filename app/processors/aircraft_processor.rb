@@ -1,3 +1,10 @@
+# frozen_string_literal: true
+
+# Parent class for all aircraft registry processors
+# This class contains all the common methods and attributes
+# for all aircraft registry processors, as well as the constants used
+# for translating/normalising data.
+
 class AircraftProcessor
   MANUFACTURER_REPLACEMENT_PATTERNS = [
     [/The Boeing Company/i, "Boeing"],
@@ -47,7 +54,7 @@ class AircraftProcessor
     [/Fokker Aircraft B.V./i, "Fokker"],
     [/Atr - Gie Avions.*/i, ""],
     [/Pilatus Aircraft Ltd./i, "Pilatus"]
-  ]
+  ].freeze
 
   AIRCRAFT_MODEL_PATTERNS = [
     [/^A(3[0-9]{3})-(\d{1,2})\d{2}/, 'A\1-\200'],
@@ -73,7 +80,7 @@ class AircraftProcessor
     [/BETA/, 'Beta'],
     [/DA /, 'DA'],
     [/DA-/, 'DA'],
-  ]
+  ].freeze
 
   AIRCRAFT_MODEL_TO_FAMILY = [
     [/BD-500-1A10/, 'A220-200'],
@@ -82,7 +89,7 @@ class AircraftProcessor
     [/^B(7[0-9]{2})-(\d{1,2})\d{2}/, 'B\1-\200'],
     [/PC-(\d+).*/, 'PC-\1'],
     [/(.*)\/,/, '\1'],
-  ]
+  ].freeze
 
   ICAO_MODEL_PATTERN = [
     [/^A-([234]\d{2,3})-/, 'A\1-'],         # Airbus A-3XX-XXX -> A3XX-XXX
@@ -90,7 +97,7 @@ class AircraftProcessor
     [/^A-([234]00\w*)(-?)/, 'A\1\2'],       # Airbus A-300XX-XXX -> A300XX-XXX or A-300XX -> A300XX
     [/^C-212/, 'C212'],                     # Airbus/CASA C-212 -> C212
     [/^ACJ \(A-319\)/, 'ACJ-319'],          # Airbus ACJ (A3-319) -> ACJ-319
-  ]
+  ].freeze
 
   OPERATOR_REPLACEMENT_PATTERNS = [
     [/ PTY\.? LTD\.?\z/i, ''],
@@ -113,9 +120,35 @@ class AircraftProcessor
     [/State of South Australia Represented by Department for Environment and Water/, 'Dept. for Environment and Water (SA)'],
     [/COMMONWEALTH OF AUSTRALIA REPRESENTED BY RAAF RICHMOND FLYING CLUB/, 'RAAF Richmond Flying Club'],
     [/COMMONWEALTH OF AUSTRALIA REPRESENTED BY ROYAL AUSTRALIAN AIR FORCE/, 'Royal Australian Air Force'],
-  ]
+  ].freeze
 
-  def normalise_model(input)
+  def self.get_aircraft_manufacturer(manufacturer)
+    MANUFACTURER_REPLACEMENT_PATTERNS.each { |p| manufacturer.gsub!(p[0], p[1]) }
+
+    manufacturer_obj = Rails.cache.fetch("aircraft_manufacturer_#{manufacturer}") do
+      Manufacturer.find_by(name: manufacturer.titleize)
+    end
+
+    raise ActiveRecord::RecordNotFound unless manufacturer_obj
+
+    manufacturer_obj.id
+  end
+
+  def self.get_aircraft_type(type_code)
+    aircraft_type_obj = Rails.cache.fetch("aircraft_type_typecode_#{type_code}") do
+      AircraftType.find_by(type_code: type_code)
+    end
+
+    raise ActiveRecord::RecordNotFound unless aircraft_type_obj
+
+    aircraft_type_obj.id
+  end
+
+  def self.normalise_name(name)
+    name
+  end
+
+  def self.normalise_model(input)
     model = input.dup
     AIRCRAFT_MODEL_TO_FAMILY.each { |pattern, replacement| model.gsub!(pattern, replacement) }
     model

@@ -8,12 +8,12 @@ ActiveSupport::Inflector.inflections(:en) do |inflect|
   # inflect.singular /^(ox)en/i, "\\1"
   # inflect.irregular "person", "people"
   # inflect.uncountable %w( fish sheep )
-  inflect.acronym "ICAO"
-  inflect.acronym "FIR"
+  inflect.acronym 'ICAO'
+  inflect.acronym 'FIR'
   inflect.acronym 'ACARS'
   inflect.acronym 'CASA'
   inflect.acronym 'VRS'
-  inflect.uncountable %w(aircraft)
+  inflect.uncountable %w[aircraft]
 end
 
 # These inflection rules are supported but not enabled by default:

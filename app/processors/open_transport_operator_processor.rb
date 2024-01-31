@@ -2,39 +2,39 @@ require 'csv'
 
 class OpenTransportOperatorProcessor < OperatorProcessor
   @transform_data = {
-    "3char_code" => {
+    '3char_code' => {
       function: ->(value) { value&.strip },
       field: 'icao_code',
     },
-    "2char_code" => {
+    '2char_code' => {
       function: ->(value) { value&.strip },
       field: 'iata_code',
     },
-    "num_code" => {
+    'num_code' => {
       function: ->(value) { value&.strip },
       field: 'num_code',
     },
-    "validity_from" => {
+    'validity_from' => {
       function: ->(value) { value&.strip },
       field: 'validity_from'
     },
-    "validity_to" => {
+    'validity_to' => {
       function: ->(value) { value&.strip },
       field: 'validity_to'
     },
-    "name" => {
+    'name' => {
       function: ->(value) { value&.strip },
       field: 'name'
     },
-    "name2" => {
+    'name2' => {
       function: ->(value) { value&.strip },
       field: 'alt_name'
     },
-    "wiki_link" => {
+    'wiki_link' => {
       function: ->(value) { value&.strip },
       field: 'wikipedia_link'
     },
-    "alt_names" => {
+    'alt_names' => {
       function: ->(value) { value&.strip },
       field: 'alt_name'
     }
@@ -44,7 +44,7 @@ class OpenTransportOperatorProcessor < OperatorProcessor
     csv_data = Excon.get('https://raw.githubusercontent.com/opentraveldata/opentraveldata/master/opentraveldata/optd_airlines.csv')&.body
     return false if csv_data.nil?
 
-    csv = CSV.parse(csv_data, headers: true, encoding: "utf-8:utf-8", col_sep: "^")
+    csv = CSV.parse(csv_data, headers: true, encoding: 'utf-8:utf-8', col_sep: '^')
 
     batch_import_timestamp = DateTime.now
     is_first_import = OpenTransportOperatorSource.none?
