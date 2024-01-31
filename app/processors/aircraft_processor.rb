@@ -92,4 +92,46 @@ class AircraftProcessor
     [/^ACJ \(A-319\)/, 'ACJ-319'],          # Airbus ACJ (A3-319) -> ACJ-319
   ]
 
+  OPERATOR_REPLACEMENT_PATTERNS = [
+    [/ PTY\.? LTD\.?\z/i, ''],
+    [/ PROPRIETARY LIMITED/, ''],
+    [/ LIMITED$/i, ''],
+    [/ INC$/i, ''],
+    [/ INCORPORATED$/i, ''],
+    [/ PROPERTY TRUST/, ''],
+    [/JETSTAR AIRWAYS/, 'Jetstar'],
+    [/QANTAS AIRWAYS/, 'Qantas'],
+    [/VIRGIN AUSTRALIA INTERNATIONAL AIRLINES/, 'Virgin Australia'],
+    [/VIRGIN AUSTRALIA AIRLINES/, 'Virgin Australia'],
+    [/VIRGIN AUSTRALIA REGIONAL AIRLINES PTY LTD/, 'Virgin Australia Regional Airlines'],
+    [/COMMONWEALTH OF AUSTRALIA (CADETS BRANCH - AIR FORCE)/, 'Australian Air Force Cadets'],
+    [/COMMONWEALTH OF AUSTRALIA REPRESENTED BY ROYAL AUSTRALIAN AIR FORCE 100 SQUADRON/, 'Royal Australian Air Force No. 100 Squadron'],
+    [/ROYAL FLYING DOCTOR SERVICE OF AUSTRALIA \((.*)\)/, 'Royal Flying Doctor Service of Australia (\1)'],
+    [/ROYAL FLYING DOCTOR SERVICE OF AUSTRALIA CENTRAL OPERATIONS/, 'Royal Flying Doctor Service of Australia (Central Operations)'],
+    [/STATE OF NEW SOUTH WALES REPRESENTED BY NSW POLICE FORCE/, 'New South Wales Police Force'],
+    [/STATE OF NEW SOUTH WALES REPRESENTED BY DEPARTMENT OF PLANNING AND ENVIRONMENT/, 'Dept. of Planning and Environment (NSW)'],
+    [/State of South Australia Represented by Department for Environment and Water/, 'Dept. for Environment and Water (SA)'],
+    [/COMMONWEALTH OF AUSTRALIA REPRESENTED BY RAAF RICHMOND FLYING CLUB/, 'RAAF Richmond Flying Club'],
+    [/COMMONWEALTH OF AUSTRALIA REPRESENTED BY ROYAL AUSTRALIAN AIR FORCE/, 'Royal Australian Air Force'],
+  ]
+
+  def normalise_model(input)
+    model = input.dup
+    AIRCRAFT_MODEL_TO_FAMILY.each { |pattern, replacement| model.gsub!(pattern, replacement) }
+    model
+  end
+
+  def self.normalise_and_find_operator(name)
+    OPERATOR_REPLACEMENT_PATTERNS.each { |p| name.gsub!(p[0], p[1]) }
+    name = name.titleize
+    puts "Searching for #{name}
+"
+    operator = Operator.search(name: name)&.first
+    if operator.nil?
+      operator = Operator.new(name: name, country: 'Australia')
+      operator.save(validate: false)
+    end
+
+    operator
+  end
 end

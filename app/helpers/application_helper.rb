@@ -1,4 +1,5 @@
 module ApplicationHelper
+  include Pagy::Frontend
   def tailwind_text_classes_for(flash_type)
     {
       notice: 'text-green-700',

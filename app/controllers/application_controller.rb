@@ -1,4 +1,6 @@
 class ApplicationController < ActionController::Base
+  include Pagy::Backend
+
   # Expect CSRF tokens to be passed with all post requests, if not raise an exception
   # use prepend: true to make sure this happens first before any other actions.
   protect_from_forgery with: :exception, prepend: true

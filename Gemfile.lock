@@ -167,6 +167,7 @@ GEM
     nokogiri (1.16.0-arm64-darwin)
       racc (~> 1.4)
     orm_adapter (0.5.0)
+    pagy (6.4.3)
     paper_trail (15.1.0)
       activerecord (>= 6.1)
       request_store (~> 1.4)
@@ -310,6 +311,7 @@ DEPENDENCIES
   jbuilder
   jsbundling-rails
   meilisearch-rails (~> 0.9.1)
+  pagy (~> 6.4)
   paper_trail (~> 15.0)
   pg (~> 1.1)
   puma (~> 6.0)

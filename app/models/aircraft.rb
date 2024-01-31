@@ -2,26 +2,31 @@
 #
 # Table name: aircraft
 #
-#  id                    :bigint           not null, primary key
-#  aircraft_name         :string
-#  engine_count          :integer
-#  engine_model          :string
-#  icao                  :string
-#  manufacture_year      :integer
-#  model                 :string
-#  owner                 :string
-#  registration          :string
-#  registration_country  :string
-#  registration_date     :date
-#  cabin_configuration :string
-#  serial_number         :string
-#  status                :integer          default("active")
-#  created_at            :datetime         not null
-#  updated_at            :datetime         not null
-#  aircraft_type_id      :integer
-#  operator_id           :integer
+#  id                   :bigint           not null, primary key
+#  aircraft_name        :string
+#  cabin_configuration  :string
+#  engine_count         :integer
+#  engine_model         :string
+#  icao                 :string
+#  manufacture_year     :integer
+#  model                :string
+#  owner                :string
+#  registration         :string
+#  registration_country :string
+#  registration_date    :date
+#  serial_number        :string
+#  status               :integer          default("active")
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  aircraft_type_id     :integer
+#  operator_id          :integer
 #
 class Aircraft < ApplicationRecord
+  include MeiliSearch::Rails
+  extend Pagy::Meilisearch
+
+  ActiveRecord_Relation.include Pagy::Meilisearch
+
   belongs_to :aircraft_type
   belongs_to :operator
   has_one :manufacturer, through: :aircraft_type
@@ -36,5 +41,32 @@ class Aircraft < ApplicationRecord
   validates :operator, presence: true, allow_blank: false
   validates :registration_date, presence: true, allow_blank: false
 
+  scope :meilisearch_import, -> { includes( :operator, aircraft_type: [ :manufacturer]) }
+  scope :search_for, ->(query) { where(id: self.search(query).raw_answer&.dig('hits')&.collect { |hit| hit['id'] }) if query.present? }
+
+
   has_paper_trail
+
+  meilisearch do
+    attribute :icao
+    attribute :registration
+    attribute :serial_number
+    attribute :owner
+    attribute :aircraft_name
+    attribute :model
+    attribute :aircraft_type do
+      aircraft_type.name
+    end
+    attribute :aircraft_type_code do
+      aircraft_type.type_code
+    end
+    attribute :aircraft_manufacturer do
+      aircraft_type.manufacturer.name
+    end
+    attribute :operator do
+      operator.name
+    end
+
+    displayed_attributes [ :id ]
+  end
 end

@@ -3,6 +3,7 @@
 # Table name: aircraft_types
 #
 #  id              :bigint           not null, primary key
+#  category        :integer
 #  name            :string
 #  type_code       :string
 #  created_at      :datetime         not null
@@ -14,6 +15,7 @@ class AircraftType < ApplicationRecord
 
   has_many :aircraft
   belongs_to :manufacturer
+  enum category: { airplane: 0, helicopter: 1, seaplane: 2, glider: 3, balloon: 4 }
 
   has_paper_trail
   meilisearch do

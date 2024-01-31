@@ -37,5 +37,4 @@ class Operator < ApplicationRecord
     attribute :country
   end
 
-
 end

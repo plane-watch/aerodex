@@ -3,6 +3,7 @@
 # Table name: aircraft_types
 #
 #  id              :bigint           not null, primary key
+#  category        :integer
 #  name            :string
 #  type_code       :string
 #  created_at      :datetime         not null
