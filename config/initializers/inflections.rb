@@ -8,11 +8,13 @@ ActiveSupport::Inflector.inflections(:en) do |inflect|
   # inflect.singular /^(ox)en/i, "\\1"
   # inflect.irregular "person", "people"
   # inflect.uncountable %w( fish sheep )
-  inflect.acronym 'ICAO'
-  inflect.acronym 'FIR'
-  inflect.acronym 'ACARS'
-  inflect.acronym 'CASA'
-  inflect.acronym 'VRS'
+
+  inflect.acronym 'ICAO'  # International Civil Aviation Organization
+  inflect.acronym 'FIR'   # Flight Information Region
+  inflect.acronym 'ACARS' # Aircraft Communications Addressing and Reporting System
+  inflect.acronym 'CASA'  # Civil Aviation Safety Authority (Australia)
+  inflect.acronym 'CAANZ' # Civil Aviation Authority of New Zealand
+  inflect.acronym 'VRS'   # Virtual Radar Server
   inflect.uncountable %w[aircraft]
 end
 

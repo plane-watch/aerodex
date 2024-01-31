@@ -28,7 +28,7 @@ class CASAAircraftRegistryProcessor < AircraftProcessor
       field: :owner,
     },
     'Registered operator' => {
-      function: ->(v) { normalise_and_find_operator(v) },
+      function: ->(v) { normalise_and_find_operator(v, country: 'Australia') },
       field: :operator,
     },
     'Number of engines' => {

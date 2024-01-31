@@ -27,7 +27,7 @@ class CASAAircraftCsvProcessor < CASAAircraftRegistryProcessor
       field: :owner,
     },
     'regopname' => {
-      function: ->(v) { normalise_and_find_operator(v) },
+      function: ->(v) { normalise_and_find_operator(v, country: 'Australia') },
       field: :operator,
     },
     'engnum' => {

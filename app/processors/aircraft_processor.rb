@@ -7,53 +7,53 @@
 
 class AircraftProcessor
   MANUFACTURER_REPLACEMENT_PATTERNS = [
-    [/The Boeing Company/i, "Boeing"],
-    [/Airbus Industrie/i, "Airbus"],
-    [/Cessna Aircraft Company/i, "Cessna"],
-    [/Piper Aircraft.*$/i, "Piper"],
-    [/The New Piper.*$/i, "Piper"],
-    [/Beech.*$/i, "Beechcraft"],
-    [/Pilatus Aircraft Ltd/i, "Pilatus"],
-    [/Fokker.*$/i, "Fokker"],
-    [/Atr - Gie Avions.*$/i, "ATR"],
-    [/Fairchild.*$/i, "Fairchild"],
-    [/S.A.A.B..*$/i, "SAAB"],
-    [/North American Aviation Inc/i, "North American Aviation"],
-    [/Robinson Helicopter Co/i, "Robinson"],
-    [/Embraer.*$/i, "Embraer"],
-    [/Costruzioni Aeronautiche Tecnam.*$/i, "Tecnam"],
-    [/Tecnam.*$/i, "Tecnam"],
-    [/Commonwealth Aircraft Corporation.*$/i, "CAC"],
-    [/British Aerospace.*$/i, "British Aerospace"],
-    [/Partenavia Costruzioni Aeronautiche.*$/i, "Partenavia"],
-    [/Diamond Aircraft.*$/i, "Diamond"],
-    [/de Havilland.*$/i, "de Havilland"],
-    [/GippsAero Pty Ltd/i, "GippsAero"],
-    [/Gippsland Aeronautics Pty Ltd/i, "GippsAero"],
-    [/S.O.C.A.T.A.*$/i, "SOCATA"],
-    [/Dassault.*$/i, "Dassault"],
-    [/Mooney Aircraft Corp/i, "Mooney"],
-    [/Textron Aviation.*$/i, "Textron Aviation"],
-    [/American Champion.*$/i, "American Champion"],
-    [/Cirrus Design Corporation.*$/i, "Cirrus"],
-    [/Airbus Helicopters.*$/i, "Airbus Helicopters"],
-    [/Aerospatiale.*$/i, "Aerospatiale"],
-    [/Eurocopter.*$/i, "Eurocopter"],
-    [/Bell Helicopter Textron.*$/i, "Bell Textron"],
-    [/Bell Textron.*$/i, "Bell Textron"],
-    [/Costruzioni Aeronautiche Giovanni Agusta/i, "Agusta"],
-    [/Agusta S.*$/i, "Agusta"],
-    [/Agusta Aerospace.*$/i, "Agusta"],
-    [/Agusta, S.*$/i, "Agusta"],
-    [/Agustawestland.*$/i, "AgustaWestland"],
-    [/Leonardo S.P.A.*$/i, "Leonardo"],
-    [/Finmeccanica S.P.A.*$/i, "Leonardo"],
-    [/Sikorsky Aircraft.*$/i, "Sikorsky"],
-    [/Beech Aircraft Corp/i, "Beech"],
-    [/Fairchild I.*$/i, "Fairchild"],
-    [/Fokker Aircraft B.V./i, "Fokker"],
-    [/Atr - Gie Avions.*/i, ""],
-    [/Pilatus Aircraft Ltd./i, "Pilatus"]
+    [/The Boeing Company/i, 'Boeing'],
+    [/Airbus Industrie/i, 'Airbus'],
+    [/Cessna Aircraft Company/i, 'Cessna'],
+    [/Piper Aircraft.*$/i, 'Piper'],
+    [/The New Piper.*$/i, 'Piper'],
+    [/Beech.*$/i, 'Beechcraft'],
+    [/Pilatus Aircraft Ltd/i, 'Pilatus'],
+    [/Fokker.*$/i, 'Fokker'],
+    [/Atr - Gie Avions.*$/i, 'ATR'],
+    [/Fairchild.*$/i, 'Fairchild'],
+    [/S.A.A.B..*$/i, 'SAAB'],
+    [/North American Aviation Inc/i, 'North American Aviation'],
+    [/Robinson Helicopter Co/i, 'Robinson'],
+    [/Embraer.*$/i, 'Embraer'],
+    [/Costruzioni Aeronautiche Tecnam.*$/i, 'Tecnam'],
+    [/Tecnam.*$/i, 'Tecnam'],
+    [/Commonwealth Aircraft Corporation.*$/i, 'CAC'],
+    [/British Aerospace.*$/i, 'British Aerospace'],
+    [/Partenavia Costruzioni Aeronautiche.*$/i, 'Partenavia'],
+    [/Diamond Aircraft.*$/i, 'Diamond'],
+    [/de Havilland.*$/i, 'de Havilland'],
+    [/GippsAero Pty Ltd/i, 'GippsAero'],
+    [/Gippsland Aeronautics Pty Ltd/i, 'GippsAero'],
+    [/S.O.C.A.T.A.*$/i, 'SOCATA'],
+    [/Dassault.*$/i, 'Dassault'],
+    [/Mooney Aircraft Corp/i, 'Mooney'],
+    [/Textron Aviation.*$/i, 'Textron Aviation'],
+    [/American Champion.*$/i, 'American Champion'],
+    [/Cirrus Design Corporation.*$/i, 'Cirrus'],
+    [/Airbus Helicopters.*$/i, 'Airbus Helicopters'],
+    [/Aerospatiale.*$/i, 'Aerospatiale'],
+    [/Eurocopter.*$/i, 'Eurocopter'],
+    [/Bell Helicopter Textron.*$/i, 'Bell Textron'],
+    [/Bell Textron.*$/i, 'Bell Textron'],
+    [/Costruzioni Aeronautiche Giovanni Agusta/i, 'Agusta'],
+    [/Agusta S.*$/i, 'Agusta'],
+    [/Agusta Aerospace.*$/i, 'Agusta'],
+    [/Agusta, S.*$/i, 'Agusta'],
+    [/Agustawestland.*$/i, 'AgustaWestland'],
+    [/Leonardo S.P.A.*$/i, 'Leonardo'],
+    [/Finmeccanica S.P.A.*$/i, 'Leonardo'],
+    [/Sikorsky Aircraft.*$/i, 'Sikorsky'],
+    [/Beech Aircraft Corp/i, 'Beech'],
+    [/Fairchild I.*$/i, 'Fairchild'],
+    [/Fokker Aircraft B.V./i, 'Fokker'],
+    [/Atr - Gie Avions.*/i, ''],
+    [/Pilatus Aircraft Ltd./i, 'Pilatus']
   ].freeze
 
   AIRCRAFT_MODEL_PATTERNS = [
@@ -154,14 +154,14 @@ class AircraftProcessor
     model
   end
 
-  def self.normalise_and_find_operator(name)
+  def self.normalise_and_find_operator(input, country:)
+    name = input.dup
     OPERATOR_REPLACEMENT_PATTERNS.each { |p| name.gsub!(p[0], p[1]) }
     name = name.titleize
-    puts "Searching for #{name}
-"
+    puts "Searching for #{name}"
     operator = Operator.search(name: name)&.first
     if operator.nil?
-      operator = Operator.new(name: name, country: 'Australia')
+      operator = Operator.new(name: name, country: country)
       operator.save(validate: false)
     end
 
