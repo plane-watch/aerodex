@@ -23,11 +23,11 @@ class OperatorSource < ApplicationRecord
   scope :with_icao, ->(icao_code) { where(icao_code: icao_code) unless icao_code.nil? }
   scope :with_iata, ->(iata_code) { where(iata_code: iata_code) unless iata_code.nil? }
   scope :with_icao_and_name, lambda { |icao_code, name|
-                               where(icao_code: icao_code, name: name) unless icao_code.nil? || name.nil?
-                             }
+    where(icao_code: icao_code, name: name) unless icao_code.nil? || name.nil?
+  }
   scope :with_iata_and_name, lambda { |iata_code, name|
-                               where(iata_code: iata_code, name: name) unless iata_code.nil? || name.nil?
-                             }
+    where(iata_code: iata_code, name: name) unless iata_code.nil? || name.nil?
+  }
 
   scope :find_unique_operator, lambda { |args|
     if args['icao_code'] && (args['iata_code'] || args['name'])
@@ -42,6 +42,6 @@ class OperatorSource < ApplicationRecord
   private
 
   def icao_or_iata_code
-    errors.add(:missing_code, 'Record must have one of ICAO or IATA code.') unless icao_code || iata_code
+    errors.add(:base, 'Record must have one of ICAO or IATA code.') unless icao_code || iata_code
   end
 end

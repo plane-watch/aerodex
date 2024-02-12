@@ -17,22 +17,22 @@
 #  index_operator_sources_on_data  (data) USING gin
 #
 
-one:
-  type: 'VRSOperatorSource'
-  icao_code: 'AAA'
-  iata_code: 'AA'
-  name: 'Airline A'
-  import_date: <%= Date.today %>
-  data:
-    name: "MyName"
-    validity_to: nil
+# one:
+#   type: 'VRSOperatorSource'
+#   icao_code: 'AAA'
+#   iata_code: 'AA'
+#   name: 'Airline A'
+#   import_date: <%= Date.today %>
+#   data:
+#     name: "MyName"
+#     validity_to: nil
 
-two:
-  type: 'VRSOperatorSource'
-  icao_code: 'AAB'
-  iata_code: 'AB'
-  name: 'Airline B'
-  import_date: <%= Date.today %>
-  data:
-    name: "MyName"
-    validity_to: nil
+# two:
+#   type: 'VRSOperatorSource'
+#   icao_code: 'AAB'
+#   iata_code: 'AB'
+#   name: 'Airline B'
+#   import_date: <%= Date.today %>
+#   data:
+#     name: "MyName"
+  #     validity_to: nil

@@ -70,3 +70,5 @@ gem 'meilisearch-rails', '~> 0.9.1'
 gem 'pagy', '~> 6.4'
 gem 'paper_trail', '~> 15.0'
 gem 'table_print', '~> 1.5'
+# for string comparison distance calculation
+gem "jaro_winkler", "~> 1.5"

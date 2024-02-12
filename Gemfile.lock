@@ -128,6 +128,7 @@ GEM
     io-console (0.6.0)
     irb (1.7.0)
       reline (>= 0.3.0)
+    jaro_winkler (1.5.6)
     jbuilder (2.11.5)
       actionview (>= 5.0.0)
       activesupport (>= 5.0.0)
@@ -308,6 +309,7 @@ DEPENDENCIES
   devise (~> 4.9)
   excon (~> 0.100.0)
   foreman
+  jaro_winkler (~> 1.5)
   jbuilder
   jsbundling-rails
   meilisearch-rails (~> 0.9.1)
