@@ -16,7 +16,7 @@
 #
 #  index_operator_sources_on_data  (data) USING gin
 #
-class OpenTransportOperatorSource < OperatorSource
+class OpenTravelOperatorSource < OperatorSource
   include MeiliSearch::Rails
 
   meilisearch do

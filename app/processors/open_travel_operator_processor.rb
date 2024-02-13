@@ -1,6 +1,6 @@
 require 'csv'
 
-class OpenTransportOperatorProcessor < OperatorProcessor
+class OpenTravelOperatorProcessor < OperatorProcessor
   @transform_data = {
     '3char_code' => {
       function: ->(value) { value&.strip },
@@ -49,12 +49,12 @@ class OpenTransportOperatorProcessor < OperatorProcessor
     csv = CSV.parse(csv_data, headers: true, encoding: 'utf-8:utf-8', col_sep: '^')
 
     batch_import_timestamp = DateTime.now
-    is_first_import = OpenTransportOperatorSource.none?
+    is_first_import = OpenTravelOperatorSource.none?
     records_processed = 0
 
     import_errors = []
 
-    OpenTransportOperatorSource.transaction do
+    OpenTravelOperatorSource.transaction do
       csv&.each do |row|
         attributes = {}
 
@@ -104,15 +104,15 @@ class OpenTransportOperatorProcessor < OperatorProcessor
     # prefer ICAO, fallback to IATA, check with name
     records = if icao_code.present? && iata_code.present?
                 Rails.logger.debug('with_icao, with_iata')
-                OpenTransportOperatorSource.with_icao(icao_code).with_iata(iata_code)
+                OpenTravelOperatorSource.with_icao(icao_code).with_iata(iata_code)
               elsif icao_code.present?
                 Rails.logger.debug('with_icao_and_name')
-                OpenTransportOperatorSource.with_icao_and_name(icao_code, name)
+                OpenTravelOperatorSource.with_icao_and_name(icao_code, name)
               elsif iata_code.present?
                 Rails.logger.debug('with_iata_and_name')
-                OpenTransportOperatorSource.with_iata_and_name(iata_code, name)
+                OpenTravelOperatorSource.with_iata_and_name(iata_code, name)
               else
-                OpenTransportOperatorSource.none
+                OpenTravelOperatorSource.none
               end
 
     validity_to_date = validity_to&.to_date
@@ -126,7 +126,7 @@ class OpenTransportOperatorProcessor < OperatorProcessor
     # no existing record for that ICAO or IATA code and name and it's still valid.
     return unless records&.none? && (validity_to_date.nil? || validity_to_date >= Date.today)
 
-    OpenTransportOperatorSource.new
+    OpenTravelOperatorSource.new
   end
 
   def self.parse_alt_names_to_a(value)

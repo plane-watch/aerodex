@@ -1,6 +1,14 @@
 # frozen_string_literal: true
 
 class Processor
+  def self.transform_field(key, value)
+    return nil if @transform_data[key].nil?
+
+    {
+      key: @transform_data[key][:field] || key,
+      value: @transform_data[key][:function] ? @transform_data[key][:function].call(value) : value
+    }
+  end
   def self.get_source_from_url(url)
     mock = true if Rails.env == 'test'
     result = Excon.get(url, mock: mock)

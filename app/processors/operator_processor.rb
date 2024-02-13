@@ -13,7 +13,7 @@ class OperatorProcessor < Processor
     # Full outer join VRS to OTD
     vrs = VRSDataOperatorSource.all
 
-    otd_ids = OpenTransportOperatorSource.all.pluck(:id)
+    otd_ids = OpenTravelOperatorSource.all.pluck(:id)
     errors = []
 
     Operator.transaction do
@@ -21,9 +21,9 @@ class OperatorProcessor < Processor
         vrs.each do |v_record|
           # Match on Name + one of ICAO or IATA code
           o_record = if v_record.icao_code.nil?
-                       OpenTransportOperatorSource.with_iata_and_name(v_record.iata_code, v_record.name).first
+                       OpenTravelOperatorSource.with_iata_and_name(v_record.iata_code, v_record.name).first
                      else
-                       OpenTransportOperatorSource.with_icao_and_name(v_record.icao_code, v_record.name).first
+                       OpenTravelOperatorSource.with_icao_and_name(v_record.icao_code, v_record.name).first
                      end
 
           # if there isn't a match,
@@ -33,12 +33,12 @@ class OperatorProcessor < Processor
             candidate_match = { id: nil, confidence: 0 }
             confidence_threshold = v_record.icao_code.present? ? 0.5 : 0.75
 
-            possible_matches = OpenTransportOperatorSource
+            possible_matches = OpenTravelOperatorSource
             if v_record.icao_code
-              possible_matches = possible_matches.merge(OpenTransportOperatorSource.where(icao_code: v_record.icao_code))
+              possible_matches = possible_matches.merge(OpenTravelOperatorSource.where(icao_code: v_record.icao_code))
             end
             if v_record.iata_code
-              possible_matches = possible_matches.merge(OpenTransportOperatorSource.where(iata_code: v_record.iata_code))
+              possible_matches = possible_matches.merge(OpenTravelOperatorSource.where(iata_code: v_record.iata_code))
             end
 
             possible_matches.each do |match|
@@ -102,7 +102,7 @@ class OperatorProcessor < Processor
 
         # complete the full outer join and add the un-matched OTD records.
         otd_ids.each do |o_id|
-          record = OpenTransportOperatorSource.find(o_id)
+          record = OpenTravelOperatorSource.find(o_id)
           begin
             Operator.create!(name: record.name, icao_code: record.icao_code, iata_code: record.iata_code)
           rescue ActiveRecord::RecordInvalid => e
@@ -128,14 +128,5 @@ class OperatorProcessor < Processor
   def self.normalise_name(name)
     OPERATOR_REWRITE_PATTERNS.each { |p| name.gsub!(p[0], p[1]) }
     name
-  end
-
-  def self.transform_field(key, value)
-    return nil if @transform_data[key].nil?
-
-    {
-      key: @transform_data[key][:field] || key,
-      value: @transform_data[key][:function] ? @transform_data[key][:function].call(value) : value
-    }
   end
 end
