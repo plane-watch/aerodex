@@ -15,7 +15,27 @@ module Aerodex
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.
     config.autoload_lib(ignore: %w(assets tasks))
-    config.autoload_paths << "#{root}/processors"
+    config.autoload_paths << Rails.root.join('app', 'processor')
+    config.eager_load_paths << Rails.root.join('app', 'processor')
+
+    # Add Zeitwerk debugging inside the configuration block
+    if Rails.env.development?
+      # Enable Zeitwerk debugging
+      config.autoloader = :zeitwerk
+
+      # Print autoload paths and debug information
+      config.after_initialize do
+        puts "\nAutoload paths:"
+        Rails.autoloaders.main.dirs.each do |dir|
+          puts "  #{dir}"
+        end
+
+        # Set up logging for Zeitwerk
+        Rails.autoloaders.main.on_load do |cpath, value, abspath|
+          puts "Loaded: #{cpath} from #{abspath}"
+        end
+      end
+    end
 
     # Configuration for the application, engines, and railties goes here.
     #

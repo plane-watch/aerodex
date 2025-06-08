@@ -17,7 +17,7 @@
 
 module Sources
   module Country
-    class OpenTravelCountry < CountrySource
+    class OpenTravelCountrySource < CountrySource
     end
   end
 end

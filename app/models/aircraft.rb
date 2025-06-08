@@ -12,7 +12,7 @@
 #  model                :string
 #  owner                :string
 #  registration         :string
-#  registration_country :string
+#  registration_country_id :integer
 #  registration_date    :date
 #  serial_number        :string
 #  status               :integer          default("active")
@@ -29,6 +29,8 @@ class Aircraft < ApplicationRecord
 
   belongs_to :aircraft_type
   belongs_to :operator
+  belongs_to :registration_country, class_name: 'Country'
+
   has_one :manufacturer, through: :aircraft_type
   enum status: { active: 0, withdrawn: 1, hull_loss: 2, scrapped: 3, stored: 4, written_off: 5 }
 

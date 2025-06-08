@@ -16,10 +16,14 @@
 #
 #  index_operator_sources_on_data  (data) USING gin
 #
-class OpenTravelOperatorSource < OperatorSource
-  include MeiliSearch::Rails
+module Sources
+  module Operator
+    class OpenTravelOperatorSource < OperatorSource
+      include MeiliSearch::Rails
 
-  meilisearch do
-    attribute :name
+      meilisearch do
+        attribute :name
+      end
+    end
   end
 end

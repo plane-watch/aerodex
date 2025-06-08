@@ -1,6 +1,6 @@
 # frozen_string_literal: true
-module Processors
-  class Processor
+module Processor
+  class ProcessorBase
     def self.transform_field(key, value)
       return nil if @transform_data[key].nil?
 

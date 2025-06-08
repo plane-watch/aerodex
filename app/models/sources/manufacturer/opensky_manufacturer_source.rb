@@ -15,7 +15,7 @@
 
 module Sources
   module Manufacturer
-    class OpenskyManufacturer < ManufacturerSource
+    class OpenskyManufacturerSource < ManufacturerSource
     end
   end
 end
