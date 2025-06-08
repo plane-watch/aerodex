@@ -37,7 +37,7 @@ module Processor
 
         import_errors = []
 
-        Sources::Country::OpenTravelCountrySource.transaction do
+        Source::Country::OpenTravelCountrySource.transaction do
           csv&.each do |row|
             attributes = {}
 
@@ -49,7 +49,7 @@ module Processor
             end
 
             if attributes['name'].present? && attributes['icao_code'].present?
-              record = Sources::Country::OpenTravelCountrySource.find_or_initialize_by(iso_2char_code: attributes['iso_2char_code'])
+              record = Source::Country::OpenTravelCountrySource.find_or_initialize_by(iso_2char_code: attributes['iso_2char_code'])
               record.iso_2char_code = attributes['iso_2char_code']
               record.iso_3char_code = attributes['iso_3char_code']
               record.iso_num_code = attributes['iso_num_code']

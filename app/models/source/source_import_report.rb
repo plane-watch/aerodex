@@ -10,7 +10,7 @@
 #  created_at        :datetime         not null
 #  updated_at        :datetime         not null
 #
-module Sources
+module Source
   class SourceImportReport < ApplicationRecord
   end
 end

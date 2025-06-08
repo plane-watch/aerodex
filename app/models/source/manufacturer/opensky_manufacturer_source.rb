@@ -13,7 +13,7 @@
 #  updated_at  :datetime         not null
 #
 
-module Sources
+module Source
   module Manufacturer
     class OpenskyManufacturerSource < ManufacturerSource
     end

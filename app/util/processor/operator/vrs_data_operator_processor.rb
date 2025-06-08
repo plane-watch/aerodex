@@ -51,7 +51,7 @@ module Processor
           search_params = attributes.dup.slice(*%w[icao_code iata_code name])
           search_params.except!(*%w[name iata_code]) if search_params['icao_code']
 
-          record = VRSDataOperatorSource.find_unique_operator(search_params).first_or_initialize
+          record = Source::Operator::VRSDataOperatorSource.find_unique_operator(search_params).first_or_initialize
 
           record.attributes = {
             icao_code: attributes['icao_code'],

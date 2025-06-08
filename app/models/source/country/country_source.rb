@@ -15,9 +15,9 @@
 #  updated_at     :datetime         not null
 #
 
-module Sources
+module Source
   module Country
-    class OpenTravelCountrySource < CountrySource
+    class CountrySource < ApplicationRecord
     end
   end
 end

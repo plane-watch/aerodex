@@ -16,7 +16,7 @@
 #
 #  index_operator_sources_on_data  (data) USING gin
 #
-module Sources
+module Source
   module Operator
     class OperatorSource < ApplicationRecord
       validate :icao_or_iata_code

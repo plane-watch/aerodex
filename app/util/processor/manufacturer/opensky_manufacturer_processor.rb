@@ -25,7 +25,7 @@ module Processor
 
         import_errors = []
 
-        Sources::Manufacturer::OpenskyManufacturerSource.transaction do
+        Source::Manufacturer::OpenskyManufacturerSource.transaction do
           csv&.each do |row|
             attributes = {}
 
@@ -39,7 +39,7 @@ module Processor
             country = nil
 
             if attributes['name'].present? && attributes['icao_code'].present?
-              record = Sources::Manufacturer::OpenskyManufacturerSource.find_or_initialize_by(icao_code: attributes['icao_code'])
+              record = Source::Manufacturer::OpenskyManufacturerSource.find_or_initialize_by(icao_code: attributes['icao_code'])
               record.icao_code = attributes['icao_code']
               record.name = attributes['name']
               record.import_date = Date.today
