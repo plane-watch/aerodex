@@ -18,6 +18,7 @@ class OpenskyManufacturerProcessor < Processor
     csv_data = get_source_from_url(url)
     return false if csv_data.nil?
 
+    # liberal parsing is needed for nested quotes inside fields
     csv = CSV.parse(csv_data, headers: true, encoding: 'utf-8:utf-8', col_sep: ',', liberal_parsing: true)
 
     import_errors = []
@@ -33,10 +34,15 @@ class OpenskyManufacturerProcessor < Processor
           attributes[transformed_data[:key]] = transformed_data[:value]
         end
 
-        puts attributes
+        country = nil
+
 
         if attributes['name'].present? && attributes['icao_code'].present?
-          OpenskyManufacturerSource.create!(name: attributes['name'], icao_code: attributes['code'])
+          record = OpenskyManufacturerSource.find_or_initialize_by(icao_code: attributes['icao_code'])
+          record.icao_code = attributes['icao_code']
+          record.name = attributes['name']
+          record.import_date = Date.today
+          record.save!
         end
       end
     end

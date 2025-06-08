@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_02_13_113255) do
+ActiveRecord::Schema[7.1].define(version: 2024_02_14_082152) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -69,6 +69,29 @@ ActiveRecord::Schema[7.1].define(version: 2024_02_13_113255) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "countries", force: :cascade do |t|
+    t.string "iso_2char_code"
+    t.string "iso_3char_code"
+    t.string "iso_num_code"
+    t.string "name"
+    t.string "capital"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "country_sources", force: :cascade do |t|
+    t.string "iso_2char_code"
+    t.string "iso_3char_code"
+    t.string "iso_num_code"
+    t.string "name"
+    t.string "capital"
+    t.string "type"
+    t.datetime "import_date", null: false
+    t.jsonb "data", default: "{}", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "flight_information_regions", force: :cascade do |t|
     t.string "icao_code"
     t.string "country"
@@ -78,18 +101,22 @@ ActiveRecord::Schema[7.1].define(version: 2024_02_13_113255) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "manufacturer_sources", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "icao_code", null: false
+    t.string "type", null: false
+    t.string "country"
+    t.datetime "import_date", null: false
+    t.jsonb "data", default: "{}", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "manufacturers", force: :cascade do |t|
     t.string "name"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "icao_code"
-  end
-
-  create_table "opensky_manufacturer_sources", force: :cascade do |t|
-    t.string "name"
-    t.string "icao_code"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
   end
 
   create_table "operator_sources", force: :cascade do |t|
