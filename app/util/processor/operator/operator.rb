@@ -1,6 +1,6 @@
 module Processor
   module Operator
-    class Operator < Processor::Base
+    class Operator < Processor::Base # rubocop:disable Metrics/ClassLength
       OPERATOR_REWRITE_PATTERNS = [
         [/Royal Flying Doctor Service.*/, 'Royal Flying Doctor Service'],
         [/State Of New South Wales Represented By Nsw Police Force/, 'NSW Police Force'],
@@ -22,10 +22,12 @@ module Processor
             vrs.each do |v_record|
               # Match on Name + one of ICAO or IATA code
               o_record = if v_record.icao_code.nil?
-                Source::Operator::OpenTravelOperatorSource.with_iata_and_name(v_record.iata_code, v_record.name).first
-                        else
-                          Source::Operator::OpenTravelOperatorSource.with_icao_and_name(v_record.icao_code, v_record.name).first
-                        end
+                           Source::Operator::OpenTravelOperatorSource.with_iata_and_name(v_record.iata_code,
+                                                                                         v_record.name).first
+                         else
+                           Source::Operator::OpenTravelOperatorSource.with_icao_and_name(v_record.icao_code,
+                                                                                         v_record.name).first
+                         end
 
               # if there isn't a match,
               #   lookup just the ICAO or just the IATA, compare names for the matching records, choose the highest confidence.
@@ -45,18 +47,18 @@ module Processor
                 possible_matches.each do |match|
                   Rails.logger.debug "Candidate: #{match.inspect}"
                   match_confidence = if (v_record.icao_code == match.icao_code) && (v_record.iata_code == match.iata_code)
-                                      1.0
-                                    else
-                                      name_scores = []
-                                      all_names = [match.name]
-                                      all_names += match.data['alt_names'] if match.data['alt_names'].present?
-                                      all_names.each do |name|
-                                        name_scores.append(
-                                          JaroWinkler.distance(v_record.name, name)
-                                        )
-                                      end
-                                      name_scores.max
-                                    end
+                                       1.0
+                                     else
+                                       name_scores = []
+                                       all_names = [match.name]
+                                       all_names += match.data['alt_names'] if match.data['alt_names'].present?
+                                       all_names.each do |name|
+                                         name_scores.append(
+                                           JaroWinkler.distance(v_record.name, name)
+                                         )
+                                       end
+                                       name_scores.max
+                                     end
 
                   Rails.logger.debug "Confidence: #{match_confidence}"
                   if match_confidence >= confidence_threshold && match_confidence > candidate_match[:confidence]
@@ -95,7 +97,7 @@ module Processor
                   errors << {
                     record: v_record,
                     source: 'VRS',
-                    error: new_operator.errors
+                    error: obj.errors
                   }
                 end
               end

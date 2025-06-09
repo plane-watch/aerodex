@@ -40,7 +40,6 @@ module Processor
         Source::Country::OpenTravelCountrySource.transaction do
           csv&.each do |row|
             attributes = {}
-
             row.headers.each do |key|
               transformed_data = transform_field(key, row[key])
               next if transformed_data.nil?
@@ -48,21 +47,23 @@ module Processor
               attributes[transformed_data[:key]] = transformed_data[:value]
             end
 
-            if attributes['name'].present? && attributes['icao_code'].present?
-              record = Source::Country::OpenTravelCountrySource.find_or_initialize_by(iso_2char_code: attributes['iso_2char_code'])
-              record.iso_2char_code = attributes['iso_2char_code']
-              record.iso_3char_code = attributes['iso_3char_code']
-              record.iso_num_code = attributes['iso_num_code']
-              record.name = attributes['name']
-              record.capital = attributes['capital']
-              record.import_date = Date.today
-              record.save!
+            puts attributes.inspect
+
+            unless attributes['name'].present? && attributes['iso_2char_code'].present? && attributes['iso_3char_code'].present?
+              next
             end
+
+            record = Source::Country::OpenTravelCountrySource.find_or_initialize_by(iso_2char_code: attributes['iso_2char_code'])
+            record.iso_2char_code = attributes['iso_2char_code']
+            record.iso_3char_code = attributes['iso_3char_code']
+            record.iso_num_code = attributes['iso_num_code']
+            record.name = attributes['name']
+            record.capital = attributes['capital']
+            record.import_date = Date.today
+            record.save!
           end
         end
       end
     end
   end
 end
-
-
