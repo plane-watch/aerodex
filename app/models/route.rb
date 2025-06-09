@@ -9,9 +9,9 @@
 #  operator_id :string
 #
 class Route < ApplicationRecord
+  include MeiliSearch::Rails
   has_many :route_segments
   belongs_to :operator
 
   has_paper_trail
-
 end

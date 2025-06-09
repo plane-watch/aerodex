@@ -12,11 +12,12 @@
 #  route_id       :integer
 #
 class RouteSegment < ApplicationRecord
+  include MeiliSearch::Rails
+
   belongs_to :route
   belongs_to :airport
   has_one :flight_information_region, through: :airport
   has_one :operator, through: :route
 
   has_paper_trail
-
 end
