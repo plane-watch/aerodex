@@ -16,7 +16,7 @@
 
 module Source
   module Manufacturer
-    class OpenskyManufacturerSource < ManufacturerSource
+    class CfappsICAOIntManufacturerSource < ManufacturerSource
     end
   end
 end

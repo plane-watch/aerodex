@@ -23,7 +23,7 @@ class Operator < ApplicationRecord
   has_many :route_segments, through: :routes
 
   validates :name, presence: true, allow_blank: false
-  validates :icao_code, allow_blank: true, format: { with: /\A[A-Z0-9]{3}\z/ }, uniqueness: { case_sensitive: false } #, scope: :active }
+  validates :icao_code, allow_blank: true, format: { with: /\A[A-Z0-9]{3}\z/ }, uniqueness: { case_sensitive: false } # , scope: :active }
   validates :iata_code, allow_blank: true, format: { with: /\A[A-Z0-9]{2}\z/ }
 
   has_paper_trail
@@ -33,5 +33,4 @@ class Operator < ApplicationRecord
     attribute :iata_code
     attribute :country
   end
-
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_02_14_082152) do
+ActiveRecord::Schema[7.1].define(version: 2025_06_09_091335) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -110,6 +110,7 @@ ActiveRecord::Schema[7.1].define(version: 2024_02_14_082152) do
     t.jsonb "data", default: "{}", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "alt_names"
   end
 
   create_table "manufacturers", force: :cascade do |t|
@@ -117,6 +118,9 @@ ActiveRecord::Schema[7.1].define(version: 2024_02_14_082152) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "icao_code"
+    t.jsonb "alt_names"
+    t.bigint "country_id"
+    t.index ["country_id"], name: "index_manufacturers_on_country_id"
   end
 
   create_table "operator_sources", force: :cascade do |t|
@@ -201,4 +205,5 @@ ActiveRecord::Schema[7.1].define(version: 2024_02_14_082152) do
     t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
   end
 
+  add_foreign_key "manufacturers", "countries"
 end

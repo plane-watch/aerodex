@@ -19,8 +19,6 @@
 module Source
   module Operator
     class OpenTravelOperatorSource < OperatorSource
-      include MeiliSearch::Rails
-
       meilisearch do
         attribute :name
       end
