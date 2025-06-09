@@ -3,7 +3,7 @@
 require 'csv'
 module Processor
   module Operator
-    class VRSDataOperatorProcessor < Processor::Operator::OperatorProcessor # rubocop:disable Style/Documentation
+    class VRSData < Operator
       @transform_data = {
         'Name' => {
           function: ->(value) { normalise_name(value) },

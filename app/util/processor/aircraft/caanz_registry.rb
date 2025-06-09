@@ -4,7 +4,7 @@
 # aircraft registry
 module Processor
   module Aircraft
-    class CAANZAircraftRegistryProcessor < Processor::Aircraft::AircraftProcessor
+    class CAANZRegistry < Processor::Base
       @transform_data = {
         'Reg Mark' => {
           field: :registration,

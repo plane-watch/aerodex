@@ -2,7 +2,7 @@ require 'csv'
 
 module Processor
   module Country
-    class OpenTravelCountryProcessor < Processor::Processor
+    class OpenTravel < Processor::Base
       @transform_data = {
         'iso_2char_code' => {
           function: ->(value) { value&.strip },

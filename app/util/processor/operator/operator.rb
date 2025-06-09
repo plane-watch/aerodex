@@ -1,6 +1,6 @@
 module Processor
   module Operator
-    class OperatorProcessor < Processor::ProcessorBase
+    class Operator < Processor::Base
       OPERATOR_REWRITE_PATTERNS = [
         [/Royal Flying Doctor Service.*/, 'Royal Flying Doctor Service'],
         [/State Of New South Wales Represented By Nsw Police Force/, 'NSW Police Force'],

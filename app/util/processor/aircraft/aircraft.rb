@@ -7,7 +7,7 @@
 
 module Processor
   module Aircraft
-    class AircraftProcessor < Processor::ProcessorBase
+    class Aircraft < Processor::Base
       MANUFACTURER_REPLACEMENT_PATTERNS = [
         [/The Boeing Company/i, 'Boeing'],
         [/Airbus Industrie/i, 'Airbus'],

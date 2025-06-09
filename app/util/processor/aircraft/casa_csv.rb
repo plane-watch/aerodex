@@ -6,7 +6,7 @@
 # processor.
 module Processor
   module Aircraft
-    class CASAAircraftCsvProcessor < CASAAircraftRegistryProcessor
+    class CASACSV < Processor::Base
 
       @transform_data = {
         'model' => {

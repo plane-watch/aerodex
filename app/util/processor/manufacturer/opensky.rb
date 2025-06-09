@@ -2,7 +2,7 @@ require 'csv'
 
 module Processor
   module Manufacturer
-    class OpenskyManufacturerProcessor < Processor::ProcessorBase
+    class OpenSky < Processor::Base
       @transform_data = {
         'Code' => {
           function: ->(value) { value&.strip },
