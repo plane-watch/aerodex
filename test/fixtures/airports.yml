@@ -15,31 +15,28 @@
 #  wmo_code                     :string
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
+#  country_id                   :bigint           not null
 #  flight_information_region_id :integer
 #
+# Indexes
+#
+#  index_airports_on_country_id  (country_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (country_id => countries.id)
+#
 
-one:
-  name: MyString
-  city: MyString
-  country: MyString
-  iata_code: MyString
-  icao_code: MyString
-  wmo_code: MyString
-  flight_information_region_id: 1
-  latitude: 9.99
-  longitude: 9.99
-  altitude: 9.99
-  timezone: MyString
+yssy:
+  name: Sydney International Airport
+  city: Sydney
+  country: australia
+  iata_code: SYD
+  icao_code: YSSY
+  wmo_code: 94719
+  flight_information_region: melbourne
+  latitude: -33.946111
+  longitude: 151.177222
+  altitude: 13
+  timezone: Australia/Sydney
 
-two:
-  name: MyString
-  city: MyString
-  country: MyString
-  iata_code: MyString
-  icao_code: MyString
-  wmo_code: MyString
-  flight_information_region_id: 1
-  latitude: 9.99
-  longitude: 9.99
-  altitude: 9.99
-  timezone: MyString

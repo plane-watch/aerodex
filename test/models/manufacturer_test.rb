@@ -18,10 +18,34 @@
 #
 #  fk_rails_...  (country_id => countries.id)
 #
-require "test_helper"
+require 'test_helper'
 
 class ManufacturerTest < ActiveSupport::TestCase
-  # test "the truth" do
-  #   assert true
-  # end
+  test 'can be associated with a country' do
+    country = countries(:united_states)
+    manufacturer = manufacturers(:boeing)
+
+    manufacturer.country = country
+    assert manufacturer.save
+    assert_equal country, manufacturer.country
+  end
+
+  test 'can exist without a country' do
+    manufacturer = manufacturers(:embraer)
+    manufacturer.country = nil
+
+    assert manufacturer.save
+    assert_nil manufacturer.country
+  end
+
+  test 'can access country attributes' do
+    country = countries(:france)
+    manufacturer = manufacturers(:airbus)
+
+    manufacturer.country = country
+    manufacturer.save
+
+    assert_equal country.name, manufacturer.country.name
+    assert_equal country.iso_2char_code, manufacturer.country.iso_2char_code
+  end
 end

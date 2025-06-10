@@ -3,12 +3,20 @@
 # Table name: operators
 #
 #  id         :bigint           not null, primary key
-#  country    :string
 #  iata_code  :string
 #  icao_code  :string
 #  name       :string
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
+#  country_id :bigint
+#
+# Indexes
+#
+#  index_operators_on_country_id  (country_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (country_id => countries.id)
 #
 
 ## Notes:
@@ -21,6 +29,8 @@ class Operator < ApplicationRecord
 
   has_many :routes
   has_many :route_segments, through: :routes
+
+  belongs_to :country
 
   validates :name, presence: true, allow_blank: false
   validates :icao_code, allow_blank: true, format: { with: /\A[A-Z0-9]{3}\z/ }, uniqueness: { case_sensitive: false } # , scope: :active }

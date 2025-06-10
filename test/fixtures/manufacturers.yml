@@ -19,8 +19,26 @@
 #  fk_rails_...  (country_id => countries.id)
 #
 
-one:
-  name: MyString
+boeing:
+  name: Boeing
+  icao_code: BOE
+  country: united_states
+  alt_names: ["The Boeing Company"]
 
-two:
-  name: MyString
+airbus:
+  name: Airbus
+  icao_code: AIRBUS
+  country: france
+  alt_names: ["Airbus Industrie", "Airbus SAS"]
+
+cessna:
+  name: Cessna
+  icao_code: CNA
+  country: united_states
+  alt_names: ["Cessna Aircraft Company"]
+
+embraer:
+  name: Embraer
+  icao_code: EMB
+  alt_names: ["Empresa Brasileira de Aeronáutica"]
+

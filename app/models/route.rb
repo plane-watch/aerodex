@@ -6,7 +6,15 @@
 #  call_sign   :string
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
-#  operator_id :string
+#  operator_id :bigint           not null
+#
+# Indexes
+#
+#  index_routes_on_operator_id  (operator_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (operator_id => operators.id)
 #
 class Route < ApplicationRecord
   include MeiliSearch::Rails

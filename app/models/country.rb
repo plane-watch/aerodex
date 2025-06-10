@@ -13,4 +13,10 @@
 #
 class Country < ApplicationRecord
   include MeiliSearch::Rails
+
+  has_many :airports
+  has_many :manufacturers
+  has_many :operators
+  has_many :flight_information_regions
+  has_many :aircraft, foreign_key: :registration_country_id
 end
