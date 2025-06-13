@@ -1,8 +1,11 @@
 # frozen_string_literal: true
 
 module Processors
-  module Base
-    class AircraftProcessor < Processors::Base::Processor
+  module Aircraft
+    # Base class for aircraft-related processors
+    class Base
+      include Processors::Base
+
       MANUFACTURER_REPLACEMENT_PATTERNS = [
         [/The Boeing Company/i, 'Boeing'],
         [/Airbus Industrie/i, 'Airbus'],
@@ -128,51 +131,53 @@ module Processors
         [/STATE OF WESTERN AUSTRALIA/, 'Dept. of Biodiversity Conservation and Attractions (WA)'],
       ].freeze
 
-      def self.get_aircraft_manufacturer(manufacturer)
-        MANUFACTURER_REPLACEMENT_PATTERNS.each { |p| manufacturer.gsub!(p[0], p[1]) }
+      class << self
+        def get_aircraft_manufacturer(manufacturer)
+          MANUFACTURER_REPLACEMENT_PATTERNS.each { |p| manufacturer.gsub!(p[0], p[1]) }
 
-        manufacturer_obj = Rails.cache.fetch("aircraft_manufacturer_#{manufacturer}") do
-          Manufacturer.find_by(name: manufacturer.titleize)
+          manufacturer_obj = Rails.cache.fetch("aircraft_manufacturer_#{manufacturer}") do
+            Manufacturer.find_by(name: manufacturer.titleize)
+          end
+
+          raise ActiveRecord::RecordNotFound unless manufacturer_obj
+
+          manufacturer_obj.id
         end
 
-        raise ActiveRecord::RecordNotFound unless manufacturer_obj
+        def get_aircraft_type(type_code)
+          aircraft_type_obj = Rails.cache.fetch("aircraft_type_typecode_#{type_code}") do
+            AircraftType.find_by(type_code: type_code)
+          end
 
-        manufacturer_obj.id
-      end
+          raise ActiveRecord::RecordNotFound unless aircraft_type_obj
 
-      def self.get_aircraft_type(type_code)
-        aircraft_type_obj = Rails.cache.fetch("aircraft_type_typecode_#{type_code}") do
-          AircraftType.find_by(type_code: type_code)
+          aircraft_type_obj.id
         end
 
-        raise ActiveRecord::RecordNotFound unless aircraft_type_obj
-
-        aircraft_type_obj.id
-      end
-
-      def self.normalise_name(name)
-        name
-      end
-
-      def self.normalise_model(input)
-        model = input.dup
-        AIRCRAFT_MODEL_TO_FAMILY.each { |pattern, replacement| model.gsub!(pattern, replacement) }
-        model
-      end
-
-      def self.normalise_and_find_operator(input, country:)
-        name = input.dup
-        OPERATOR_REPLACEMENT_PATTERNS.each { |p| name.gsub!(p[0], p[1]) }
-        name = name.titleize
-        puts "Searching for #{name}"
-        operator = Operator.search(name: name)&.first
-        if operator.nil?
-          operator = Operator.new(name: name, country: country)
-          operator.save(validate: false)
+        def normalise_name(name)
+          name
         end
 
-        operator
+        def normalise_model(input)
+          model = input.dup
+          AIRCRAFT_MODEL_TO_FAMILY.each { |pattern, replacement| model.gsub!(pattern, replacement) }
+          model
+        end
+
+        def normalise_and_find_operator(input, country:)
+          name = input.dup
+          OPERATOR_REPLACEMENT_PATTERNS.each { |p| name.gsub!(p[0], p[1]) }
+          name = name.titleize
+          puts "Searching for #{name}"
+          operator = Operator.search(name: name)&.first
+          if operator.nil?
+            operator = Operator.new(name: name, country: country)
+            operator.save(validate: false)
+          end
+
+          operator
+        end
       end
     end
   end
-end 
+end

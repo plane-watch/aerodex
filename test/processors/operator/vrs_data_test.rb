@@ -4,7 +4,7 @@ require 'test_helper'
 
 module Processors
   module Operator
-    class VRSDataProcessorTest < ActiveSupport::TestCase
+    class VrsDataTest < ActiveSupport::TestCase
       # ... existing test code ...
     end
   end

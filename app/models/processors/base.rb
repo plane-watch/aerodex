@@ -1,9 +1,12 @@
 # frozen_string_literal: true
 
 module Processors
+  # Base module containing shared functionality for all processors
   module Base
-    class Processor
-      def self.transform_field(key, value)
+    extend ActiveSupport::Concern
+
+    class_methods do
+      def transform_field(key, value)
         return nil if @transform_data[key].nil?
 
         {
@@ -12,7 +15,7 @@ module Processors
         }
       end
 
-      def self.get_source_from_url(url)
+      def get_source_from_url(url)
         mock = true if Rails.env == 'test'
         result = Excon.get(url, mock: mock)
 
@@ -21,10 +24,10 @@ module Processors
         result.body
       end
 
-      def self.new_import_report(import_errors, records_processed)
+      def new_import_report(import_errors, records_processed)
         SourceImportReport.create(import_errors: import_errors, importer_type: name, records_processed: records_processed,
-                                success: true)
+                                  success: true)
       end
     end
   end
-end 
+end

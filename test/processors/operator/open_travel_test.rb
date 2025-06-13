@@ -4,7 +4,7 @@ require 'test_helper'
 
 module Processors
   module Operator
-    class OpenTravelProcessorTest < ActiveSupport::TestCase
+    class OpenTravelTest < ActiveSupport::TestCase
       # ... existing test code ...
     end
   end
