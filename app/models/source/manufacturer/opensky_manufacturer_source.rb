@@ -3,6 +3,7 @@
 # Table name: manufacturer_sources
 #
 #  id          :bigint           not null, primary key
+#  alt_names   :jsonb
 #  country     :string
 #  data        :jsonb            not null
 #  icao_code   :string           not null

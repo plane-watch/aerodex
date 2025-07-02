@@ -19,8 +19,6 @@
 module Source
   module Operator
     class VRSDataOperatorSource < OperatorSource
-      include MeiliSearch::Rails
-
       meilisearch do
         attribute :name
       end

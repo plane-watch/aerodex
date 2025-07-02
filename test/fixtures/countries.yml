@@ -12,16 +12,23 @@
 #  updated_at     :datetime         not null
 #
 
-one:
-  iso_2char_code: MyString
-  iso_3char_code: MyString
-  iso_num_code: MyString
-  name: MyString
-  capital: MyString
+united_states:
+  iso_2char_code: US
+  iso_3char_code: USA
+  iso_num_code: 840
+  name: United States
+  capital: Washington, D.C.
 
-two:
-  iso_2char_code: MyString
-  iso_3char_code: MyString
-  iso_num_code: MyString
-  name: MyString
-  capital: MyString
+france:
+  iso_2char_code: FR
+  iso_3char_code: FRA
+  iso_num_code: 250
+  name: France
+  capital: Paris
+
+australia:
+  iso_2char_code: AU
+  iso_3char_code: AUS
+  iso_num_code: 036
+  name: Australia
+  capital: Canberra

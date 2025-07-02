@@ -9,14 +9,19 @@
 #  region     :string
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
+#  country_id :bigint           not null
+#
+# Indexes
+#
+#  index_flight_information_regions_on_country_id  (country_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (country_id => countries.id)
 #
 
-one:
-  icao_code: MyString
-  country: MyString
-  region: MyString
-
-two:
-  icao_code: MyString
-  country: MyString
-  region: MyString
+melbourne:
+  icao_code: YMMM
+  region: Melbourne
+  bounds: (1,2,3,4)
+  country: australia

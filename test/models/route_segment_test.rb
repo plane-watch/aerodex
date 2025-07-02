@@ -11,6 +11,11 @@
 #  airport_id     :integer
 #  route_id       :integer
 #
+# Indexes
+#
+#  index_route_segments_on_airport_id  (airport_id)
+#  index_route_segments_on_route_id    (route_id)
+#
 require "test_helper"
 
 class RouteSegmentTest < ActiveSupport::TestCase
