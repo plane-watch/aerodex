@@ -11,17 +11,22 @@
 #  airport_id     :integer
 #  route_id       :integer
 #
+# Indexes
+#
+#  index_route_segments_on_airport_id  (airport_id)
+#  index_route_segments_on_route_id    (route_id)
+#
 
 one:
-  route_id: 1
-  airport_id: 1
+  route: aa_1
+  airport: yssy
   order: 1
   arrival_time: 2023-06-23 00:15:04
   departing_time: 2023-06-23 00:15:04
 
 two:
-  route_id: 1
-  airport_id: 1
-  order: 1
+  route: aa_1
+  airport: yssy
+  order: 2
   arrival_time: 2023-06-23 00:15:04
   departing_time: 2023-06-23 00:15:04

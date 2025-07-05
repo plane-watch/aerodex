@@ -2,15 +2,22 @@
 #
 # Table name: operators
 #
-#  id                           :bigint           not null, primary key
-#  charter_callsign_pattern     :string
-#  country                      :string
-#  iata_callsign                :string
-#  icao_callsign                :string
-#  name                         :string
-#  positioning_callsign_pattern :string
-#  created_at                   :datetime         not null
-#  updated_at                   :datetime         not null
+#  id         :bigint           not null, primary key
+#  iata_code  :string
+#  icao_code  :string
+#  name       :string
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#  country_id :bigint
+#
+# Indexes
+#
+#  index_operators_on_country_id  (country_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (country_id => countries.id)
+#
 
 ## Notes:
 ## Consider normalising the call sign patterns into a separate table
@@ -23,18 +30,17 @@ class Operator < ApplicationRecord
   has_many :routes
   has_many :route_segments, through: :routes
 
+  belongs_to :country
+
   validates :name, presence: true, allow_blank: false
-  validates :icao_callsign, presence: true, allow_blank: false, format: { with: /\A[A-Z]{3}\z/ }, uniqueness: { case_sensitive: false } #, scope: :active }
-  validates :iata_callsign, presence: true, allow_blank: false, format: { with: /\A[A-Z]{2}\z/ }
-  validates :positioning_callsign_pattern, callsign_pattern: true, allow_blank: true
-  validates :charter_callsign_pattern, callsign_pattern: true, allow_blank: true
+  validates :icao_code, allow_blank: true, format: { with: /\A[A-Z0-9]{3}\z/ }, uniqueness: { case_sensitive: false } # , scope: :active }
+  validates :iata_code, allow_blank: true, format: { with: /\A[A-Z0-9]{2}\z/ }
 
   has_paper_trail
   meilisearch do
     attribute :name
-    attribute :icao_callsign
-    attribute :iata_callsign
+    attribute :icao_code
+    attribute :iata_code
     attribute :country
   end
-
 end

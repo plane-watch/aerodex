@@ -11,14 +11,14 @@
 #  updated_at        :datetime         not null
 #
 
-one:
-  importer_type: 
-  import_errors: 
-  success: true
-  records_processed: 1
+# one:
+#   importer_type: 
+#   import_errors: 
+#   success: true
+#   records_processed: 1
 
-two:
-  importer_type: 
-  import_errors: 
-  success: false
-  records_processed: 1
+# two:
+#   importer_type: 
+#   import_errors: 
+#   success: false
+  #   records_processed: 1

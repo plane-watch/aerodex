@@ -2,15 +2,21 @@
 #
 # Table name: operators
 #
-#  id                           :bigint           not null, primary key
-#  charter_callsign_pattern     :string
-#  country                      :string
-#  iata_callsign                :string
-#  icao_callsign                :string
-#  name                         :string
-#  positioning_callsign_pattern :string
-#  created_at                   :datetime         not null
-#  updated_at                   :datetime         not null
+#  id         :bigint           not null, primary key
+#  iata_code  :string
+#  icao_code  :string
+#  name       :string
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#  country_id :bigint
+#
+# Indexes
+#
+#  index_operators_on_country_id  (country_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (country_id => countries.id)
 #
 require "test_helper"
 

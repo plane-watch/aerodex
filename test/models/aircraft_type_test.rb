@@ -10,7 +10,11 @@
 #  updated_at      :datetime         not null
 #  manufacturer_id :integer
 #
-require "test_helper"
+# Indexes
+#
+#  index_aircraft_types_on_manufacturer_id  (manufacturer_id)
+#
+require 'test_helper'
 
 class AircraftTypeTest < ActiveSupport::TestCase
   # test "the truth" do

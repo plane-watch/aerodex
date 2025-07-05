@@ -12,16 +12,16 @@
 #  airport_id  :integer
 #
 
-one:
-  airport_id: 1
-  runway_name: MyString
-  heading: 9.99
-  length: 9.99
-  width: 9.99
+yssy_rwy_16r:
+  airport: yssy
+  runway_name: 16R
+  heading: 167.85
+  length: 3971
+  width: 45
 
-two:
-  airport_id: 1
-  runway_name: MyString
-  heading: 9.99
-  length: 9.99
-  width: 9.99
+yssy_rwy_25:
+  airport: yssy
+  runway_name: 25
+  heading: 254.12
+  length: 2525
+  width: 45

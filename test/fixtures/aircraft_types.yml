@@ -10,13 +10,38 @@
 #  updated_at      :datetime         not null
 #  manufacturer_id :integer
 #
+# Indexes
+#
+#  index_aircraft_types_on_manufacturer_id  (manufacturer_id)
+#
 
-one:
-  manufacturer_id: 1
-  type_code: MyString
-  name: MyString
+boeing_737:
+  manufacturer: boeing
+  type_code: B737
+  name: 737-800
+  category: 0
 
-two:
-  manufacturer_id: 1
-  type_code: MyString
-  name: MyString
+boeing_777:
+  manufacturer: boeing
+  type_code: B777W
+  name: 777-300ER
+  category: 0
+
+airbus_a320neo:
+  manufacturer: airbus
+  type_code: A20N
+  name: A320neo
+  category: 0
+
+airbus_a350:
+  manufacturer: airbus
+  type_code: A350
+  name: A350-900
+  category: 0
+
+airbus_a380:
+  manufacturer: airbus
+  type_code: A380
+  name: A380-800
+  category: 0
+
