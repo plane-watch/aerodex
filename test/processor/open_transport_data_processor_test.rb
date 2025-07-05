@@ -45,7 +45,7 @@ class OpenTransportOperatorProcessorTest < ActiveSupport::TestCase
 
   # Should skip expired records on first import
   def test_expired_record_only
-    OpenTravelOperatorProcessor.import(url_for_test_name('expired_record_only'))
+    Processors::Operator::OpenTravel.import(url_for_test_name('expired_record_only'))
 
     where_non_exist = OpenTravelOperatorSource.where(icao_code: 'AJD')
 
@@ -54,7 +54,7 @@ class OpenTransportOperatorProcessorTest < ActiveSupport::TestCase
 
   # The non-valid record should be skipped and the valid one of the same name should be imported
   def test_expired_record_and_valid
-    OpenTravelOperatorProcessor.import(url_for_test_name('expired_record_and_valid'))
+    Processors::Operator::OpenTravel.import(url_for_test_name('expired_record_and_valid'))
 
     where_abg = OpenTravelOperatorSource.where(icao_code: 'ABG')
 
