@@ -31,7 +31,7 @@ module ApplicationHelper
   def nav_link_to(path, label, icon: '')
     link_to path, class: 'group text-gray-300 hover:-mb-0.5 hover:border-b-2 hover:border-yellow-500 group flex items-center gap-x-3 p-2 text-sm leading-6 font-semibold' do
       content_tag(:i, nil, class: "size-6 group-hover:text-yellow-500 #{icon}") +
-      content_tag(:span, label, class: "group-hover:bg-gradient-to-r group-hover:from-violet-500 group-hover:to-fuchsia-500 group-hover:text-transparent group-hover:bg-clip-text") do
+      content_tag(:span, label, class: "group-hover:bg-linear-to-r group-hover:from-violet-500 group-hover:to-fuchsia-500 group-hover:text-transparent group-hover:bg-clip-text") do
         label
       end
     end
