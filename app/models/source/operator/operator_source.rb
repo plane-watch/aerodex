@@ -19,6 +19,8 @@
 module Source
   module Operator
     class OperatorSource < ApplicationRecord
+      include MeiliSearch::Rails
+      
       validate :icao_or_iata_code
       serialize :data, coder: JsonbSerializer
 

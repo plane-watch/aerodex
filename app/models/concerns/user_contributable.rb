@@ -4,7 +4,7 @@ module UserContributable
   included do
     has_many :annotations, polymorphic: true, dependent: :destroy
 
-    enum status: { inactive: 0, active: 1, flagged: 2, invalid: 3 }
+    enum :status, { inactive: 0, active: 1, flagged: 2, invalid: 3 }
 
     scope :active, -> { where(status: %w(active flagged_for_review)) }
     scope :inactive, -> { where(status: 'inactive') }

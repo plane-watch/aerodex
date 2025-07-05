@@ -35,14 +35,14 @@ class Aircraft < ApplicationRecord
   include MeiliSearch::Rails
   extend Pagy::Meilisearch
 
-  ActiveRecord_Relation.include Pagy::Meilisearch
+  ActiveRecord::Relation.include Pagy::Meilisearch
 
   belongs_to :aircraft_type
   belongs_to :operator
   belongs_to :registration_country, class_name: 'Country'
 
   has_one :manufacturer, through: :aircraft_type
-  enum status: { active: 0, withdrawn: 1, hull_loss: 2, scrapped: 3, stored: 4, written_off: 5 }
+  enum :status, { active: 0, withdrawn: 1, hull_loss: 2, scrapped: 3, stored: 4, written_off: 5 }
 
   delegate :name, to: :aircraft_type
 
