@@ -19,6 +19,7 @@
 ## Consider normalising the call sign patterns into a separate table
 class Operator < ApplicationRecord
   include MeiliSearch::Rails
+  extend Pagy::Meilisearch
 
   has_many :aircraft
   has_many :aircraft_types, through: :aircraft
@@ -34,9 +35,12 @@ class Operator < ApplicationRecord
 
   has_paper_trail
   meilisearch do
+    attribute :id
     attribute :name
     attribute :icao_code
     attribute :iata_code
     attribute :country
+
+    filterable_attributes %i[id name icao_code iata_code country]
   end
 end

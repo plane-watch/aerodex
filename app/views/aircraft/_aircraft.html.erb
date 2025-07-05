@@ -35,9 +35,9 @@
       <span class="text-gray-900">
         <%= aircraft.operator.name %>
       </span>
-      <% if aircraft.operator.icao_callsign || aircraft.operator.iata_callsign -%>
+      <% if aircraft.operator.icao_callsign || aircraft.operator.iata_code -%>
         <span class="text-gray-500">
-          (<%= [aircraft.operator.icao_callsign, aircraft.operator.iata_callsign].compact.join('/') %>)
+          (<%= [aircraft.operator.icao_callsign, aircraft.operator.iata_code].compact.join('/') %>)
         </span>
       <% end %>
     </div>

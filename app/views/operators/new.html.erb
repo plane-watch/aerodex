@@ -1,0 +1,9 @@
+<% content_for :page_title, 'New Operator' -%>
+<% content_for :page_description, 'Add a new airline operator to the database' -%>
+<% content_for :page_actions do %>
+  <%= link_to operators_path, class: "rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50" do %>
+    Back to operators
+  <% end %>
+<% end -%>
+
+<%= render 'form', operator: @operator %>

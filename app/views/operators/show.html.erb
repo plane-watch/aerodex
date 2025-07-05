@@ -1,0 +1,85 @@
+<% content_for :page_title, @operator.name -%>
+<% content_for :page_description, "Details for #{@operator.name}" -%>
+<% content_for :page_actions do %>
+  <%= link_to edit_operator_path(@operator), class: "rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600" do %>
+    Edit operator
+  <% end %>
+  <%= link_to operators_path, class: "rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50" do %>
+    Back to operators
+  <% end %>
+<% end -%>
+
+<dl>
+  <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+    <dt class="text-sm font-medium text-gray-500">
+      Name
+    </dt>
+    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+      <%= @operator.name %>
+    </dd>
+  </div>
+  <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+    <dt class="text-sm font-medium text-gray-500">
+      ICAO Code
+    </dt>
+    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+      <%= @operator.icao_code || 'Not specified' %>
+    </dd>
+  </div>
+  <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+    <dt class="text-sm font-medium text-gray-500">
+      IATA Code
+    </dt>
+    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+      <%= @operator.iata_code || 'Not specified' %>
+    </dd>
+  </div>
+  <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+    <dt class="text-sm font-medium text-gray-500">
+      Country
+    </dt>
+    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+      <%= @operator.country&.name || 'Not specified' %>
+    </dd>
+  </div>
+  <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+    <dt class="text-sm font-medium text-gray-500">
+      Logo
+    </dt>
+    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+      <%= image_tag operator_logo_for(@operator), class: 'h-16' %>
+    </dd>
+  </div>
+  <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+    <dt class="text-sm font-medium text-gray-500">
+      Aircraft Count
+    </dt>
+    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+      <%= @operator.aircraft.count %>
+    </dd>
+  </div>
+  <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+    <dt class="text-sm font-medium text-gray-500">
+      Created
+    </dt>
+    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+      <%= @operator.created_at.strftime("%B %d, %Y at %I:%M %p") %>
+      <span class="text-gray-400">(<%= time_ago_in_words(@operator.created_at) %> ago)</span>
+    </dd>
+  </div>
+  <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+    <dt class="text-sm font-medium text-gray-500">
+      Last Updated
+    </dt>
+    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+      <%= @operator.updated_at.strftime("%B %d, %Y at %I:%M %p") %>
+      <span class="text-gray-400">(<%= time_ago_in_words(@operator.updated_at) %> ago)</span>
+    </dd>
+  </div>
+</dl>
+
+<div class="mt-6 flex items-center justify-end gap-x-6">
+  <%= link_to 'Delete', operator_path(@operator), method: :delete,
+              confirm: 'Are you sure?',
+              class: "rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600" %>
+</div>

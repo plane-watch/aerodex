@@ -1,0 +1,25 @@
+<% content_for :page_title, "Edit #{@operator.name}" -%>
+<% content_for :page_description, "Update information for #{@operator.name}" -%>
+<% content_for :page_actions do %>
+  <%= link_to @operator, class: "rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50" do %>
+    View operator
+  <% end %>
+  <%= link_to operators_path, class: "rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50" do %>
+    Back to operators
+  <% end %>
+<% end -%>
+
+<div class="space-y-10 divide-y divide-gray-900/10">
+  <div class="grid grid-cols-1 gap-x-8 gap-y-8 md:grid-cols-3">
+    <div class="px-4 sm:px-0">
+      <h2 class="text-base font-semibold leading-7 text-gray-900">Operator Information</h2>
+      <p class="mt-1 text-sm leading-6 text-gray-600">Update the details for this operator.</p>
+    </div>
+
+    <div class="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl md:col-span-2">
+      <div class="px-4 py-6 sm:p-8">
+        <%= render 'form', operator: @operator %>
+      </div>
+    </div>
+  </div>
+</div>

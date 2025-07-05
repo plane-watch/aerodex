@@ -1,0 +1,64 @@
+<tr class="">
+<!--  hover:bg-purple-50-->
+  <td class="whitespace-nowrap py-5 pl-4 pr-3 text-sm sm:pl-0">
+    <div class="flex items-center">
+      <div class="size-14 ml-1 bg-gray-500 border-2 border-purple-700 rounded-2xl overflow-hidden flex items-center">
+        <i class="fa-solid fa-building size-10 mx-auto text-purple-400"></i>
+      </div>
+      <div class="ml-4">
+        <%= link_to operator_path(operator), class: "font-medium text-gray-900 hover:text-indigo-600" do %>
+          <%= operator.name %>
+        <% end %>
+        <% if operator.icao_code || operator.iata_code %>
+          <div class="mt-1 text-gray-500">
+            <%= [operator.icao_code, operator.iata_code].compact.join(' / ') %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </td>
+  <td class="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
+    <div class="text-gray-900">
+      <%= operator.icao_code || '-' %>
+    </div>
+  </td>
+  <td class="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
+    <div class="text-gray-900">
+      <%= operator.iata_code || '-' %>
+    </div>
+  </td>
+  <td class="whitespace-nowrap px-3 py-5 text-sm hidden lg:block">
+    <div class="text-gray-900">
+      <%= operator.country&.name || 'Unknown' %>
+    </div>
+  </td>
+  <td class="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
+    <div class="text-gray-900">
+      <%= operator.aircraft.count %>
+    </div>
+  </td>
+  <td>
+    <div class="pl-6 space-x-1">
+      <%= link_to edit_operator_path(operator), title: 'edit' do %>
+        <div class="group inline-flex items-center rounded px-2 py-0.5
+                          border-2 border-indigo-100 bg-indigo-100
+                          hover:border-indigo-300 shadow-2xl shadow-indigo-500/50">
+          <i class="size-3 fa-regular fa-pen-to-square text-indigo-500"></i>
+          <span class="text-indigo-900 text-right text-xs ml-1">edit</span>
+        </div>
+      <% end %>
+      <%= link_to '#', title: 'Flag as incorrect',
+                  class: '' do %>
+        <div class="group inline-flex items-center rounded px-2 py-0.5
+                          border-2 border-yellow-100 bg-yellow-100
+                          hover:border-amber-300 shadow-2xl shadow-yellow-500/50">
+          <i class="size-3 fa-solid fa-flag text-amber-500"></i>
+          <span class="text-amber-900 text-right text-xs ml-1">flag</span>
+        </div>
+      <% end %>
+    </div>
+  </td>
+</tr>
+<% if @pagy.last == @pagy.page %>
+  <div class="hidden" data-no-more-records></div>
+<% end %>
