@@ -1,0 +1,34 @@
+# == Schema Information
+#
+# Table name: countries
+#
+#  id             :bigint           not null, primary key
+#  capital        :string
+#  iso_2char_code :string
+#  iso_3char_code :string
+#  iso_num_code   :string
+#  name           :string
+#  created_at     :datetime         not null
+#  updated_at     :datetime         not null
+#
+
+united_states:
+  iso_2char_code: US
+  iso_3char_code: USA
+  iso_num_code: 840
+  name: United States
+  capital: Washington, D.C.
+
+france:
+  iso_2char_code: FR
+  iso_3char_code: FRA
+  iso_num_code: 250
+  name: France
+  capital: Paris
+
+australia:
+  iso_2char_code: AU
+  iso_3char_code: AUS
+  iso_num_code: 036
+  name: Australia
+  capital: Canberra

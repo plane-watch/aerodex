@@ -10,6 +10,10 @@
 #  updated_at      :datetime         not null
 #  manufacturer_id :integer
 #
+# Indexes
+#
+#  index_aircraft_types_on_manufacturer_id  (manufacturer_id)
+#
 class AircraftType < ApplicationRecord
   include MeiliSearch::Rails
 

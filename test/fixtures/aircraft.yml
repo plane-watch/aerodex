@@ -2,48 +2,58 @@
 #
 # Table name: aircraft
 #
-#  id                   :bigint           not null, primary key
-#  aircraft_name        :string
-#  cabin_configuration  :string
-#  engine_count         :integer
-#  engine_model         :string
-#  icao                 :string
-#  manufacture_year     :integer
-#  model                :string
-#  owner                :string
-#  registration         :string
-#  registration_country :string
-#  registration_date    :date
-#  serial_number        :string
-#  status               :integer          default("active")
-#  created_at           :datetime         not null
-#  updated_at           :datetime         not null
-#  aircraft_type_id     :integer
-#  operator_id          :integer
+#  id                      :bigint           not null, primary key
+#  aircraft_name           :string
+#  cabin_configuration     :string
+#  engine_count            :integer
+#  engine_model            :string
+#  icao                    :string
+#  manufacture_year        :integer
+#  model                   :string
+#  owner                   :string
+#  registration            :string
+#  registration_date       :date
+#  serial_number           :string
+#  status                  :integer          default("active")
+#  created_at              :datetime         not null
+#  updated_at              :datetime         not null
+#  aircraft_type_id        :integer
+#  operator_id             :integer
+#  registration_country_id :bigint           not null
+#
+# Indexes
+#
+#  index_aircraft_on_aircraft_type_id         (aircraft_type_id)
+#  index_aircraft_on_operator_id              (operator_id)
+#  index_aircraft_on_registration_country_id  (registration_country_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (registration_country_id => countries.id)
 #
 
 one:
-  icao: MyString
-  aircraft_type_id: 1
-  serial_number: MyString
-  manufacture_year: 1
-  owner: MyString
-  operator_id: 1
-  registration: MyString
+  icao: N123456
+  aircraft_type: boeing_737
+  serial_number: 123456
+  manufacture_year: 2023
+  owner: american_airlines
+  operator: american_airlines
+  registration: N123456
   registration_date: 2023-06-23
-  registration_country: MyString
-  engine_count: 1
-  engine_model: MyString
+  registration_country: united_states
+  engine_count: 2
+  engine_model: CFM56-7B27
 
 two:
-  icao: MyString
-  aircraft_type_id: 1
-  serial_number: MyString
-  manufacture_year: 1
-  owner: MyString
-  operator_id: 1
-  registration: MyString
+  icao: N123457
+  aircraft_type: airbus_a320neo
+  serial_number: 123457
+  manufacture_year: 2023
+  owner: Air France
+  operator: air_france
+  registration: N123457
   registration_date: 2023-06-23
-  registration_country: MyString
-  engine_count: 1
-  engine_model: MyString
+  registration_country: france
+  engine_count: 2
+  engine_model: CFM56-7B27

@@ -1,25 +1,22 @@
 # == Schema Information
 #
-# Table name: operator_sources
+# Table name: manufacturer_sources
 #
 #  id          :bigint           not null, primary key
+#  alt_names   :jsonb
+#  country     :string
 #  data        :jsonb            not null
-#  iata_code   :string
-#  icao_code   :string
+#  icao_code   :string           not null
 #  import_date :datetime         not null
-#  name        :string
+#  name        :string           not null
 #  type        :string           not null
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
 #
-# Indexes
-#
-#  index_operator_sources_on_data  (data) USING gin
-#
-class VRSDataOperatorSource < OperatorSource
-  include MeiliSearch::Rails
 
-  meilisearch do
-    attribute :name
+module Source
+  module Manufacturer
+    class OpenskyManufacturerSource < ManufacturerSource
+    end
   end
 end

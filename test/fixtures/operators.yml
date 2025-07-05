@@ -3,26 +3,48 @@
 # Table name: operators
 #
 #  id         :bigint           not null, primary key
-#  country    :string
 #  iata_code  :string
 #  icao_code  :string
 #  name       :string
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
+#  country_id :bigint
+#
+# Indexes
+#
+#  index_operators_on_country_id  (country_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (country_id => countries.id)
 #
 
-one:
-  name: MyString
-  country: MyString
-  icao_callsign: MyString
-  iata_callsign: MyString
-  positioning_callsign_pattern: MyString
-  charter_callsign_pattern: MyString
+american_airlines:
+  name: American Airlines
+  country: united_states
+  icao_code: AAL
+  iata_code: AA
 
-two:
-  name: MyString
-  country: MyString
-  icao_callsign: MyString
-  iata_callsign: MyString
-  positioning_callsign_pattern: MyString
-  charter_callsign_pattern: MyString
+united_airlines:
+  name: United Airlines
+  country: united_states
+  icao_code: UAL
+  iata_code: UA
+
+delta_airlines:
+  name: Delta Air Lines
+  country: united_states
+  icao_code: DAL
+  iata_code: DL
+
+southwest_airlines:
+  name: Southwest Airlines
+  country: united_states
+  icao_code: SWA
+
+air_france:
+  name: Air France
+  country: france
+  icao_code: AFR
+  iata_code: AF
+
