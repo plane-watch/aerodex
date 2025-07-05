@@ -13,7 +13,7 @@ Aerodex is a **Ruby on Rails** monolith that provides a **free, open registry 
 
 The app:  
 
-1. **Ingests** data from heterogeneous public sources (CSV, JSON, XML, HTML scrapes, REST APIs).  
+1. **Ingests** data from heterogeneous public sources (CSV, JSON, XML, HTML scrapes, REST APIs). 
 2. **Normalises & deduplicates** feeds into a **canonical domain model** (Aircraft, Operator, Route, …).  
 3. **Serves** the consolidated data through:  
    * A **Hotwire/Tailwind** web UI.  
@@ -82,6 +82,8 @@ end
 ```
 
 ### 4.1 Workflow  
+
+The key data pipeline workflow is described below. The key aim is to be liberal about the data we ingest but strict about what we insert and combine.
 
 1. **Fetch** — stream remote file or API.  
 2. **Parse** — convert to enumerable of hashes.  
