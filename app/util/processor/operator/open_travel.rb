@@ -61,6 +61,7 @@ module Processor
             attributes = {}
 
             # pre-process and throw away anything that isn't an airline.
+            row['pk']&.strip!
             next unless row['pk'] =~ /\Aair-/
 
             row.headers.each do |key|

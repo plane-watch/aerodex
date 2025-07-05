@@ -2,15 +2,16 @@
 #
 # Table name: airport_runways
 #
-#  id          :bigint           not null, primary key
+#  id          :integer          not null, primary key
+#  airport_id  :integer
+#  runway_name :string
 #  heading     :decimal(, )
 #  length      :decimal(, )
-#  runway_name :string
 #  width       :decimal(, )
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
-#  airport_id  :integer
 #
+
 require "test_helper"
 
 class AirportRunwayTest < ActiveSupport::TestCase

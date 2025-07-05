@@ -11,7 +11,7 @@
     "esbuild-rails": "^1.0.7",
     "postcss": "^8.5.4",
     "stimulus-use": "^0.52.2",
-    "tailwindcss": "^4.1.8",
+    "tailwindcss": "^4.1.11",
     "tailwindcss-stimulus-components": "^4.0.4"
   },
   "scripts": {

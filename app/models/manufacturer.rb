@@ -2,22 +2,19 @@
 #
 # Table name: manufacturers
 #
-#  id         :bigint           not null, primary key
-#  alt_names  :jsonb
-#  icao_code  :string
+#  id         :integer          not null, primary key
 #  name       :string
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
-#  country_id :bigint
+#  icao_code  :string
+#  alt_names  :jsonb
+#  country_id :integer
 #
 # Indexes
 #
 #  index_manufacturers_on_country_id  (country_id)
 #
-# Foreign Keys
-#
-#  fk_rails_...  (country_id => countries.id)
-#
+
 class Manufacturer < ApplicationRecord
   include MeiliSearch::Rails
   has_many :aircraft_types

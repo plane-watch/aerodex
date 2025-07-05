@@ -2,22 +2,19 @@
 #
 # Table name: operators
 #
-#  id         :bigint           not null, primary key
-#  iata_code  :string
-#  icao_code  :string
+#  id         :integer          not null, primary key
 #  name       :string
+#  icao_code  :string
+#  iata_code  :string
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
-#  country_id :bigint
+#  country_id :integer
 #
 # Indexes
 #
 #  index_operators_on_country_id  (country_id)
 #
-# Foreign Keys
-#
-#  fk_rails_...  (country_id => countries.id)
-#
+
 require "test_helper"
 
 class OperatorTest < ActiveSupport::TestCase

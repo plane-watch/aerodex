@@ -15,6 +15,7 @@ ActiveSupport::Inflector.inflections(:en) do |inflect|
   inflect.acronym 'CASA'  # Civil Aviation Safety Authority (Australia)
   inflect.acronym 'CAANZ' # Civil Aviation Authority of New Zealand
   inflect.acronym 'VRS'   # Virtual Radar Server
+  inflect.acronym 'CSV'   # Comma-Separated Values
   inflect.uncountable %w[aircraft]
 end
 

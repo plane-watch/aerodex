@@ -3,7 +3,7 @@
 module Processors
   module Aircraft
     module CASA
-      class Csv < Processors::Aircraft::CASA::Registry
+      class CSV < Processors::Aircraft::CASA::Registry
         @transform_data = {
           'model' => {
             function: ->(model) { normalise_model(model) },
