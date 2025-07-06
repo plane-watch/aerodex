@@ -76,11 +76,11 @@ module Processors
 
           def normalise_model(input)
             tokens = input.split.map.with_index(1) { |_, i| input.split.first(i).join(' ') }
-            manufacturer = Manufacturer.where(name: tokens).order('length(name) DESC').first
+            manufacturer = ::Manufacturer.where(name: tokens).order('length(name) DESC').first
             return false if manufacturer.nil?
 
             aircraft_model = input.gsub(/^#{manufacturer.name} /, '')
-            AircraftType.joins(:manufacturer).find_by(name: aircraft_model, manufacturer: { name: manufacturer.name })
+            ::AircraftType.joins(:manufacturer).find_by(name: aircraft_model, manufacturer: { name: manufacturer.name })
           end
         end
       end

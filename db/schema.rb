@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_10_103831) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_06_122139) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -35,6 +35,18 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_10_103831) do
     t.index ["aircraft_type_id"], name: "index_aircraft_on_aircraft_type_id"
     t.index ["operator_id"], name: "index_aircraft_on_operator_id"
     t.index ["registration_country_id"], name: "index_aircraft_on_registration_country_id"
+  end
+
+  create_table "aircraft_type_sources", force: :cascade do |t|
+    t.string "name"
+    t.string "type_code"
+    t.string "manufacturer"
+    t.string "wtc"
+    t.string "category"
+    t.integer "engines"
+    t.string "engine_type"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "aircraft_types", force: :cascade do |t|

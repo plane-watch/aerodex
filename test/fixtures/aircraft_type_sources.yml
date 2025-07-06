@@ -1,0 +1,35 @@
+# == Schema Information
+#
+# Table name: aircraft_type_sources
+#
+#  id           :integer          not null, primary key
+#  name         :string
+#  type_code    :string
+#  manufacturer :string
+#  wtc          :string
+#  category     :string
+#  engines      :integer
+#  engine_type  :string
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#
+
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  name: MyString
+  type_code: MyString
+  manufacturer: MyString
+  wtc: MyString
+  category: MyString
+  engines: 1
+  engine_type: MyString
+
+two:
+  name: MyString
+  type_code: MyString
+  manufacturer: MyString
+  wtc: MyString
+  category: MyString
+  engines: 1
+  engine_type: MyString

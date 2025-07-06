@@ -1,6 +1,6 @@
-module Processor
+module Processors
   module Country
-    class Country < Processor::Base
+    class Country < Processors::Base
       def self.combine_sources
         Source::Country::OpenTravelCountrySource.find_each do |source|
           ::Country.find_or_initialize_by(iso_2char_code: source.iso_2char_code).tap do |country|

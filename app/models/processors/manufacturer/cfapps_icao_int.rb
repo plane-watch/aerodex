@@ -1,7 +1,7 @@
-module Processor
+module Processors
   module Manufacturer
     # Processor for importing manufacturer data from ICAO's CFAPPS database
-    class CfappsICAOInt < Processor::Base
+    class CfappsICAOInt < Processors::Base
       def self.import
         @transform_data = {
           'Code' => {

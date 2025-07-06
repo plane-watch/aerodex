@@ -3,8 +3,7 @@
 module Processors
   module Operator
     # Base class for operator-related processors
-    class Base
-      include Processors::Base
+    class Operator < Processors::Base
 
       OPERATOR_REWRITE_PATTERNS = [
         [/Royal Flying Doctor Service.*/, 'Royal Flying Doctor Service'],
@@ -18,19 +17,19 @@ module Processors
       class << self
         def combine_sources
           # Full outer join VRS to OTD
-          vrs = VRSDataOperatorSource.all
+          vrs = Source::Operator::VRSDataOperatorSource.all
 
-          otd_ids = OpenTravelOperatorSource.all.pluck(:id)
+          otd_ids = Source::Operator::OpenTravelOperatorSource.all.pluck(:id)
           errors = []
 
-          Operator.transaction do
+          ::Operator.transaction do
             ActiveRecord::Base.logger.silence do
               vrs.each do |v_record|
                 # Match on Name + one of ICAO or IATA code
                 o_record = if v_record.icao_code.nil?
-                             OpenTravelOperatorSource.with_iata_and_name(v_record.iata_code, v_record.name).first
+                            Source::Operator::OpenTravelOperatorSource.with_iata_and_name(v_record.iata_code, v_record.name).first
                            else
-                             OpenTravelOperatorSource.with_icao_and_name(v_record.icao_code, v_record.name).first
+                            Source::Operator::OpenTravelOperatorSource.with_icao_and_name(v_record.icao_code, v_record.name).first
                            end
 
                 # if there isn't a match,
@@ -40,12 +39,12 @@ module Processors
                   candidate_match = { id: nil, confidence: 0 }
                   confidence_threshold = v_record.icao_code.present? ? 0.5 : 0.75
 
-                  possible_matches = OpenTravelOperatorSource
+                  possible_matches = Source::Operator::OpenTravelOperatorSource
                   if v_record.icao_code
-                    possible_matches = possible_matches.merge(OpenTravelOperatorSource.where(icao_code: v_record.icao_code))
+                    possible_matches = possible_matches.merge(Source::Operator::OpenTravelOperatorSource.where(icao_code: v_record.icao_code))
                   end
                   if v_record.iata_code
-                    possible_matches = possible_matches.merge(OpenTravelOperatorSource.where(iata_code: v_record.iata_code))
+                    possible_matches = possible_matches.merge(Source::Operator::OpenTravelOperatorSource.where(iata_code: v_record.iata_code))
                   end
 
                   possible_matches.each do |match|
@@ -77,7 +76,7 @@ module Processors
 
                 # If we have a match between the two, prefer VRS attributes.
                 if o_record&.present?
-                  new_operator = Operator.new
+                  new_operator = ::Operator.new
                   new_operator.name = preferred_attr(:name, v_record, o_record)
                   new_operator.icao_code = preferred_attr(:icao_code, v_record, o_record)
                   new_operator.iata_code = preferred_attr(:iata_code, v_record, o_record)
@@ -94,7 +93,7 @@ module Processors
                   otd_ids.delete(o_record.id) # mark this record as used.
                 else
                   # else, just create without OTD data.
-                  obj = Operator.new(name: v_record.name, icao_code: v_record.icao_code, iata_code: v_record.iata_code)
+                  obj = ::Operator.new(name: v_record.name, icao_code: v_record.icao_code, iata_code: v_record.iata_code)
                   if obj.valid?
                     obj.save
                   else
@@ -109,9 +108,9 @@ module Processors
 
               # complete the full outer join and add the un-matched OTD records.
               otd_ids.each do |o_id|
-                record = OpenTravelOperatorSource.find(o_id)
+                record = Source::Operator::OpenTravelOperatorSource.find(o_id)
                 begin
-                  Operator.create!(name: record.name, icao_code: record.icao_code, iata_code: record.iata_code)
+                  ::Operator.create!(name: record.name, icao_code: record.icao_code, iata_code: record.iata_code)
                 rescue ActiveRecord::RecordInvalid => e
                   errors << {
                     record: record,
