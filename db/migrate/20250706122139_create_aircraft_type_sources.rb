@@ -8,6 +8,7 @@ class CreateAircraftTypeSources < ActiveRecord::Migration[8.0]
       t.string :category
       t.integer :engines
       t.string :engine_type
+      t.string :type
 
       t.timestamps
     end

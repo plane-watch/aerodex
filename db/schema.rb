@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_06_122139) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_08_095203) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -45,6 +45,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_06_122139) do
     t.string "category"
     t.integer "engines"
     t.string "engine_type"
+    t.string "type"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
@@ -56,6 +57,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_06_122139) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "category", limit: 2
+    t.string "wtc"
+    t.integer "engines"
+    t.string "engine_type"
     t.index ["manufacturer_id"], name: "index_aircraft_types_on_manufacturer_id"
   end
 

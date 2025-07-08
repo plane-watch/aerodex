@@ -19,8 +19,8 @@ module Processors
             function: ->(value) { value&.strip },
             field: 'wtc',
           },
-          'Engines' => {
-            function: ->(value) { value&.strip },
+          'EngineCount' => {
+            function: ->(value) { value&.strip.to_i },
             field: 'engines',
           },
           'EngineType' => {
@@ -44,15 +44,15 @@ module Processors
             transformed_attrs[transformed_data[:key]] = transformed_data[:value]
           end
 
-          record = Source::AircraftType::CfappsICAOIntAircraftTypeSource.find_or_initialize_by(icao_code: transformed_attrs['type_code'])
-          record.type_code = transformed_attrs['type_code']
-          record.manufacturer = transformed_attrs['manufacturer_code']
-          record.wtc = transformed_attrs['wtc']
-          record.name = transformed_attrs['name']
-          record.engines = transformed_attrs['engines']
-          record.engine_type = transformed_attrs['engine_type']
-
-          type.save!
+          record = Source::AircraftType::CfappsICAOIntAircraftTypeSource.find_or_initialize_by(
+            type_code: transformed_attrs['type_code'],
+            name: transformed_attrs['name'],
+            manufacturer: transformed_attrs['manufacturer'],
+            wtc: transformed_attrs['wtc'],
+            engines: transformed_attrs['engines'],
+            engine_type: transformed_attrs['engine_type']
+          )
+          record.save!
         end
       end
     end
