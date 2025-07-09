@@ -136,7 +136,7 @@ module Processors
           MANUFACTURER_REPLACEMENT_PATTERNS.each { |p| manufacturer.gsub!(p[0], p[1]) }
 
           manufacturer_obj = Rails.cache.fetch("aircraft_manufacturer_#{manufacturer}") do
-            Manufacturer.find_by(name: manufacturer.titleize)
+            ::Manufacturer.find_by(name: manufacturer.titleize)
           end
 
           raise ActiveRecord::RecordNotFound unless manufacturer_obj
@@ -146,7 +146,7 @@ module Processors
 
         def get_aircraft_type(type_code)
           aircraft_type_obj = Rails.cache.fetch("aircraft_type_typecode_#{type_code}") do
-            AircraftType.find_by(type_code: type_code)
+            ::AircraftType.find_by(type_code: type_code)
           end
 
           raise ActiveRecord::RecordNotFound unless aircraft_type_obj
@@ -169,9 +169,9 @@ module Processors
           OPERATOR_REPLACEMENT_PATTERNS.each { |p| name.gsub!(p[0], p[1]) }
           name = name.titleize
           puts "Searching for #{name}"
-          operator = Operator.search(name: name)&.first
+          operator = ::Operator.search(name: name)&.first
           if operator.nil?
-            operator = Operator.new(name: name, country: country)
+            operator = ::Operator.new(name: name, country: country)
             operator.save(validate: false)
           end
 

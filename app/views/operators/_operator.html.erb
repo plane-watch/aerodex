@@ -3,9 +3,11 @@
   <td class="whitespace-nowrap py-5 pl-4 pr-3 text-sm sm:pl-0">
     <div class="flex items-center">
       <div class="size-14 ml-1 bg-gray-200 border-2 border-purple-700 rounded-2xl overflow-hidden flex items-center">
-        <%= image_tag operator_logo_for(operator), class: 'h-14' %>
+        <% if operator_logo_for(operator) %>
+          <%= image_tag operator_logo_for(operator), class: 'h-14' %>
+        <% end %>
       </div>
-      <div class="ml-4">
+      <div class="ml-4">    
         <%= link_to operator_path(operator), class: "font-medium text-gray-900 hover:text-indigo-600" do %>
           <%= operator.name %>
         <% end %>

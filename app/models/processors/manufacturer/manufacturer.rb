@@ -1,6 +1,6 @@
-module Processor
+module Processors
   module Manufacturer
-    class Manufacturer < Processor::Base
+    class Manufacturer < Processors::Base
       def self.combine_sources
         Source::Manufacturer::CfappsICAOIntManufacturerSource.find_each do |source|
           ::Manufacturer.find_or_initialize_by(icao_code: source.icao_code).tap do |manufacturer|

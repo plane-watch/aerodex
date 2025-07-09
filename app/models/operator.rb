@@ -27,7 +27,7 @@ class Operator < ApplicationRecord
   has_many :routes
   has_many :route_segments, through: :routes
 
-  belongs_to :country
+  belongs_to :country, optional: true
 
   validates :name, presence: true, allow_blank: false
   validates :icao_code, allow_blank: true, format: { with: /\A[A-Z0-9]{3}\z/ }, uniqueness: { case_sensitive: false } # , scope: :active }

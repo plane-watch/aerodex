@@ -59,7 +59,7 @@ module Processors
                 data[transformed_data[:key]] = transformed_data[:value]
               end
 
-              obj = Aircraft.find_or_initialize_by(
+              obj = ::Aircraft.find_or_initialize_by(
                 registration: data[:registration],
                 serial_number: data[:serial_number],
                 aircraft_type_id: data[:aircraft_type_id]
