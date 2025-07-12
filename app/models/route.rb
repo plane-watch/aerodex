@@ -15,8 +15,17 @@
 
 class Route < ApplicationRecord
   include MeiliSearch::Rails
+  extend Pagy::Meilisearch
+
   has_many :route_segments
   belongs_to :operator
 
   has_paper_trail
+  meilisearch do
+    attribute :id
+    attribute :call_sign
+    attribute :operator
+
+    filterable_attributes %i[id call_sign operator]
+  end
 end

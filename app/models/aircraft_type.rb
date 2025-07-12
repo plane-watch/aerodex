@@ -20,6 +20,7 @@
 
 class AircraftType < ApplicationRecord
   include MeiliSearch::Rails
+  extend Pagy::Meilisearch
 
   has_many :aircraft
   belongs_to :manufacturer
@@ -27,7 +28,13 @@ class AircraftType < ApplicationRecord
 
   has_paper_trail
   meilisearch do
+    attribute :id
     attribute :name
+    attribute :type_code
+    attribute :manufacturer
+    attribute :category
+
+    filterable_attributes %i[id name type_code manufacturer category]
   end
 
   def full_name

@@ -5,12 +5,7 @@ class OperatorsController < ApplicationController
   before_action :set_operator, only: [:show, :edit, :update, :destroy]
 
   def index
-    operators = Operator.where.not(iata_code: nil)
-
-    options = {}.tap do |options|
-      options[:filter] = ["id IN #{operators.pluck(:id)}"]
-    end
-    q = operators.pagy_search(params[:search], **options)
+    q = Operator.pagy_search(params[:search])
     @pagy, @operators = pagy_meilisearch(q)
 
     respond_to do |format|
