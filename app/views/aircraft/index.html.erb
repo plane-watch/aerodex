@@ -1,10 +1,5 @@
 <% content_for :page_title, 'Aircraft' -%>
 <% content_for :page_description, 'View and search aircraft here. Use the search bar above to search by registration, owner and more!' -%>
-<% content_for :page_actions do %>
-  <button type="button" class="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Add
-    user
-  </button>
-<% end -%>
 <%= content_for :search do %>
   <%= form_with url: aircraft_index_path, method: :get, class: 'relative flex flex-1' do |form| %>
     <%= form.label :search_field, 'Search Aircraft', class: 'sr-only' %>

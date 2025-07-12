@@ -24,10 +24,23 @@
 #
 
 class Airport < ApplicationRecord
+  include MeiliSearch::Rails
+  extend Pagy::Meilisearch
+
   belongs_to :flight_information_region, optional: true
   has_many :airport_runways
   has_many :route_segments
   belongs_to :country, optional: true
 
   has_paper_trail
+  meilisearch do
+    attribute :id
+    attribute :name
+    attribute :city
+    attribute :icao_code
+    attribute :iata_code
+    attribute :country
+
+    filterable_attributes %i[id name city icao_code iata_code country]
+  end
 end

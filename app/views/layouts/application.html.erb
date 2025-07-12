@@ -175,10 +175,10 @@
                 <%= nav_link_to aircraft_index_path, 'Aircraft', icon: 'fa-solid fa-plane' %>
               </li>
               <li>
-                <%= nav_link_to '#', 'Aircraft Types', icon: 'fa-solid fa-rectangle-list' %>
+                <%= nav_link_to aircraft_types_path, 'Aircraft Types', icon: 'fa-solid fa-rectangle-list' %>
               </li>
               <li>
-                <%= nav_link_to '#', 'Aircraft Manufacturers', icon: 'fa-solid fa-wrench' %>
+                <%= nav_link_to manufacturers_path, 'Aircraft Manufacturers', icon: 'fa-solid fa-wrench' %>
               </li>
               <li>
                 <%= nav_link_to operators_path, 'Operators', icon: 'fa-solid fa-building-user' %>
@@ -187,7 +187,7 @@
             <ul role="list" class="-mx-2 space-y-1">
               <div class="mt-2 text-xs font-semibold leading-6 text-gray-400">Airports</div>
               <li>
-                <%= nav_link_to '#', 'Airports', icon: 'fa-solid fa-road-bridge' %>
+                <%= nav_link_to airports_path, 'Airports', icon: 'fa-solid fa-road-bridge' %>
               </li>
               <li>
                 <%= nav_link_to '#', 'Runways', icon: 'fa-solid fa-road' %>
@@ -196,7 +196,7 @@
             <ul role="list" class="-mx-2 space-y-1">
               <div class="mt-2 text-xs font-semibold leading-6 text-gray-400">Navigation</div>
               <li>
-                <%= nav_link_to '#', 'Routes', icon: 'fa-solid fa-route' %>
+                <%= nav_link_to routes_path, 'Routes', icon: 'fa-solid fa-route' %>
               </li>
               <li>
                 <%= nav_link_to '#', 'Flight Information Regions', icon: 'fa-solid fa-earth-oceania' %>
@@ -206,6 +206,12 @@
               </li>
               <li>
                 <%= nav_link_to '#', 'Airways', icon: 'fa-solid fa-wave-square' %>
+              </li>
+            </ul>
+            <ul role="list" class="-mx-2 space-y-1">
+              <div class="mt-2 text-xs font-semibold leading-6 text-gray-400">Geography</div>
+              <li>
+                <%= nav_link_to countries_path, 'Countries', icon: 'fa-solid fa-flag' %>
               </li>
             </ul>
           </li>

@@ -17,9 +17,19 @@
 
 class Manufacturer < ApplicationRecord
   include MeiliSearch::Rails
+  extend Pagy::Meilisearch
+
   has_many :aircraft_types
   has_many :aircraft, through: :aircraft_types
   belongs_to :country, optional: true
 
   has_paper_trail
+  meilisearch do
+    attribute :id
+    attribute :name
+    attribute :icao_code
+    attribute :country
+
+    filterable_attributes %i[id name icao_code country]
+  end
 end
