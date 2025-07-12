@@ -7,5 +7,6 @@ Rails.application.routes.draw do
   resources :countries, only: [:index]
   resources :routes, only: [:index]
   resources :operators
-  root to: 'home#index'
+  get 'dashboard', to: 'home#dashboard'
+  root to: 'home#dashboard'
 end
