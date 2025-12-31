@@ -1,0 +1,195 @@
+# frozen_string_literal: true
+
+# Registry of data sources with attribution metadata.
+#
+# Provides a centralised lookup for source metadata including URLs, licenses,
+# and descriptions. This is used for API output attribution and transparency.
+#
+# @example Looking up source metadata
+#   SourceRegistry.for('OurAirportsAirportSource')
+#   # => { name: 'OurAirports', url: 'https://ourairports.com/data/', ... }
+#
+# @example Getting attribution for a provenance record
+#   provenance = airport.provenance_for(:timezone)
+#   source_info = SourceRegistry.for(provenance['source_type'])
+#   source_info[:url] # => 'https://github.com/evansiroky/timezone-boundary-builder'
+module SourceRegistry
+  # Source metadata registry.
+  # Keys are source type names (matching what's stored in field_provenance).
+  SOURCES = {
+    # === Airport Sources ===
+    'OurAirportsAirportSource' => {
+      name: 'OurAirports',
+      url: 'https://ourairports.com/data/',
+      license: 'Public Domain',
+      description: 'Community-maintained global airport database, updated daily'
+    }.freeze,
+    'OpenFlightsAirportSource' => {
+      name: 'OpenFlights',
+      url: 'https://openflights.org/data.php',
+      license: 'ODbL',
+      description: 'Open source flight route and airport database'
+    }.freeze,
+
+    # === Runway Sources ===
+    'OurAirportsRunwaySource' => {
+      name: 'OurAirports',
+      url: 'https://ourairports.com/data/',
+      license: 'Public Domain',
+      description: 'Community-maintained runway data from OurAirports'
+    }.freeze,
+
+    # === Operator Sources ===
+    'VrsDataOperatorSource' => {
+      name: 'Virtual Radar Server Database',
+      url: 'https://www.virtualradarserver.co.uk/',
+      license: 'BSD 3-Clause',
+      description: 'Aircraft and operator data from the VRS standing data project'
+    }.freeze,
+    'OpenTravelOperatorSource' => {
+      name: 'OpenTravel',
+      url: 'https://opentravel.org/',
+      license: 'OpenTravel License',
+      description: 'Airline and travel industry reference data'
+    }.freeze,
+    'OpenFlightsOperatorSource' => {
+      name: 'OpenFlights',
+      url: 'https://openflights.org/data.php',
+      license: 'ODbL',
+      description: 'Open source airline database with IATA/ICAO codes'
+    }.freeze,
+
+    # === Country Sources ===
+    'OpenTravelCountrySource' => {
+      name: 'OpenTravel',
+      url: 'https://opentravel.org/',
+      license: 'OpenTravel License',
+      description: 'Country reference data from OpenTravel'
+    }.freeze,
+    'OpenFlightsCountrySource' => {
+      name: 'OpenFlights',
+      url: 'https://openflights.org/data.php',
+      license: 'ODbL',
+      description: 'Country data with DAFIF codes'
+    }.freeze,
+    'OurAirportsCountrySource' => {
+      name: 'OurAirports',
+      url: 'https://ourairports.com/data/',
+      license: 'Public Domain',
+      description: 'Country and continent data from OurAirports'
+    }.freeze,
+
+    # === Manufacturer Sources ===
+    'CfappsIcaoIntManufacturerSource' => {
+      name: 'ICAO Aircraft Type Designators',
+      url: 'https://cfapps.icao.int/doc8643/',
+      license: 'ICAO',
+      description: 'Official ICAO Doc 8643 aircraft manufacturer designators'
+    }.freeze,
+    'OpenskyManufacturerSource' => {
+      name: 'OpenSky Network',
+      url: 'https://opensky-network.org/',
+      license: 'CC BY-NC 4.0',
+      description: 'Aircraft manufacturer data from OpenSky Network database'
+    }.freeze,
+
+    # === Aircraft Type Sources ===
+    'CfappsIcaoIntAircraftTypeSource' => {
+      name: 'ICAO Aircraft Type Designators',
+      url: 'https://cfapps.icao.int/doc8643/',
+      license: 'ICAO',
+      description: 'Official ICAO Doc 8643 aircraft type designators'
+    }.freeze,
+    'OpenFlightsAircraftTypeSource' => {
+      name: 'OpenFlights',
+      url: 'https://openflights.org/data.php',
+      license: 'ODbL',
+      description: 'Aircraft type data with IATA codes'
+    }.freeze,
+
+    # === Aircraft Sources ===
+    'CasaAircraftSource' => {
+      name: 'CASA Aircraft Register',
+      url: 'https://www.casa.gov.au/aircraft/aircraft-register',
+      license: 'Australian Government Open Data',
+      description: 'Australian Civil Aviation Safety Authority aircraft register'
+    }.freeze,
+    'CaanzAircraftSource' => {
+      name: 'CAANZ Aircraft Register',
+      url: 'https://www.aviation.govt.nz/aircraft/aircraft-registration/aircraft-register-search/',
+      license: 'New Zealand Government Open Data',
+      description: 'Civil Aviation Authority of New Zealand aircraft register'
+    }.freeze,
+
+    # === Derived/Calculated Sources ===
+    'OpenStreetMap/TimezoneBoundaryBuilder' => {
+      name: 'Timezone Boundary Builder',
+      url: 'https://github.com/evansiroky/timezone-boundary-builder',
+      license: 'ODbL (OpenStreetMap)',
+      description: 'Timezone boundaries derived from OpenStreetMap data'
+    }.freeze,
+    'AutoGenerated' => {
+      name: 'Auto-generated',
+      url: nil,
+      license: nil,
+      description: 'Stub record created automatically, awaiting enrichment from real sources'
+    }.freeze
+  }.freeze
+
+  class << self
+    # Retrieves metadata for a source type.
+    #
+    # @param source_type [String] The source type name (e.g. 'OurAirportsAirportSource')
+    # @return [Hash, nil] The source metadata or nil if not found
+    def for(source_type)
+      SOURCES[source_type]
+    end
+
+    # Retrieves metadata for a source type, raising if not found.
+    #
+    # @param source_type [String] The source type name
+    # @return [Hash] The source metadata
+    # @raise [KeyError] If the source type is not registered
+    def fetch(source_type)
+      SOURCES.fetch(source_type)
+    end
+
+    # Returns all registered source types.
+    #
+    # @return [Array<String>] List of source type names
+    def all_source_types
+      SOURCES.keys
+    end
+
+    # Returns all sources with their metadata.
+    #
+    # @return [Hash] All source metadata
+    def all
+      SOURCES
+    end
+
+    # Checks if a source type is registered.
+    #
+    # @param source_type [String] The source type name
+    # @return [Boolean]
+    def registered?(source_type)
+      SOURCES.key?(source_type)
+    end
+
+    # Returns the attribution URL for a source type.
+    #
+    # @param source_type [String] The source type name
+    # @return [String, nil] The URL or nil if not found
+    def url_for(source_type)
+      SOURCES.dig(source_type, :url)
+    end
+
+    # Returns the license for a source type.
+    #
+    # @param source_type [String] The source type name
+    # @return [String, nil] The license or nil if not found
+    def license_for(source_type)
+      SOURCES.dig(source_type, :license)
+    end
+  end
+end

@@ -41,7 +41,7 @@ class VRSDataOperatorProcessorTest < ActiveSupport::TestCase
   # Test importing a complete record with all fields populated
   ## We expect the 3 key fields to be present plus two in the JSONB data
   def test_complete_record
-    Processor::Operator::VRSData.import(url_for_test_name('complete_record'))
+    Processors::Operator::VRSData.import(url_for_test_name('complete_record'))
 
     where_complete = Source::Operator::VRSDataOperatorSource.where(icao_code: 'VIR')
 
@@ -59,7 +59,7 @@ class VRSDataOperatorProcessorTest < ActiveSupport::TestCase
   # Test importing data with only an IATA code
   ## We expect the model to be valid and import all records.
   def test_vrs_iata_only_import
-    Processor::Operator::VRSData.import(url_for_test_name('iata_only'))
+    Processors::Operator::VRSData.import(url_for_test_name('iata_only'))
 
     where_record_1b = Source::Operator::VRSDataOperatorSource.where(iata_code: '1B')
 
@@ -72,7 +72,7 @@ class VRSDataOperatorProcessorTest < ActiveSupport::TestCase
   # Test importing data with a non-unique IATA code but with unique ICAO code
   ## Where there is a unique ICAO code, we expect both records to be imported.
   def test_vrs_non_unique_iata_import
-    Processor::Operator::VRSData.import(url_for_test_name('non_unique_iata'))
+    Processors::Operator::VRSData.import(url_for_test_name('non_unique_iata'))
 
     where_record_2b = Source::Operator::VRSDataOperatorSource.where(iata_code: '2D')
     assert_equal 2, where_record_2b.count
@@ -81,7 +81,7 @@ class VRSDataOperatorProcessorTest < ActiveSupport::TestCase
   # Test importing data with duplicate entries
   ## Where there are duplicate entries, we expect the last to be imported (with an update)
   def test_vrs_non_unique_rows_import
-    Processor::Operator::VRSData.import(url_for_test_name('non_unique_iata_icao'))
+    Processors::Operator::VRSData.import(url_for_test_name('non_unique_iata_icao'))
 
     where_fbw = Source::Operator::VRSDataOperatorSource.where(icao_code: 'FBW')
 

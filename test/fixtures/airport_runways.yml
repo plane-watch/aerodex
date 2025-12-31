@@ -2,14 +2,21 @@
 #
 # Table name: airport_runways
 #
-#  id          :integer          not null, primary key
-#  airport_id  :integer
-#  runway_name :string
-#  heading     :decimal(, )
-#  length      :decimal(, )
-#  width       :decimal(, )
-#  created_at  :datetime         not null
-#  updated_at  :datetime         not null
+#  id               :integer          not null, primary key
+#  airport_id       :integer
+#  runway_name      :string
+#  heading          :decimal(, )
+#  length           :decimal(, )
+#  width            :decimal(, )
+#  created_at       :datetime         not null
+#  updated_at       :datetime         not null
+#  le_ident         :string
+#  he_ident         :string
+#  surface          :string
+#  lighted          :boolean          default("false")
+#  closed           :boolean          default("false")
+#  field_provenance :jsonb            default("{}"), not null
+#  last_combined_at :datetime
 #
 
 yssy_rwy_16r:

@@ -5,7 +5,9 @@
         <i class="fa-solid fa-route size-10 mx-auto text-purple-400"></i>
       </div>
       <div class="ml-4">    
-        <span class="font-medium text-gray-900"><%= route.call_sign || 'No Call Sign' %></span>
+        <%= link_to route_path(route), class: "font-medium text-gray-900 hover:text-indigo-600" do %>
+          <%= route.call_sign || 'No Call Sign' %>
+        <% end %>
         <div class="mt-1 text-gray-500">
           Route #<%= route.id %>
         </div>
@@ -24,7 +26,7 @@
   </td>
   <td class="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
     <div class="text-gray-900">
-      <%= route.route_segments.count %>
+      <%= route.route_segments_count %>
     </div>
   </td>
   <td>

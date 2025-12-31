@@ -3,90 +3,144 @@
 module Processors
   module Aircraft
     module CASA
+      # Processor for importing Australian aircraft registry data from CASA CSV files.
+      #
+      # This processor reads CSV exports from CASA and imports them into the
+      # CASAAircraftSource table. The data is then combined with other sources
+      # using Processors::Aircraft::Aircraft#combine_sources.
+      #
+      # @example Importing from a CSV file
+      #   Processors::Aircraft::CASA::CSV.bulk_import('/path/to/casa_export.csv')
       class CSV < Processors::Aircraft::CASA::Registry
+        CHARACTER_SET = ('A'..'Z').to_a + ('0'..'9').to_a
+
+        # Field mappings for CSV columns to source table fields
+        # Note: CSV converters may cast values to Integer/Date, so functions must handle multiple types
         @transform_data = {
           'model' => {
-            function: ->(model) { normalise_model(model) },
-            field: :model,
+            function: ->(model) { normalise_model(model.to_s) },
+            field: :model
           },
           'icaotypedesig' => {
-            function: ->(v) { get_aircraft_type(v) },
-            field: :aircraft_type_id,
+            function: ->(v) { v.to_s.strip },
+            field: :type_code
           },
           'datefirstreg' => {
-            function: ->(v) { Date.parse(v) },
-            field: :registration_date,
+            function: ->(v) { v.is_a?(Date) ? v : Date.parse(v.to_s) },
+            field: :registration_date
           },
           'serial' => {
+            function: ->(v) { v.to_s },
             field: :serial_number
           },
           'regholdname' => {
-            function: ->(v) { normalise_name(v) },
-            field: :owner,
+            function: ->(v) { normalise_name(v.to_s) },
+            field: :owner
           },
           'regopname' => {
-            function: ->(v) { normalise_and_find_operator(v, country: 'Australia') },
-            field: :operator,
+            function: ->(v) { normalise_name(v.to_s) },
+            field: :operator_name
           },
           'engnum' => {
             function: ->(v) { v.to_i },
-            field: :engine_count,
+            field: :engine_count
           },
           'engmodel' => {
-            field: :engine_model,
-          },
+            function: ->(v) { v.to_s },
+            field: :engine_model
+          }
         }
 
         class << self
+          # Imports aircraft data from a CASA CSV file into the source table.
+          #
+          # @param file_path [String] Path to the CSV file
+          # @return [Hash] Result with :success, :errors, and :missing_types arrays
           def bulk_import(file_path)
-            missing_types = []
+            require 'csv'
+
             errors = []
             success = []
-            CSV.foreach(file_path, headers: true, header_converters: :symbol, converters: :all).each do |row|
-              data = {
-                registration: "VH-#{row[:mark]}",
-                icao: reg_to_hex("VH-#{row[:mark]}"),
-              }
-              row.each do |k, v|
-                begin
-                  transformed_data = transform_row(k.to_s, v)
-                  next if transformed_data.nil?
-                rescue ActiveRecord::RecordNotFound
-                  errors << { registration: data[:registration], errors: "Aircraft type not found #{row[:icaotypedesig]}" }
-                  missing_types << row[:icaotypedesig] unless missing_types.include?(row[:icaotypedesig])
-                  next
+            records_processed = 0
+
+            progress_bar = create_progress_bar(count_csv_rows(file_path))
+
+            Source::Aircraft::CASAAircraftSource.transaction do
+              ::CSV.foreach(file_path, headers: true, header_converters: :symbol, converters: :all) do |row|
+                records_processed += 1
+                result = import_row(row)
+
+                if result[:error]
+                  errors << result[:error]
+                else
+                  success << result[:registration]
                 end
-                data[transformed_data[:key]] = transformed_data[:value]
-              end
 
-              obj = ::Aircraft.find_or_initialize_by(
-                registration: data[:registration],
-                serial_number: data[:serial_number],
-                aircraft_type_id: data[:aircraft_type_id]
-              )
-
-              obj.assign_attributes(data)
-              begin
-                obj.save!
-                success << "VH-#{row[:mark]}"
-              rescue ActiveRecord::RecordInvalid
-                errors << { registration: data[:registration], errors: obj.errors.full_messages }
+                progress_bar.increment!
               end
             end
 
-            { success: success, errors: errors, missing_types: missing_types }
+            # Create an import report
+            new_import_report(errors, records_processed)
+
+            { success: success, errors: errors }
           end
 
-          def transform_row(a, b)
-            key = a.to_s
-            value = b
-            value.strip! if value.is_a?(String)
+          private
+
+          # Imports a single CSV row into the source table.
+          #
+          # @param row [CSV::Row] The CSV row to import
+          # @return [Hash] Result with :registration or :error key
+          def import_row(row)
+            registration = "VH-#{row[:mark]}"
+            icao = reg_to_hex(registration)
+
+            return { error: { registration: registration, errors: ['Invalid registration format'] } } unless icao
+
+            data = {
+              registration: registration,
+              icao: icao,
+              registration_country_code: 'AU',
+              import_date: Time.current
+            }
+
+            # Transform each field from the CSV
+            row.each do |key, value|
+              next if value.nil?
+
+              transformed = transform_row(key.to_s, value)
+              next if transformed.nil?
+
+              data[transformed[:key]] = transformed[:value]
+            end
+
+            # Find or initialise the source record
+            source = Source::Aircraft::CASAAircraftSource.find_or_initialize_by(icao: icao)
+            source.assign_attributes(data)
+
+            if source.save
+              { registration: registration }
+            else
+              { error: { registration: registration, errors: source.errors.full_messages } }
+            end
+          end
+
+          # Counts the number of rows in a CSV file (excluding header).
+          #
+          # @param file_path [String] Path to the CSV file
+          # @return [Integer] The row count
+          def count_csv_rows(file_path)
+            File.foreach(file_path).count - 1
+          end
+
+          def transform_row(key, value)
+            key = key.to_s
+            value = value.to_s.strip if value.is_a?(String)
 
             return nil if key.nil? || value.nil?
-
-            if @transform_data[key].nil?
-              return nil
-            end
+            return nil if value.respond_to?(:empty?) && value.empty?
+            return nil if @transform_data[key].nil?
 
             {
               key: @transform_data[key][:field] || key,

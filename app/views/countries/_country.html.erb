@@ -6,7 +6,9 @@
         <%= image_tag "country_flags/#{flag_code}.svg", class: 'h-full w-full object-cover' %>
       </div>
       <div class="ml-4">    
-        <span class="font-medium text-gray-900"><%= country.name %></span>
+        <%= link_to country_path(country), class: "font-medium text-gray-900 hover:text-indigo-600" do %>
+          <%= country.name %>
+        <% end %>
         <% if country.iso_2char_code %>
           <div class="mt-1 text-gray-500">
             <%= country.iso_2char_code %>
@@ -32,12 +34,12 @@
   </td>
   <td class="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
     <div class="text-gray-900">
-      <%= country.airports.count %>
+      <%= country.airports_count %>
     </div>
   </td>
   <td class="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
     <div class="text-gray-900">
-      <%= country.operators.count %>
+      <%= country.operators_count %>
     </div>
   </td>
   <td>

@@ -2,24 +2,31 @@
 #
 # Table name: operator_sources
 #
-#  id          :bigint           not null, primary key
-#  data        :jsonb            not null
-#  iata_code   :string
-#  icao_code   :string
-#  name        :string
-#  type        :string           not null
-#  import_date :datetime         not null
-#  created_at  :datetime         not null
-#  updated_at  :datetime         not null
+#  id               :integer          not null, primary key
+#  icao_code        :string
+#  iata_code        :string
+#  name             :string
+#  type             :string           not null
+#  import_date      :datetime         not null
+#  data             :jsonb            default("\"{}\""), not null
+#  created_at       :datetime         not null
+#  updated_at       :datetime         not null
+#  excluded         :boolean          default("false"), not null
+#  exclusion_reason :string
+#  excluded_at      :datetime
+#  excluded_by      :string
 #
 # Indexes
 #
-#  index_operator_sources_on_data  (data) USING gin
+#  index_operator_sources_on_data      (data)
+#  index_operator_sources_on_excluded  (excluded)
 #
+
 module Source
   module Operator
     class OperatorSource < ApplicationRecord
       include MeiliSearch::Rails
+      include HasSourceExclusion
       
       validate :icao_or_iata_code
       serialize :data, coder: JsonbSerializer

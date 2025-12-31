@@ -1,0 +1,61 @@
+<% content_for :page_title, @manufacturer.name -%>
+<% content_for :page_description, "Details for #{@manufacturer.name}" -%>
+<% content_for :page_actions do %>
+  <%= link_to manufacturers_path, class: "rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50" do %>
+    Back to manufacturers
+  <% end %>
+<% end -%>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2">
+    <div class="bg-white shadow rounded-lg">
+      <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+        <h3 class="text-lg font-medium leading-6 text-gray-900">Manufacturer Information</h3>
+      </div>
+      <dl>
+        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Name</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2"><%= @manufacturer.name %></dd>
+        </div>
+        <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">ICAO Code</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <span class="font-mono font-bold"><%= @manufacturer.icao_code || '-' %></span>
+          </dd>
+        </div>
+        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Country</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <% if @manufacturer.country %>
+              <div class="flex items-center">
+                <% flag_code = @manufacturer.country.iso_2char_code&.downcase || 'xx' %>
+                <%= image_tag "country_flags/#{flag_code}.svg", class: 'h-4 w-6 mr-2' %>
+                <%= link_to @manufacturer.country.name, country_path(@manufacturer.country), class: "text-indigo-600 hover:text-indigo-500" %>
+              </div>
+            <% else %>
+              -
+            <% end %>
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+
+  <div>
+    <div class="bg-white shadow rounded-lg">
+      <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+        <h3 class="text-lg font-medium leading-6 text-gray-900">Statistics</h3>
+      </div>
+      <dl>
+        <div class="bg-gray-50 px-4 py-5 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Aircraft Types</dt>
+          <dd class="mt-1 text-2xl font-semibold text-gray-900"><%= @manufacturer.aircraft_types_count %></dd>
+        </div>
+        <div class="bg-white px-4 py-5 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Total Aircraft</dt>
+          <dd class="mt-1 text-2xl font-semibold text-gray-900"><%= @manufacturer.aircraft_count %></dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+</div>

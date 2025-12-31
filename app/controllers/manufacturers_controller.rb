@@ -11,6 +11,12 @@ class ManufacturersController < ApplicationController
     end
   end
 
+  def show
+    @manufacturer = Manufacturer.includes(:country).find(params[:id])
+  end
+
+  private
+
   def render_infinite_scroll(partial:, collection:)
     render turbo_stream: turbo_stream.append(
       params.fetch(:turbo_target, 'list'),

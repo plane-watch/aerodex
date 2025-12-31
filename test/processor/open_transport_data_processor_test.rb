@@ -45,7 +45,7 @@ class OpenTransportOperatorProcessorTest < ActiveSupport::TestCase
 
   # Should skip expired records on first import
   def test_expired_record_only
-    Processor::Operator::OpenTravel.import(url_for_test_name('expired_record_only'))
+    Processors::Operator::OpenTravel.import(url_for_test_name('expired_record_only'))
 
     where_non_exist = Source::Operator::OpenTravelOperatorSource.where(icao_code: 'AJD')
 
@@ -54,7 +54,7 @@ class OpenTransportOperatorProcessorTest < ActiveSupport::TestCase
 
   # The non-valid record should be skipped and the valid one of the same name should be imported
   def test_expired_record_and_valid
-    Processor::Operator::OpenTravel.import(url_for_test_name('expired_record_and_valid'))
+    Processors::Operator::OpenTravel.import(url_for_test_name('expired_record_and_valid'))
 
     where_abg = Source::Operator::OpenTravelOperatorSource.where(icao_code: 'ABG')
 
@@ -64,7 +64,7 @@ class OpenTransportOperatorProcessorTest < ActiveSupport::TestCase
 
   # Duplicate ICAO codes because both are indicating as valid.
   def test_duplicate_icao_different_names
-    Processor::Operator::OpenTravel.import(url_for_test_name('duplicate_icao_different_name'))
+    Processors::Operator::OpenTravel.import(url_for_test_name('duplicate_icao_different_name'))
 
     where_aia = Source::Operator::OpenTravelOperatorSource.where(icao_code: 'AIA')
 
@@ -72,7 +72,7 @@ class OpenTransportOperatorProcessorTest < ActiveSupport::TestCase
   end
 
   def test_duplicate_icao_different_names_second_import
-    Processor::Operator::OpenTravel.import(url_for_test_name('duplicate_icao_different_name'))
+    Processors::Operator::OpenTravel.import(url_for_test_name('duplicate_icao_different_name'))
 
     where_aia = Source::Operator::OpenTravelOperatorSource.where(icao_code: 'AIA')
     where_8r = Source::Operator::OpenTravelOperatorSource.where(icao_code: 'AIA', iata_code: '8R')
@@ -84,7 +84,7 @@ class OpenTransportOperatorProcessorTest < ActiveSupport::TestCase
   end
 
   def test_duplicate_iata_different_names
-    Processor::Operator::OpenTravel.import(url_for_test_name('duplicate_iata_different_name'))
+    Processors::Operator::OpenTravel.import(url_for_test_name('duplicate_iata_different_name'))
 
     where_1i = Source::Operator::OpenTravelOperatorSource.where(iata_code: '1I')
 
@@ -92,7 +92,7 @@ class OpenTransportOperatorProcessorTest < ActiveSupport::TestCase
   end
 
   def test_duplicate_iata_different_names_second_import
-    Processor::Operator::OpenTravel.import(url_for_test_name('duplicate_iata_different_name'))
+    Processors::Operator::OpenTravel.import(url_for_test_name('duplicate_iata_different_name'))
 
     where_1i = Source::Operator::OpenTravelOperatorSource.where(iata_code: '1I')
     where_nje = Source::Operator::OpenTravelOperatorSource.where(iata_code: '1I', icao_code: 'NJE')
@@ -104,7 +104,7 @@ class OpenTransportOperatorProcessorTest < ActiveSupport::TestCase
   end
 
   def test_valid_unique_record
-    Processor::Operator::OpenTravel.import(url_for_test_name('valid_unique_record'))
+    Processors::Operator::OpenTravel.import(url_for_test_name('valid_unique_record'))
 
     where_qfa = Source::Operator::OpenTravelOperatorSource.where(icao_code: 'QFA')
 
@@ -113,7 +113,7 @@ class OpenTransportOperatorProcessorTest < ActiveSupport::TestCase
 
   def test_record_becomes_invalid
     travel_to Date.new(2010, 01, 01) do
-      Processor::Operator::OpenTravel.import(url_for_test_name('record_becomes_invalid_before'))
+      Processors::Operator::OpenTravel.import(url_for_test_name('record_becomes_invalid_before'))
     end
 
     where_before = Source::Operator::OpenTravelOperatorSource.where(icao_code: 'VOZ')
@@ -124,7 +124,7 @@ class OpenTransportOperatorProcessorTest < ActiveSupport::TestCase
     assert_equal '2000-08-31', where_before.first.data['validity_from']
 
     travel_to Date.new(2013, 01, 01) do
-      Processor::Operator::OpenTravel.import(url_for_test_name('record_becomes_invalid_after'))
+      Processors::Operator::OpenTravel.import(url_for_test_name('record_becomes_invalid_after'))
     end
 
     where_after = Source::Operator::OpenTravelOperatorSource.where(icao_code: 'VOZ')

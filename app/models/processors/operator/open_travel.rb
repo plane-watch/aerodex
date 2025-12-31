@@ -4,7 +4,7 @@ require 'csv'
 
 module Processors
   module Operator
-    class OpenTravel < Processors::Operator::Base
+    class OpenTravel < Processors::Operator::Operator
       @transform_data = {
         '3char_code' => {
           function: ->(value) { value&.strip },

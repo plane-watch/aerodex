@@ -2,14 +2,18 @@
 #
 # Table name: countries
 #
-#  id             :integer          not null, primary key
-#  iso_2char_code :string
-#  iso_3char_code :string
-#  iso_num_code   :string
-#  name           :string
-#  capital        :string
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
+#  id               :integer          not null, primary key
+#  iso_2char_code   :string
+#  iso_3char_code   :string
+#  iso_num_code     :string
+#  name             :string
+#  capital          :string
+#  created_at       :datetime         not null
+#  updated_at       :datetime         not null
+#  field_provenance :jsonb            default("{}"), not null
+#  last_combined_at :datetime
+#  airports_count   :integer          default("0"), not null
+#  operators_count  :integer          default("0"), not null
 #
 
 require "test_helper"

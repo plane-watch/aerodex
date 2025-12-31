@@ -1,0 +1,67 @@
+<% content_for :page_title, @aircraft_type.full_name -%>
+<% content_for :page_description, "Details for #{@aircraft_type.full_name}" -%>
+<% content_for :page_actions do %>
+  <%= link_to aircraft_types_path, class: "rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50" do %>
+    Back to aircraft types
+  <% end %>
+<% end -%>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2">
+    <div class="bg-white shadow rounded-lg">
+      <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+        <h3 class="text-lg font-medium leading-6 text-gray-900">Aircraft Type Information</h3>
+      </div>
+      <dl>
+        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Name</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2"><%= @aircraft_type.name %></dd>
+        </div>
+        <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Type Code</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <span class="font-mono font-bold"><%= @aircraft_type.type_code || '-' %></span>
+          </dd>
+        </div>
+        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Manufacturer</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <%= link_to @aircraft_type.manufacturer.name, manufacturer_path(@aircraft_type.manufacturer), class: "text-indigo-600 hover:text-indigo-500" %>
+          </dd>
+        </div>
+        <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Category</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2"><%= @aircraft_type.category&.titleize || '-' %></dd>
+        </div>
+        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Wake Turbulence Category</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2"><%= @aircraft_type.wtc || '-' %></dd>
+        </div>
+        <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Engines</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <% if @aircraft_type.engines %>
+              <%= @aircraft_type.engines %> &times; <%= @aircraft_type.engine_type || 'Unknown' %>
+            <% else %>
+              -
+            <% end %>
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+
+  <div>
+    <div class="bg-white shadow rounded-lg">
+      <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+        <h3 class="text-lg font-medium leading-6 text-gray-900">Statistics</h3>
+      </div>
+      <dl>
+        <div class="bg-gray-50 px-4 py-5 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Aircraft in fleet</dt>
+          <dd class="mt-1 text-2xl font-semibold text-gray-900"><%= @aircraft_type.aircraft_count %></dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+</div>

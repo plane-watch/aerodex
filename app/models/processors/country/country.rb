@@ -1,15 +1,187 @@
+# frozen_string_literal: true
+
 module Processors
   module Country
+    # Processor for combining country data from sources into canonical Country records.
+    #
+    # Uses FieldMerger for consistent source handling, even with a single source currently.
+    # This makes adding additional sources straightforward in the future.
     class Country < Processors::Base
-      def self.combine_sources
-        Source::Country::OpenTravelCountrySource.find_each do |source|
-          ::Country.find_or_initialize_by(iso_2char_code: source.iso_2char_code).tap do |country|
-            country.iso_2char_code = source.iso_2char_code
-            country.iso_3char_code = source.iso_3char_code
-            country.iso_num_code = source.iso_num_code
-            country.name = source.name
-            country.capital = source.capital
-            country.save!
+      # The entity type for trust score lookups
+      ENTITY_TYPE = 'Country'
+
+      # The fields to merge when combining sources
+      MERGE_FIELDS = %i[iso_2char_code iso_3char_code iso_num_code name capital].freeze
+
+      class << self
+        # Combines a single country by ISO 2-character code.
+        #
+        # @param iso_code [String] The ISO 2-character country code (e.g., "AU")
+        # @return [Hash] Result with :country, :created, :updated, or :error
+        #
+        # @example
+        #   result = Processors::Country::Country.combine_one("AU")
+        #   result[:country]  # => <Country iso_2char_code: "AU">
+        def combine_one(iso_code)
+          iso_code = iso_code.to_s.strip.upcase
+          raise ArgumentError, "ISO 2-character code is required" if iso_code.blank?
+          raise ArgumentError, "ISO code must be 2 characters" if iso_code.length != 2
+
+          # Gather sources for this country
+          sources = gather_sources_for_iso_code(iso_code)
+
+          if sources.empty?
+            return { error: "No sources found for ISO code: #{iso_code}" }
+          end
+
+          # Ensure trust scores are cached
+          SourceTrustScore.send(:ensure_cache_loaded)
+
+          conflicts = []
+          result = merge_sources_for_iso(iso_code, sources, conflicts)
+
+          if result[:error]
+            return { error: result[:error] }
+          end
+
+          is_new = result[:country]&.id_previously_changed?
+          {
+            country: result[:country],
+            created: is_new,
+            updated: !is_new,
+            conflicts: conflicts
+          }
+        end
+
+        # Gathers all sources for a specific country ISO code.
+        #
+        # @param iso_code [String] The ISO 2-character code
+        # @return [Array<ApplicationRecord>] All source records matching the code
+        def gather_sources_for_iso_code(iso_code)
+          sources = []
+          sources.concat(Source::Country::OpenTravelCountrySource.includable.where(iso_2char_code: iso_code).to_a)
+          sources.concat(Source::Country::OpenFlightsCountrySource.includable.where(iso_2char_code: iso_code).to_a)
+          sources.concat(Source::Country::OurAirportsCountrySource.includable.where(iso_2char_code: iso_code).to_a)
+          sources
+        end
+
+        # Combines country data from all available sources into canonical Country records.
+        #
+        # @return [Array<Hash>, true] Returns array of errors if any, otherwise true
+        def combine_sources
+          # Collect all sources grouped by iso_2char_code (the unique identifier)
+          sources_by_iso = group_sources_by_iso
+          errors = []
+          conflicts = []
+
+          progress_bar = create_progress_bar(sources_by_iso.count)
+
+          ::Country.transaction do
+            sources_by_iso.each do |iso_code, sources|
+              result = merge_sources_for_iso(iso_code, sources, conflicts)
+              errors << result[:error] if result[:error]
+              progress_bar.increment!
+            end
+          end
+
+          # Log any conflicts for review
+          log_conflicts(conflicts) if conflicts.any?
+
+          # Reindex for search
+          ::Country.reindex!
+
+          # Create an import report
+          new_import_report(errors, sources_by_iso.count)
+
+          errors.any? ? errors : true
+        end
+
+        private
+
+        # Groups all source records by their iso_2char_code.
+        #
+        # @return [Hash<String, Array>] Sources grouped by iso_2char_code
+        def group_sources_by_iso
+          sources = {}
+
+          # Add OpenTravel sources
+          Source::Country::OpenTravelCountrySource.includable.find_each do |source|
+            key = source.iso_2char_code
+            next if key.blank?
+
+            sources[key] ||= []
+            sources[key] << source
+          end
+
+          # Add OpenFlights sources
+          Source::Country::OpenFlightsCountrySource.includable.find_each do |source|
+            key = source.iso_2char_code
+            next if key.blank?
+
+            sources[key] ||= []
+            sources[key] << source
+          end
+
+          # Add OurAirports sources
+          Source::Country::OurAirportsCountrySource.includable.find_each do |source|
+            key = source.iso_2char_code
+            next if key.blank?
+
+            sources[key] ||= []
+            sources[key] << source
+          end
+
+          sources
+        end
+
+        # Merges sources for a single iso_2char_code into a canonical Country.
+        #
+        # @param iso_code [String] The ISO 2-character country code
+        # @param sources [Array] The source records to merge
+        # @param conflicts [Array] Array to collect conflict information
+        # @return [Hash] Result with :country or :error key
+        def merge_sources_for_iso(iso_code, sources, conflicts)
+          record = ::Country.find_or_initialize_by(iso_2char_code: iso_code)
+
+          # Merge each field using FieldMerger
+          MERGE_FIELDS.each do |field|
+            merger = FieldMerger.new(sources: sources, field: field, entity_type: ENTITY_TYPE)
+
+            record.public_send("#{field}=", merger.best_value)
+
+            # Track provenance for this field
+            if merger.best_source && merger.best_value.present?
+              record.set_provenance(field, source: merger.best_source, confidence: merger.best_confidence)
+            end
+
+            # Collect conflict information for logging
+            conflicts << merger.conflict_details if merger.has_conflict?
+          end
+
+          record.last_combined_at = Time.current
+
+          if record.valid?
+            record.save!
+            { country: record }
+          else
+            {
+              error: {
+                iso_2char_code: iso_code,
+                source_count: sources.count,
+                errors: record.errors.full_messages
+              }
+            }
+          end
+        end
+
+        # Logs conflict information for later review.
+        #
+        # @param conflicts [Array<Hash>] The conflicts to log
+        def log_conflicts(conflicts)
+          Rails.logger.info "Country combine completed with #{conflicts.count} field conflicts"
+          conflicts.each do |conflict|
+            Rails.logger.debug "Conflict on #{conflict[:field]}: " \
+                               "#{conflict[:candidates].map { |c| "#{c[:source_type]}=#{c[:value].inspect}" }.join(' vs ')}"
           end
         end
       end

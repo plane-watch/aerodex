@@ -5,7 +5,9 @@
         <i class="fa-solid fa-road-bridge size-10 mx-auto text-purple-400"></i>
       </div>
       <div class="ml-4">    
-        <span class="font-medium text-gray-900"><%= airport.name %></span>
+        <%= link_to airport_path(airport), class: "font-medium text-gray-900 hover:text-indigo-600" do %>
+          <%= airport.name %>
+        <% end %>
         <% if airport.city %>
           <div class="mt-1 text-gray-500">
             <%= airport.city %>
@@ -31,7 +33,7 @@
   </td>
   <td class="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
     <div class="text-gray-900">
-      <%= airport.airport_runways.count %>
+      <%= airport.airport_runways_count %>
     </div>
   </td>
   <td>

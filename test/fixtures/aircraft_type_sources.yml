@@ -2,17 +2,29 @@
 #
 # Table name: aircraft_type_sources
 #
-#  id           :integer          not null, primary key
-#  name         :string
-#  type_code    :string
-#  manufacturer :string
-#  wtc          :string
-#  category     :string
-#  engines      :integer
-#  engine_type  :string
-#  type         :string
-#  created_at   :datetime         not null
-#  updated_at   :datetime         not null
+#  id               :integer          not null, primary key
+#  name             :string
+#  type_code        :string
+#  manufacturer     :string
+#  wtc              :string
+#  category         :string
+#  engines          :integer
+#  engine_type      :string
+#  type             :string
+#  created_at       :datetime         not null
+#  updated_at       :datetime         not null
+#  iata_code        :string
+#  import_date      :datetime         not null
+#  data             :jsonb            default("{}"), not null
+#  excluded         :boolean          default("false"), not null
+#  exclusion_reason :string
+#  excluded_at      :datetime
+#  excluded_by      :string
+#
+# Indexes
+#
+#  index_aircraft_type_sources_on_excluded       (excluded)
+#  index_aircraft_type_sources_on_iata_and_type  (iata_code,type)
 #
 
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
@@ -25,6 +37,9 @@ one:
   category: MyString
   engines: 1
   engine_type: MyString
+  type: Source::AircraftType::CfappsICAOIntAircraftTypeSource
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>
 
 two:
   name: MyString
@@ -34,3 +49,6 @@ two:
   category: MyString
   engines: 1
   engine_type: MyString
+  type: Source::AircraftType::CfappsICAOIntAircraftTypeSource
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>

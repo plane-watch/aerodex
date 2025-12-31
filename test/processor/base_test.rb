@@ -7,10 +7,8 @@ class Processors::BaseTest < ActiveSupport::TestCase
     assert Processors::Base
   end
 
-  test 'base module has expected methods when included' do
-    test_class = Class.new do
-      include Processors::Base
-    end
+  test 'base class has expected methods when inherited' do
+    test_class = Class.new(Processors::Base)
 
     assert_respond_to test_class, :transform_field
     assert_respond_to test_class, :get_source_from_url

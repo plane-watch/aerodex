@@ -13,10 +13,10 @@
   </td>
   <td class="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
     <div class="text-gray-900">
-      <%= aircraft.aircraft_type.full_name %>
+      <%= aircraft.aircraft_type&.full_name || 'Unknown Type' %>
     </div>
     <div class="mt-1 text-gray-500">
-      <%= aircraft.aircraft_type.type_code %> (<%= aircraft.model %>), MSN: <%= aircraft.serial_number %>
+      <%= aircraft.aircraft_type&.type_code %> (<%= aircraft.model %>), MSN: <%= aircraft.serial_number %>
     </div>
   </td>
   <td class="whitespace-nowrap px-3 py-5 text-sm hidden md:block">
@@ -33,11 +33,11 @@
   <td class="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
     <div>
       <span class="text-gray-900">
-        <%= aircraft.operator.name %>
+        <%= aircraft.operator&.name || 'Unknown Operator' %>
       </span>
-      <% if aircraft.operator.icao_callsign || aircraft.operator.iata_code -%>
+      <% if aircraft.operator&.icao_code || aircraft.operator&.iata_code -%>
         <span class="text-gray-500">
-          (<%= [aircraft.operator.icao_callsign, aircraft.operator.iata_code].compact.join('/') %>)
+          (<%= [aircraft.operator&.icao_code, aircraft.operator&.iata_code].compact.join('/') %>)
         </span>
       <% end %>
     </div>
@@ -48,10 +48,9 @@
         </span>
       <% end %>
     </div>
-
   </td>
   <td class="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
-    <div class="text-gray-900"><%= aircraft.owner.titleize || "Unknown Owner" %></div>
+    <div class="text-gray-900"><%= aircraft.owner&.titleize || "Unknown Owner" %></div>
   </td>
   <td class="whitespace-nowrap py-5">
     <%= aircraft_status_badge(aircraft.status) %>

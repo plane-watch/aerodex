@@ -11,6 +11,12 @@ class RoutesController < ApplicationController
     end
   end
 
+  def show
+    @route = Route.includes(:operator, route_segments: :airport).find(params[:id])
+  end
+
+  private
+
   def render_infinite_scroll(partial:, collection:)
     render turbo_stream: turbo_stream.append(
       params.fetch(:turbo_target, 'list'),

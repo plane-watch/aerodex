@@ -17,6 +17,9 @@
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
 #  country_id                   :integer          not null
+#  field_provenance             :jsonb            default("{}"), not null
+#  last_combined_at             :datetime
+#  airport_runways_count        :integer          default("0"), not null
 #
 # Indexes
 #
@@ -25,12 +28,13 @@
 
 class Airport < ApplicationRecord
   include MeiliSearch::Rails
+  include HasFieldProvenance
   extend Pagy::Meilisearch
 
   belongs_to :flight_information_region, optional: true
   has_many :airport_runways
   has_many :route_segments
-  belongs_to :country, optional: true
+  belongs_to :country, optional: true, counter_cache: true
 
   has_paper_trail
   meilisearch do

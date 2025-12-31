@@ -4,7 +4,7 @@ require 'csv'
 
 module Processors
   module Operator
-    class VRSData < Processors::Operator::Base
+    class VRSData < Processors::Operator::Operator
       @transform_data = {
         'Name' => {
           function: ->(value) { normalise_name(value) },

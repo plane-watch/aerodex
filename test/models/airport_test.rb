@@ -17,6 +17,9 @@
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
 #  country_id                   :integer          not null
+#  field_provenance             :jsonb            default("{}"), not null
+#  last_combined_at             :datetime
+#  airport_runways_count        :integer          default("0"), not null
 #
 # Indexes
 #

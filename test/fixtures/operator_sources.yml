@@ -1,0 +1,65 @@
+# == Schema Information
+#
+# Table name: operator_sources
+#
+#  id               :integer          not null, primary key
+#  icao_code        :string
+#  iata_code        :string
+#  name             :string
+#  type             :string           not null
+#  import_date      :datetime         not null
+#  data             :jsonb            default("\"{}\""), not null
+#  created_at       :datetime         not null
+#  updated_at       :datetime         not null
+#  excluded         :boolean          default("false"), not null
+#  exclusion_reason :string
+#  excluded_at      :datetime
+#  excluded_by      :string
+#
+# Indexes
+#
+#  index_operator_sources_on_data      (data)
+#  index_operator_sources_on_excluded  (excluded)
+#
+
+# Fixtures for operator source records used in integration tests
+
+vrs_qantas:
+  type: Source::Operator::VRSDataOperatorSource
+  name: Qantas Airways
+  icao_code: QFA
+  iata_code: QF
+  data: {}
+  import_date: <%= Time.current %>
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>
+
+otd_qantas:
+  type: Source::Operator::OpenTravelOperatorSource
+  name: QANTAS
+  icao_code: QFA
+  iata_code: QF
+  data: {}
+  import_date: <%= Time.current %>
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>
+
+vrs_jetstar:
+  type: Source::Operator::VRSDataOperatorSource
+  name: Jetstar Airways
+  icao_code: JST
+  iata_code: JQ
+  data: {}
+  import_date: <%= Time.current %>
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>
+
+otd_only_singapore:
+  type: Source::Operator::OpenTravelOperatorSource
+  name: Singapore Airlines
+  icao_code: SIA
+  iata_code: SQ
+  data: {}
+  import_date: <%= Time.current %>
+  created_at: <%= Time.current %>
+  updated_at: <%= Time.current %>
