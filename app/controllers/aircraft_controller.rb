@@ -13,6 +13,12 @@ class AircraftController < ApplicationController
     end
   end
 
+  def show
+    @aircraft = Aircraft.includes(:aircraft_type, :operator, :registration_country, manufacturer: :country).find(params[:id])
+  end
+
+  private
+
   def render_infinite_scroll(partial:, collection:)
     render turbo_stream: turbo_stream.append(
       params.fetch(:turbo_target, 'list'),

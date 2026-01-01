@@ -1,4 +1,6 @@
 module OperatorsHelper
+  include AircraftHelper
+
   def operator_logo_for(operator)
 
     # In Rails 8, we need to use Dir.glob to find assets matching the pattern

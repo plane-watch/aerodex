@@ -19,6 +19,7 @@ class OperatorsController < ApplicationController
   end
 
   def show
+    @pagy, @aircraft = pagy(@operator.aircraft.includes(:aircraft_type, :registration_country).order(:registration))
   end
 
   def new

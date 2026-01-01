@@ -1,0 +1,186 @@
+<% content_for :page_title, @aircraft.registration -%>
+<% content_for :page_description, "Details for #{@aircraft.registration}" -%>
+<% content_for :page_actions do %>
+  <%= link_to aircraft_index_path, class: "rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50" do %>
+    Back to aircraft
+  <% end %>
+<% end -%>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2">
+    <div class="bg-white shadow rounded-lg">
+      <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+        <h3 class="text-lg font-medium leading-6 text-gray-900">Aircraft Information</h3>
+      </div>
+      <dl>
+        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Registration</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <span class="font-semibold"><%= @aircraft.registration %></span>
+          </dd>
+        </div>
+        <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">ICAO 24-bit Address</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <span class="font-mono font-bold"><%= @aircraft.icao %></span>
+          </dd>
+        </div>
+        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Registration Country</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <% if @aircraft.registration_country %>
+              <div class="flex items-center">
+                <% flag_code = @aircraft.registration_country.iso_2char_code&.downcase || 'xx' %>
+                <%= image_tag "country_flags/#{flag_code}.svg", class: 'h-4 w-6 mr-2' %>
+                <%= @aircraft.registration_country.name %>
+              </div>
+            <% else %>
+              -
+            <% end %>
+          </dd>
+        </div>
+        <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Registration Date</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <%= @aircraft.registration_date&.strftime("%B %d, %Y") || '-' %>
+          </dd>
+        </div>
+        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Aircraft Type</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <% if @aircraft.aircraft_type %>
+              <%= link_to @aircraft.aircraft_type.full_name, aircraft_type_path(@aircraft.aircraft_type), class: "text-indigo-600 hover:text-indigo-500" %>
+              <% if @aircraft.aircraft_type.type_code %>
+                <span class="text-gray-500 ml-1">(<%= @aircraft.aircraft_type.type_code %>)</span>
+              <% end %>
+            <% else %>
+              -
+            <% end %>
+          </dd>
+        </div>
+        <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Manufacturer</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <% if @aircraft.manufacturer %>
+              <%= link_to @aircraft.manufacturer.name, manufacturer_path(@aircraft.manufacturer), class: "text-indigo-600 hover:text-indigo-500" %>
+            <% else %>
+              -
+            <% end %>
+          </dd>
+        </div>
+        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Model</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <%= @aircraft.model || '-' %>
+          </dd>
+        </div>
+        <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Serial Number (MSN)</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <%= @aircraft.serial_number || '-' %>
+          </dd>
+        </div>
+        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Manufacture Year</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <%= @aircraft.manufacture_year || '-' %>
+          </dd>
+        </div>
+        <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Aircraft Name</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <% if @aircraft.aircraft_name.present? %>
+              <span class="italic">&quot;<%= @aircraft.aircraft_name %>&quot;</span>
+            <% else %>
+              -
+            <% end %>
+          </dd>
+        </div>
+        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Operator</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <% if @aircraft.operator %>
+              <%= link_to @aircraft.operator.name, operator_path(@aircraft.operator), class: "text-indigo-600 hover:text-indigo-500" %>
+              <% if @aircraft.operator.icao_code || @aircraft.operator.iata_code %>
+                <span class="text-gray-500">
+                  (<%= [@aircraft.operator.icao_code, @aircraft.operator.iata_code].compact.join('/') %>)
+                </span>
+              <% end %>
+            <% else %>
+              -
+            <% end %>
+          </dd>
+        </div>
+        <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Owner</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <%= @aircraft.owner&.titleize || '-' %>
+          </dd>
+        </div>
+        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Status</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <%= aircraft_status_badge(@aircraft.status) %>
+          </dd>
+        </div>
+        <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Engines</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <% if @aircraft.engine_count && @aircraft.engine_model %>
+              <%= @aircraft.engine_count %> &times; <%= @aircraft.engine_model %>
+            <% elsif @aircraft.engine_count %>
+              <%= @aircraft.engine_count %>
+            <% elsif @aircraft.engine_model %>
+              <%= @aircraft.engine_model %>
+            <% else %>
+              -
+            <% end %>
+          </dd>
+        </div>
+        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Cabin Configuration</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <% if @aircraft.cabin_configuration.present? %>
+              <%= cabin_configuration(@aircraft.cabin_configuration).join(', ') %>
+            <% else %>
+              -
+            <% end %>
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+
+  <div>
+    <div class="bg-white shadow rounded-lg">
+      <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+        <h3 class="text-lg font-medium leading-6 text-gray-900">Metadata</h3>
+      </div>
+      <dl>
+        <div class="bg-gray-50 px-4 py-5 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Created</dt>
+          <dd class="mt-1 text-sm text-gray-900">
+            <%= @aircraft.created_at.strftime("%B %d, %Y at %I:%M %p") %>
+            <div class="text-gray-400 text-xs mt-1"><%= time_ago_in_words(@aircraft.created_at) %> ago</div>
+          </dd>
+        </div>
+        <div class="bg-white px-4 py-5 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Last Updated</dt>
+          <dd class="mt-1 text-sm text-gray-900">
+            <%= @aircraft.updated_at.strftime("%B %d, %Y at %I:%M %p") %>
+            <div class="text-gray-400 text-xs mt-1"><%= time_ago_in_words(@aircraft.updated_at) %> ago</div>
+          </dd>
+        </div>
+        <% if @aircraft.last_combined_at %>
+          <div class="bg-gray-50 px-4 py-5 sm:px-6">
+            <dt class="text-sm font-medium text-gray-500">Last Combined</dt>
+            <dd class="mt-1 text-sm text-gray-900">
+              <%= @aircraft.last_combined_at.strftime("%B %d, %Y at %I:%M %p") %>
+              <div class="text-gray-400 text-xs mt-1"><%= time_ago_in_words(@aircraft.last_combined_at) %> ago</div>
+            </dd>
+          </div>
+        <% end %>
+      </dl>
+    </div>
+  </div>
+</div>

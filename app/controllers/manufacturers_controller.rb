@@ -17,6 +17,7 @@ class ManufacturersController < ApplicationController
 
   def show
     @manufacturer = Manufacturer.includes(:country).find(params[:id])
+    @aircraft_types = @manufacturer.aircraft_types.order(:name)
   end
 
   private

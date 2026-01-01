@@ -19,6 +19,7 @@ class AircraftTypesController < ApplicationController
 
   def show
     @aircraft_type = AircraftType.includes(:manufacturer).find(params[:id])
+    @pagy, @aircraft = pagy(@aircraft_type.aircraft.includes(:operator, :registration_country).order(:registration))
   end
 
   private
