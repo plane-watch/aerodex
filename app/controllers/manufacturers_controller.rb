@@ -2,8 +2,12 @@
 
 class ManufacturersController < ApplicationController
   def index
-    q = Manufacturer.pagy_search(params[:search])
-    @pagy, @manufacturers = pagy_meilisearch(q)
+    if params[:search].present?
+      q = Manufacturer.pagy_search(params[:search])
+      @pagy, @manufacturers = pagy_meilisearch(q)
+    else
+      @pagy, @manufacturers = pagy(Manufacturer.all)
+    end
 
     respond_to do |format|
       format.turbo_stream { render_infinite_scroll(partial: 'manufacturers/manufacturer', collection: @manufacturers) }

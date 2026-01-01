@@ -2,8 +2,12 @@
 
 class RunwaysController < ApplicationController
   def index
-    q = AirportRunway.pagy_search(params[:search])
-    @pagy, @runways = pagy_meilisearch(q)
+    if params[:search].present?
+      q = AirportRunway.pagy_search(params[:search])
+      @pagy, @runways = pagy_meilisearch(q)
+    else
+      @pagy, @runways = pagy(AirportRunway.all)
+    end
 
     respond_to do |format|
       format.turbo_stream { render_infinite_scroll(partial: 'runways/runway', collection: @runways) }

@@ -2,8 +2,12 @@
 
 class RoutesController < ApplicationController
   def index
-    q = Route.pagy_search(params[:search])
-    @pagy, @routes = pagy_meilisearch(q)
+    if params[:search].present?
+      q = Route.pagy_search(params[:search])
+      @pagy, @routes = pagy_meilisearch(q)
+    else
+      @pagy, @routes = pagy(Route.all)
+    end
 
     respond_to do |format|
       format.turbo_stream { render_infinite_scroll(partial: 'routes/route', collection: @routes) }

@@ -1,7 +1,11 @@
 class AircraftController < ApplicationController
   def index
-    aircraft = Aircraft.includes(:aircraft_type, :operator).pagy_search(params[:search])
-    @pagy, @aircraft = pagy_meilisearch(aircraft)
+    if params[:search].present?
+      aircraft = Aircraft.includes(:aircraft_type, :operator).pagy_search(params[:search])
+      @pagy, @aircraft = pagy_meilisearch(aircraft)
+    else
+      @pagy, @aircraft = pagy(Aircraft.includes(:aircraft_type, :operator))
+    end
 
     respond_to do |format|
       format.turbo_stream { render_infinite_scroll(partial: 'aircraft/aircraft', collection: @aircraft) }

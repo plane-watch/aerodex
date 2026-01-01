@@ -2,8 +2,12 @@
 
 class AircraftTypesController < ApplicationController
   def index
-    q = AircraftType.pagy_search(params[:search])
-    @pagy, @aircraft_types = pagy_meilisearch(q)
+    if params[:search].present?
+      q = AircraftType.pagy_search(params[:search])
+      @pagy, @aircraft_types = pagy_meilisearch(q)
+    else
+      @pagy, @aircraft_types = pagy(AircraftType.all)
+    end
 
     respond_to do |format|
       format.turbo_stream do

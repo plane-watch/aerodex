@@ -2,8 +2,12 @@
 
 class CountriesController < ApplicationController
   def index
-    q = Country.pagy_search(params[:search])
-    @pagy, @countries = pagy_meilisearch(q)
+    if params[:search].present?
+      q = Country.pagy_search(params[:search])
+      @pagy, @countries = pagy_meilisearch(q)
+    else
+      @pagy, @countries = pagy(Country.all)
+    end
 
     respond_to do |format|
       format.turbo_stream { render_infinite_scroll(partial: 'countries/country', collection: @countries) }

@@ -5,8 +5,12 @@ class OperatorsController < ApplicationController
   before_action :set_operator, only: [:show, :edit, :update, :destroy]
 
   def index
-    q = Operator.pagy_search(params[:search])
-    @pagy, @operators = pagy_meilisearch(q)
+    if params[:search].present?
+      q = Operator.pagy_search(params[:search])
+      @pagy, @operators = pagy_meilisearch(q)
+    else
+      @pagy, @operators = pagy(Operator.all)
+    end
 
     respond_to do |format|
       format.turbo_stream { render_infinite_scroll(partial: 'operators/operator', collection: @operators) }
