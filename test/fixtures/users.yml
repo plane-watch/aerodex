@@ -15,7 +15,7 @@
 #  confirmation_sent_at     :datetime
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null
-#  contribution_trust_score :integer          default("50"), not null
+#  contribution_trust_score :integer          default(50), not null
 #
 # Indexes
 #
