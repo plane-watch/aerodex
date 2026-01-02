@@ -22,10 +22,15 @@ class Route < ApplicationRecord
   belongs_to :operator
 
   has_paper_trail
+  # Preload associations for MeiliSearch reindexing to avoid N+1 queries
+  scope :meilisearch_import, -> { includes(:operator) }
+
   meilisearch do
     attribute :id
     attribute :call_sign
-    attribute :operator
+    attribute :operator do
+      operator&.name
+    end
 
     filterable_attributes %i[id call_sign operator]
   end

@@ -1,18 +1,11 @@
 <% content_for :page_title, 'Countries' -%>
 <% content_for :page_description, 'View and search countries here. Use the search bar above to search by name, ISO codes, capital and more!' -%>
 <%= content_for :search do %>
-  <%= form_with url: countries_path, method: :get, class: 'relative flex flex-1' do |form| %>
-    <%= form.label :search_field, 'Search Countries', class: 'sr-only' %>
-    <svg class="pointer-events-none absolute inset-y-0 left-0 h-full w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-      <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd"/>
-    </svg>
-    <%= form.text_field :search,
-                        class: "block h-full w-full border-0 py-0 pl-8 pr-0 text-gray-900 placeholder:text-gray-400 ring-transparent sm:text-sm",
-                        placeholder: 'Search Countries...',
-                        value: params[:search],
-                        type: 'search',
-                        name: 'search' %>
-  <% end %>
+  <%= render 'shared/search/field_search_form',
+             url: countries_path,
+             model_name: 'Country',
+             placeholder: 'Search Countries...',
+             tokens: parsed_search_tokens %>
 <% end %>
 
 <div class="mt-8 flow-root">

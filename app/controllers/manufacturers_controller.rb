@@ -1,13 +1,10 @@
 # frozen_string_literal: true
 
 class ManufacturersController < ApplicationController
+  include FieldSearchable
+
   def index
-    if params[:search].present?
-      q = Manufacturer.pagy_search(params[:search])
-      @pagy, @manufacturers = pagy_meilisearch(q)
-    else
-      @pagy, @manufacturers = pagy(Manufacturer.all)
-    end
+    @pagy, @manufacturers = field_search(Manufacturer, params[:search], includes: [:country])
 
     respond_to do |format|
       format.turbo_stream { render_infinite_scroll(partial: 'manufacturers/manufacturer', collection: @manufacturers) }

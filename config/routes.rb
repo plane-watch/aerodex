@@ -1,5 +1,9 @@
 Rails.application.routes.draw do
   devise_for :users
+
+  # Search autocomplete suggestions API
+  get 'search/suggestions', to: 'search_suggestions#index', as: :search_suggestions
+
   resources :aircraft
   resources :aircraft_types, only: [:index, :show]
   resources :manufacturers, only: [:index, :show]

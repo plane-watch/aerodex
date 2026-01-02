@@ -29,11 +29,16 @@ class Manufacturer < ApplicationRecord
   belongs_to :country, optional: true
 
   has_paper_trail
+  # Preload associations for MeiliSearch reindexing to avoid N+1 queries
+  scope :meilisearch_import, -> { includes(:country) }
+
   meilisearch do
     attribute :id
     attribute :name
     attribute :icao_code
-    attribute :country
+    attribute :country do
+      country&.name
+    end
 
     filterable_attributes %i[id name icao_code country]
   end

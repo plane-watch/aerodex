@@ -40,7 +40,9 @@ class AircraftType < ApplicationRecord
     attribute :id
     attribute :name
     attribute :type_code
-    attribute :manufacturer
+    attribute :manufacturer do
+      manufacturer&.name
+    end
     attribute :category
 
     filterable_attributes %i[id name type_code manufacturer category]

@@ -84,7 +84,28 @@ class Aircraft < ApplicationRecord
     attribute :operator do
       operator&.name
     end
+    attribute :operator_icao_code do
+      operator&.icao_code
+    end
+    attribute :operator_iata_code do
+      operator&.iata_code
+    end
 
-    displayed_attributes [:id]
+    # Enable field-specific filtering for advanced search.
+    # These attributes can be used with the field:value search syntax.
+    filterable_attributes %i[
+      icao
+      registration
+      serial_number
+      owner
+      aircraft_name
+      model
+      aircraft_type
+      aircraft_type_code
+      aircraft_manufacturer
+      operator
+      operator_icao_code
+      operator_iata_code
+    ]
   end
 end

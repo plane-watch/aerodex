@@ -1,0 +1,156 @@
+<%#
+  Renders a field-aware search form with inline chips (tag-input style).
+
+  Local variables:
+  - url: Form submission URL (required)
+  - model_name: Model being searched, e.g., 'Aircraft' (required)
+  - placeholder: Input placeholder text (optional, defaults to 'Search...')
+  - tokens: Array of parsed search tokens (optional, from controller)
+%>
+
+<% placeholder ||= 'Search...' %>
+<% tokens ||= defined?(parsed_search_tokens) ? parsed_search_tokens : [] %>
+<% # Include boolean operators for display between chips %>
+<% displayable_tokens = tokens.select { |t| t.field_qualified? || t.free_text? || t.boolean_operator? } %>
+
+<%= form_with url: url,
+              method: :get,
+              class: 'relative flex flex-1 items-center',
+              data: {
+                controller: 'field-search',
+                field_search_model_name_value: model_name,
+                field_search_suggestions_url_value: search_suggestions_path,
+                turbo_frame: '_top'
+              } do |form| %>
+  <%= form.label :search_field, "Search #{model_name.pluralize}", class: 'sr-only' %>
+
+  <%# Search icon and dropdown toggle %>
+  <div class="absolute left-0 flex items-center gap-0.5">
+    <svg class="pointer-events-none h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd"/>
+    </svg>
+    <button type="button"
+            class="p-0.5 text-gray-400 hover:text-gray-600 focus:outline-none"
+            data-action="click->field-search#showAllFields"
+            title="Show available search fields">
+      <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/>
+      </svg>
+    </button>
+  </div>
+
+  <%# Chips and input container %>
+  <div class="flex flex-wrap items-center gap-1.5 pl-10 flex-1" data-field-search-target="chipsContainer">
+    <%# Render existing chips inline with boolean operators between them %>
+    <% displayable_tokens.each do |token| %>
+      <% if token.boolean_operator? %>
+        <span class="text-xs font-medium text-purple-600 px-1">
+          <%= token.type == :boolean_or ? 'OR' : 'AND' %>
+        </span>
+      <% else %>
+        <%= render 'shared/search/search_chip', token: token %>
+      <% end %>
+    <% end %>
+
+    <%# Text input for adding new terms %>
+    <input type="text"
+           class="flex-1 min-w-[120px] border-0 p-0 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm bg-transparent"
+           placeholder="<%= displayable_tokens.any? ? 'Add filter...' : placeholder %>"
+           autocomplete="off"
+           data-field-search-target="input"
+           data-action="input->field-search#onInput keydown->field-search#onKeydown">
+  </div>
+
+  <%# Hidden input that holds the actual search query %>
+  <input type="hidden"
+         name="search"
+         value="<%= params[:search] %>"
+         data-field-search-target="hiddenInput">
+
+  <%# Autocomplete dropdown %>
+  <div data-field-search-target="dropdown"
+       class="hidden absolute z-50 left-0 right-0 top-full mt-1 bg-white rounded-md shadow-lg border border-gray-200 max-h-60 overflow-auto">
+  </div>
+
+  <%# Help icon %>
+  <button type="button"
+          class="ml-2 p-1 text-gray-400 hover:text-gray-600 focus:outline-none"
+          data-action="click->field-search#showHelp"
+          title="Search help">
+    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
+    </svg>
+  </button>
+
+  <%# Help modal %>
+  <div data-field-search-target="helpModal"
+       class="hidden fixed inset-0 z-50"
+       aria-labelledby="search-help-title"
+       role="dialog"
+       aria-modal="true">
+    <%# Backdrop - clickable transparent overlay %>
+    <div class="fixed inset-0 bg-black/20 backdrop-blur-sm"
+         data-action="click->field-search#hideHelp"></div>
+
+    <%# Modal positioning %>
+    <div class="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+
+      <%# Modal content %>
+      <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:w-full sm:max-w-lg pointer-events-auto">
+        <div class="px-4 pb-4 pt-5 sm:p-6">
+          <div class="flex items-start justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900" id="search-help-title">Search Help</h3>
+            <button type="button"
+                    class="text-gray-400 hover:text-gray-500"
+                    data-action="click->field-search#hideHelp">
+              <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="text-sm text-gray-600 space-y-3">
+            <div>
+              <p class="font-medium text-gray-900 mb-1">Field Search</p>
+              <p>Use <code class="bg-gray-100 px-1 rounded">field:value</code> to search specific fields.</p>
+              <p class="text-gray-500 mt-1">Example: <code class="bg-gray-100 px-1 rounded">manufacturer:Boeing</code>
+              </p>
+            </div>
+
+            <div>
+              <p class="font-medium text-gray-900 mb-1">Partial Matching</p>
+              <p>Add <code class="bg-gray-100 px-1 rounded">*</code> for prefix matching.</p>
+              <p class="text-gray-500 mt-1">Example: <code class="bg-gray-100 px-1 rounded">manufacturer:Boe*</code></p>
+            </div>
+
+            <div>
+              <p class="font-medium text-gray-900 mb-1">Exclusion</p>
+              <p>Use <code class="bg-gray-100 px-1 rounded">-</code> or
+                <code class="bg-gray-100 px-1 rounded">NOT</code> to exclude results.</p>
+              <p class="text-gray-500 mt-1">Example: <code class="bg-gray-100 px-1 rounded">-manufacturer:Boeing</code>
+              </p>
+            </div>
+
+            <div>
+              <p class="font-medium text-gray-900 mb-1">Boolean Operators</p>
+              <p>Combine filters with <code class="bg-gray-100 px-1 rounded">AND</code> or
+                <code class="bg-gray-100 px-1 rounded">OR</code>.</p>
+              <p class="text-gray-500 mt-1">Example:
+                <code class="bg-gray-100 px-1 rounded">manufacturer:Boeing OR manufacturer:Airbus</code></p>
+            </div>
+
+            <div>
+              <p class="font-medium text-gray-900 mb-1">Keyboard Shortcuts</p>
+              <ul class="text-gray-500 mt-1 space-y-0.5">
+                <li><code class="bg-gray-100 px-1 rounded">Tab</code> &mdash; Add filter as chip</li>
+                <li><code class="bg-gray-100 px-1 rounded">Enter</code> &mdash; Execute search</li>
+                <li><code class="bg-gray-100 px-1 rounded">Backspace</code> &mdash; Remove last chip (when empty)</li>
+                <li><code class="bg-gray-100 px-1 rounded">&uarr; &darr;</code> &mdash; Navigate suggestions</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+<% end %>

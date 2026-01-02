@@ -1,0 +1,42 @@
+<%#
+  Renders a single search token as a removable chip (inline tag-input style).
+
+  Local variables:
+  - token: A Search::SearchToken object (required)
+%>
+
+<% chip_colour = token.negated? ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700' %>
+<% hover_colour = token.negated? ? 'hover:bg-red-200' : 'hover:bg-blue-200' %>
+<% stroke_colour = token.negated? ? 'stroke-red-700/50 group-hover:stroke-red-700/75' : 'stroke-blue-700/50 group-hover:stroke-blue-700/75' %>
+
+<span data-token="<%= token.to_json %>"
+      class="inline-flex items-center gap-x-1 rounded px-1.5 py-0.5 text-xs font-medium <%= chip_colour %>">
+
+  <%# Negation indicator %>
+  <% if token.negated? %>
+    <span class="text-red-500 font-bold">NOT</span>
+  <% end %>
+
+  <%# Field name (if field-qualified) %>
+  <% if token.field_qualified? %>
+    <span class="font-semibold"><%= token.field %>:</span>
+  <% end %>
+
+  <%# Token value %>
+  <span><%= token.display_value %></span>
+
+  <%# Partial match indicator %>
+  <% if token.partial? %>
+    <span class="text-gray-500">*</span>
+  <% end %>
+
+  <%# Remove button %>
+  <button type="button"
+          data-action="click->field-search#removeChip"
+          class="group relative -mr-0.5 h-3 w-3 rounded-sm <%= hover_colour %>">
+    <span class="sr-only">Remove</span>
+    <svg viewBox="0 0 14 14" class="h-3 w-3 <%= stroke_colour %>">
+      <path d="M4 4l6 6m0-6l-6 6" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+  </button>
+</span>

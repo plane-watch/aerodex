@@ -1,13 +1,10 @@
 # frozen_string_literal: true
 
 class AircraftTypesController < ApplicationController
+  include FieldSearchable
+
   def index
-    if params[:search].present?
-      q = AircraftType.pagy_search(params[:search])
-      @pagy, @aircraft_types = pagy_meilisearch(q)
-    else
-      @pagy, @aircraft_types = pagy(AircraftType.all)
-    end
+    @pagy, @aircraft_types = field_search(AircraftType, params[:search], includes: [:manufacturer])
 
     respond_to do |format|
       format.turbo_stream do

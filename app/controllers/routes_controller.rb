@@ -1,13 +1,10 @@
 # frozen_string_literal: true
 
 class RoutesController < ApplicationController
+  include FieldSearchable
+
   def index
-    if params[:search].present?
-      q = Route.pagy_search(params[:search])
-      @pagy, @routes = pagy_meilisearch(q)
-    else
-      @pagy, @routes = pagy(Route.all)
-    end
+    @pagy, @routes = field_search(Route, params[:search], includes: [:operator])
 
     respond_to do |format|
       format.turbo_stream { render_infinite_scroll(partial: 'routes/route', collection: @routes) }

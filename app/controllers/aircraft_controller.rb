@@ -1,11 +1,8 @@
 class AircraftController < ApplicationController
+  include FieldSearchable
+
   def index
-    if params[:search].present?
-      aircraft = Aircraft.includes(:aircraft_type, :operator).pagy_search(params[:search])
-      @pagy, @aircraft = pagy_meilisearch(aircraft)
-    else
-      @pagy, @aircraft = pagy(Aircraft.includes(:aircraft_type, :operator))
-    end
+    @pagy, @aircraft = field_search(Aircraft, params[:search], includes: [:aircraft_type, :operator])
 
     respond_to do |format|
       format.turbo_stream { render_infinite_scroll(partial: 'aircraft/aircraft', collection: @aircraft) }

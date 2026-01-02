@@ -43,7 +43,9 @@ class Airport < ApplicationRecord
     attribute :city
     attribute :icao_code
     attribute :iata_code
-    attribute :country
+    attribute :country do
+      country&.name
+    end
 
     filterable_attributes %i[id name city icao_code iata_code country]
   end

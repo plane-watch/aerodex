@@ -1,13 +1,10 @@
 # frozen_string_literal: true
 
 class CountriesController < ApplicationController
+  include FieldSearchable
+
   def index
-    if params[:search].present?
-      q = Country.pagy_search(params[:search])
-      @pagy, @countries = pagy_meilisearch(q)
-    else
-      @pagy, @countries = pagy(Country.all)
-    end
+    @pagy, @countries = field_search(Country, params[:search])
 
     respond_to do |format|
       format.turbo_stream { render_infinite_scroll(partial: 'countries/country', collection: @countries) }

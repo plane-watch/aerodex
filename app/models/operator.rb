@@ -46,7 +46,9 @@ class Operator < ApplicationRecord
     attribute :name
     attribute :icao_code
     attribute :iata_code
-    attribute :country
+    attribute :country do
+      country&.name
+    end
 
     filterable_attributes %i[id name icao_code iata_code country]
   end
