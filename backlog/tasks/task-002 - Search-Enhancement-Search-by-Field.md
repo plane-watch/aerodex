@@ -1,11 +1,11 @@
 ---
 id: task-002
 title: Search Enhancement - Search by Field
-status: In Progress
+status: Done
 assignee:
   - Tardoe
 created_date: '2026-01-01 06:28'
-updated_date: '2026-01-01 07:02'
+updated_date: '2026-01-02 04:16'
 labels: []
 dependencies: []
 priority: medium
@@ -29,9 +29,7 @@ in question.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
-
 <!-- AC:BEGIN -->
-
 - [ ] #1 User can search using field:value syntax (e.g., manufacturer:Boeing)
 - [ ] #2 User can use * suffix for partial matching (e.g., manufacturer:Boe*)
 - [ ] #3 User can use quoted values for exact phrases (e.g., operator:"Qantas Airways")
@@ -48,13 +46,11 @@ in question.
 - [ ] #14 Search preserves existing Turbo Stream response format
 - [ ] #15 Unit tests cover query parser with all syntax variations
 - [ ] #16 System tests verify autocomplete and chip UI interactions
-
 <!-- AC:END -->
 
 ## Implementation Plan
 
 <!-- SECTION:PLAN:BEGIN -->
-
 ## Implementation Plan
 
 ### Query Syntax
@@ -135,13 +131,11 @@ app/views/shared/search/
 2. **Partial matching** - Uses `*` suffix with Meilisearch `attributesToSearchOn` parameter
 3. **Flattened associations** - Aircraft already indexes manufacturer/operator names
 4. **Dynamic autocomplete** - Field names from FieldRegistry, values from Meilisearch facets
-
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-
 ## Implementation Progress (Phase 1-4 Complete)
 
 ### Files Created
@@ -188,5 +182,4 @@ app/views/shared/search/
 ### Known Issues
 
 - Test runner not executing tests (pre-existing Rails 8.1/minitest issue)
-
 <!-- SECTION:NOTES:END -->
