@@ -9,6 +9,7 @@ module Processors
     class Aircraft < Processors::Aircraft::Base
       extend BusinessNameNormalisation
       extend AircraftModelNormalisation
+      extend OperatorNameCanonicalisation
       # The entity type for trust score lookups
       ENTITY_TYPE = 'Aircraft'
 
@@ -193,7 +194,7 @@ module Processors
           # (strips corporate suffixes and airline terms like "Airlines", "International", etc.)
           @operators_by_normalised_name = {}
           ::Operator.find_each do |op|
-            normalised_key = match_key(op.name)
+            normalised_key = aggressive_canonical_key(op.name)
             @operators_by_normalised_name[normalised_key] = op if normalised_key.present?
           end
 
@@ -490,11 +491,11 @@ module Processors
           # Strategy 3: Try normalised name match
           # This handles cases like "VIRGIN AUSTRALIA INTERNATIONAL AIRLINES PTY LTD" -> "Virgin Australia"
           if operator.nil? && source_with_operator.operator_name.present?
-            source_normalised_key = match_key(source_with_operator.operator_name)
+            source_normalised_key = aggressive_canonical_key(source_with_operator.operator_name)
             operator = @operators_by_normalised_name[source_normalised_key] if source_normalised_key.present?
           end
 
-          # Strategy 4: Create operator if not found and add to cache
+          # Strategy 4: Create an operator if not found and add to cache
           if operator.nil? && source_with_operator.operator_name.present?
             country = cached_country_for_source(source_with_operator)
             if country
@@ -504,7 +505,7 @@ module Processors
               )
               # Add to all caches for subsequent lookups
               @operators_by_name[operator.name.downcase] = operator
-              normalised_key = match_key(operator.name)
+              normalised_key = aggressive_canonical_key(operator.name)
               @operators_by_normalised_name[normalised_key] = operator if normalised_key.present?
             end
           end

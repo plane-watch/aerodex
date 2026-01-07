@@ -20,7 +20,7 @@ module Processors
       ].freeze
 
       # The minimum Jaro-Winkler similarity score for fuzzy name matching when ICAO is present
-      FUZZY_MATCH_THRESHOLD_WITH_ICAO = 0.5
+      FUZZY_MATCH_THRESHOLD_WITH_ICAO = 0.75
 
       # The minimum Jaro-Winkler similarity score for fuzzy name matching when only IATA is present
       FUZZY_MATCH_THRESHOLD_IATA_ONLY = 0.75
@@ -374,6 +374,15 @@ module Processors
           candidates.concat(@otd_by_iata[vrs_record.iata_code] || []) if vrs_record.iata_code.present?
           candidates.uniq!
 
+          # Filter out candidates with conflicting ICAO codes. ICAO codes are
+          # authoritative unique identifiers - if the VRS record has an ICAO code,
+          # we should only consider OTD candidates with matching (or absent) ICAO codes.
+          if vrs_record.icao_code.present?
+            candidates.reject! do |c|
+              c.icao_code.present? && c.icao_code != vrs_record.icao_code
+            end
+          end
+
           candidates.each do |candidate|
             confidence = calculate_match_confidence(vrs_record, candidate)
 
@@ -397,6 +406,15 @@ module Processors
             return 1.0
           end
 
+          # Reject if ICAO codes conflict (both present but different).
+          # ICAO codes are authoritative unique identifiers - different ICAO codes
+          # mean different operators, even if they share an IATA code.
+          if vrs_record.icao_code.present? &&
+             otd_record.icao_code.present? &&
+             vrs_record.icao_code != otd_record.icao_code
+            return 0.0
+          end
+
           # Cannot calculate similarity without a name
           return 0.0 if vrs_record.name.blank?
 
@@ -407,7 +425,7 @@ module Processors
 
           return 0.0 if all_names.empty?
 
-          all_names.map { |name| JaroWinkler.distance(vrs_record.name, name) }.max || 0.0
+          all_names.map { |name| JaroWinkler.similarity(vrs_record.name, name) }.max || 0.0
         end
 
         # Merges two source records into a canonical Operator using trust-based selection.
@@ -525,26 +543,34 @@ module Processors
         end
 
         # Finds an existing operator that matches any of the source records.
-        # Searches by ICAO code first, then IATA code, then name.
+        # Searches by ICAO code first, then falls back to name match.
+        # Does NOT search by IATA code as IATA codes can be shared across operators.
         #
         # @param sources [Array<ApplicationRecord>] The source records to search for
         # @return [::Operator, nil] The matching operator or nil
         def find_existing_operator_from_sources(sources)
-          # Try ICAO codes first (most reliable)
+          # Check if any source has an ICAO code - this affects our search strategy.
+          # ICAO codes are authoritative unique identifiers. If a source has an ICAO code,
+          # we should ONLY match operators with that same ICAO code, not fall through
+          # to IATA/name matching which could find a different operator.
           icao_codes = sources.map(&:icao_code).compact.uniq
-          if icao_codes.any?
+          has_icao = icao_codes.any?
+
+          # Try ICAO codes first (most reliable)
+          if has_icao
             operator = ::Operator.find_by(icao_code: icao_codes)
             return operator if operator
+
+            # Source has ICAO but no match found - do NOT fall through to IATA/name search.
+            # This would risk matching/updating a different operator that shares IATA code.
+            return nil
           end
 
-          # Try IATA codes next
-          iata_codes = sources.map(&:iata_code).compact.uniq
-          if iata_codes.any?
-            operator = ::Operator.find_by(iata_code: iata_codes)
-            return operator if operator
-          end
+          # Note: We intentionally do NOT search by IATA code. IATA codes can be
+          # legitimately shared across different operators (e.g., airline groups),
+          # so matching by IATA would risk finding the wrong operator.
 
-          # Fall back to exact name match (case-insensitive)
+          # Fall back to exact name match (case-insensitive) - only if no ICAO code
           names = sources.map(&:name).compact.uniq
           names.each do |name|
             operator = ::Operator.find_by("LOWER(name) = ?", name.downcase)

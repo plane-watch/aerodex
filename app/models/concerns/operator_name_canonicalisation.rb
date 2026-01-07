@@ -21,10 +21,11 @@ module OperatorNameCanonicalisation
 
   # Corporate suffixes to strip for canonicalisation.
   # Ordered by specificity (longer patterns first) to avoid partial matches.
+  # https://ithy.com/article/global-business-entity-abbreviation-guide-9xcy64o0
   CORPORATE_SUFFIXES = [
     # Australian/UK
     'pty ltd', 'pty. ltd.', 'pty. ltd', 'pty ltd.', 'proprietary limited',
-    'limited', 'ltd.', 'ltd', 'plc',
+    'limited', 'ltd.', 'ltd', 'plc', 'pty limited', 'pty. limited', 'proprietary ltd',
     # US
     'incorporated', 'inc.', 'inc',
     'l.l.c.', 'llc',
@@ -38,8 +39,11 @@ module OperatorNameCanonicalisation
     's.p.a.', 'spa',
     's.a.', 'sa',
     's.l.', 'sl',
+    # UK
+    'plc',
     # Other
-    'bv', 'nv', 'ab', 'as', 'oy', 'a/s'
+    'bv', 'b.v.', 'nv', 'n.v.', 'ab', 'as', 'oy', 'a/s', 'kk', 'k.k.', 'gk', 'g.k.',
+    'pt', 'p.t.', 'bhd', 'b.h.d', 'pte ltd', 'ltda', 'srl', 's.r.l.', 'ibc',
   ].freeze
 
   # Pattern to match corporate suffixes at end of name (case-insensitive).

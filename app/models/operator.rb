@@ -24,6 +24,7 @@
 class Operator < ApplicationRecord
   include MeiliSearch::Rails
   include HasFieldProvenance
+  include BusinessNameNormalisation
   extend Pagy::Meilisearch
 
   has_many :aircraft
@@ -39,6 +40,7 @@ class Operator < ApplicationRecord
   validates :iata_code, allow_blank: true, format: { with: /\A[A-Z0-9]{2}\z/ }
 
   after_create :index!
+  before_save :normalise_name_for_display
 
   has_paper_trail
   meilisearch do
@@ -51,5 +53,13 @@ class Operator < ApplicationRecord
     end
 
     filterable_attributes %i[id name icao_code iata_code country]
+  end
+
+  private
+
+  # Normalises the operator name by stripping corporate suffixes and titleizing.
+  # E.g., "JETSTAR AIRWAYS PTY LTD" becomes "Jetstar Airways"
+  def normalise_name_for_display
+    self.name = normalise_business_name(name) if name.present?
   end
 end

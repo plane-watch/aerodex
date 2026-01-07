@@ -48,6 +48,7 @@ module BusinessNameNormalisation
     Co\.?|
     Corp\.?|
     Pty\.?\s*Ltd\.?|
+    Pty\.?\s*Limited|
     Limited|
     Corporation|
     Company|
