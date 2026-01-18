@@ -33,6 +33,7 @@ Introduce a staging layer for data changes that:
 | Stale data handling | Fail if record modified since staging | Prevents silent overwrites of external changes |
 | Rollback depth | Single-level (extensible later) | Keeps initial implementation simple |
 | PaperTrail relationship | Disabled for batch ops | Staged diffs handle batch audit; PaperTrail handles manual edits |
+| Processor execution | ActiveJob | Background processing, schedulable, consistent interface |
 
 ---
 
@@ -47,13 +48,17 @@ Represents a processor run's pending changes.
 | `id` | uuid | Primary key |
 | `processor_type` | string | e.g., `"Processors::Aircraft::Aircraft"` |
 | `entity_type` | string | e.g., `"Aircraft"`, `"Operator"` - for grouping/filtering |
-| `status` | enum | `pending`, `approved`, `applied`, `rejected`, `superseded`, `rolled_back` |
+| `status` | enum | `processing`, `pending`, `approved`, `applied`, `rejected`, `superseded`, `rolled_back`, `failed` |
 | `summary` | jsonb | Counts: `{ created: 423, updated: 87, unchanged: 12045 }` |
 | `created_by_id` | references | User who triggered the run (nullable for scheduled jobs) |
 | `reviewed_by_id` | references | User who approved/rejected |
+| `job_id` | string | ActiveJob job ID for tracking |
+| `started_at` | timestamp | When processing began |
+| `completed_at` | timestamp | When processing finished |
 | `applied_at` | timestamp | When changes were committed |
 | `reviewed_at` | timestamp | When approved/rejected |
 | `notes` | text | Optional reviewer comments |
+| `error_message` | text | Exception details if job failed |
 | `created_at` | timestamp | |
 | `updated_at` | timestamp | |
 
@@ -61,6 +66,7 @@ Represents a processor run's pending changes.
 - `status` (for filtering pending batches)
 - `entity_type` (for filtering by model type)
 - `created_at` (for ordering)
+- `job_id` (for job lookups)
 
 ### `staged_changes`
 
@@ -178,6 +184,99 @@ Minimal changes required to existing processors:
 3. Remove direct `insert_all` / `upsert_all` calls
 
 Validation stays exactly where it is - records are validated before staging.
+
+---
+
+## ActiveJob Integration
+
+Processor execution moves to ActiveJob for background processing, scheduling, and a consistent interface.
+
+### Job Classes
+
+#### `ProcessorJob`
+
+Base job for running any processor. Creates staged batch and handles errors.
+
+```ruby
+class ProcessorJob < ApplicationJob
+  queue_as :processors
+
+  def perform(processor_class_name, triggered_by: nil)
+    processor_class = processor_class_name.constantize
+    processor_class.combine_sources(triggered_by: triggered_by)
+  end
+end
+```
+
+#### Processor-Specific Jobs (Optional)
+
+For processors that need custom configuration or scheduling:
+
+```ruby
+class AircraftProcessorJob < ProcessorJob
+  queue_as :processors
+
+  def perform(triggered_by: nil)
+    super("Processors::Aircraft::Aircraft", triggered_by: triggered_by)
+  end
+end
+
+class OperatorProcessorJob < ProcessorJob
+  queue_as :processors
+
+  def perform(triggered_by: nil)
+    super("Processors::Operator::Operator", triggered_by: triggered_by)
+  end
+end
+```
+
+### Scheduling
+
+Jobs can be scheduled via:
+
+1. **Cron / recurring jobs** (e.g., `solid_queue`, `good_job`, or `sidekiq-scheduler`)
+   ```ruby
+   # config/recurring.yml (solid_queue example)
+   aircraft_processor:
+     class: AircraftProcessorJob
+     schedule: every day at 2am
+   ```
+
+2. **Manual trigger** via rake task or admin UI
+3. **Chained execution** after source imports complete
+
+### Batch Status Tracking
+
+The `StagedBatch` record tracks job execution:
+
+| Column | Type | Purpose |
+|--------|------|---------|
+| `job_id` | string | ActiveJob job ID for tracking |
+| `started_at` | timestamp | When processing began |
+| `completed_at` | timestamp | When processing finished |
+| `error_message` | text | Captured exception if job failed |
+
+Updated `staged_batches` migration includes these columns.
+
+### Job Lifecycle
+
+```
+Job enqueued
+    ↓
+Job starts → StagedBatch created (status: processing, started_at: now)
+    ↓
+Processing runs → StagedChanges written
+    ↓
+Job completes → StagedBatch updated (status: pending, completed_at: now)
+    ↓
+Notifications sent
+```
+
+If the job fails:
+```
+Job fails → StagedBatch updated (status: failed, error_message: exception)
+           → Admin notified of failure
+```
 
 ---
 
@@ -308,6 +407,13 @@ end
 ### Rake Tasks
 
 ```bash
+# Run a processor (enqueues job, returns immediately)
+rake processors:run[Aircraft]
+rake processors:run[Operator]
+
+# Run a processor synchronously (for debugging)
+rake processors:run_sync[Aircraft]
+
 # List pending batches
 rake staged_batches:pending
 
@@ -327,9 +433,39 @@ rake staged_batches:rollback[BATCH_ID]
 rake staged_batches:history[LIMIT]
 ```
 
+### Rake Task Implementation
+
+Rake tasks enqueue ActiveJob rather than running processors directly:
+
+```ruby
+namespace :processors do
+  desc "Run a processor (enqueues background job)"
+  task :run, [:entity_type] => :environment do |_t, args|
+    processor_class = "Processors::#{args[:entity_type]}::#{args[:entity_type]}"
+    job = ProcessorJob.perform_later(processor_class)
+    puts "Enqueued #{processor_class} (job_id: #{job.job_id})"
+  end
+
+  desc "Run a processor synchronously (for debugging)"
+  task :run_sync, [:entity_type] => :environment do |_t, args|
+    processor_class = "Processors::#{args[:entity_type]}::#{args[:entity_type]}".constantize
+    batch = processor_class.combine_sources
+    puts "Completed. Batch ID: #{batch.id}, Status: #{batch.status}"
+    puts "Summary: #{batch.summary}"
+  end
+end
+```
+
 ### Rails Console
 
 ```ruby
+# Enqueue a processor job
+ProcessorJob.perform_later("Processors::Aircraft::Aircraft")
+
+# Run synchronously (returns the batch)
+batch = Processors::Aircraft::Aircraft.combine_sources
+batch.pending?  # => true
+
 # Find pending batches
 StagedBatch.pending
 
@@ -342,10 +478,6 @@ batch.staged_changes.limit(5)
 batch.apply!(by: current_user)
 batch.reject!(reason: "Model matching bug")
 batch.rollback!(by: current_user)
-
-# Processor runs return the batch
-batch = Processors::Aircraft::Aircraft.combine_sources
-batch.pending?  # => true
 ```
 
 ### Useful Scopes
@@ -371,34 +503,47 @@ end
 - [ ] Add scopes (`.pending`, `.applied`, `.for_entity`, etc.)
 - [ ] Write model specs
 
-### Phase 2: Processor Integration
+### Phase 2: ActiveJob Setup
+- [ ] Create `ProcessorJob` base class
+- [ ] Create processor-specific job classes (optional, can use base class)
+- [ ] Configure job queue (`:processors`)
+- [ ] Add job tracking columns to `StagedBatch` if not in initial migration
+- [ ] Write job specs
+
+### Phase 3: Processor Integration
 - [ ] Add staging methods to `Processors::Base`
 - [ ] Refactor `Processors::Operator::Operator` to use staging (smaller, good test case)
 - [ ] Test stage → apply cycle via console
 - [ ] Refactor `Processors::Aircraft::Aircraft`
 - [ ] Refactor remaining processors as needed
 
-### Phase 3: Console/Rake Tools
-- [ ] Create rake tasks (pending, show, apply, reject)
+### Phase 4: Console/Rake Tools
+- [ ] Create `processors:run` and `processors:run_sync` rake tasks
+- [ ] Create `staged_batches:pending`, `show`, `apply`, `reject` tasks
 - [ ] Validate end-to-end workflow via CLI
 - [ ] Document rake task usage
 
-### Phase 4: Admin Web UI
+### Phase 5: Admin Web UI
 - [ ] Create `Admin::StagedBatchesController`
 - [ ] Create index view with filtering
 - [ ] Create show view with diff browser
 - [ ] Implement apply/reject actions
 - [ ] Add pending batch count to admin nav
+- [ ] Add "Run Processor" buttons to trigger jobs from UI
 
-### Phase 5: Notifications
+### Phase 6: Notifications
 - [ ] Add email notification on batch creation
 - [ ] Add UI badge for pending count
 - [ ] (Optional) Add Discord webhook integration
 
-### Phase 6: Rollback
+### Phase 7: Rollback
 - [ ] Implement `StagedBatch#rollback!`
 - [ ] Add rollback rake task
 - [ ] Add rollback button to UI (for applied batches)
+
+### Phase 8: Scheduling (Optional)
+- [ ] Configure recurring job schedule (e.g., `solid_queue` recurring jobs)
+- [ ] Add schedule management to admin UI (view/pause schedules)
 
 ---
 
