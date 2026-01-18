@@ -143,6 +143,9 @@ module Processors
           # Log any conflicts for review
           log_conflicts(conflicts) if conflicts.any?
 
+          # Report unmatched operators for human review
+          report_unmatched_operators
+
           # Reindex and reset counter caches
           finalize_combine(
             ::Aircraft,
@@ -171,6 +174,7 @@ module Processors
           @operators_by_name = nil
           @operators_by_normalised_name = nil
           @aircraft_cache = nil
+          @unmatched_operators = nil
         end
 
         # Pre-loads lookup tables into memory to avoid N+1 queries.
@@ -190,13 +194,17 @@ module Processors
           @operators_by_icao = ::Operator.where.not(icao_code: [nil, '']).index_by(&:icao_code)
           @operators_by_name = ::Operator.all.index_by { |o| o.name.downcase }
 
-          # Build a normalised name cache for fuzzy matching
-          # (strips corporate suffixes and airline terms like "Airlines", "International", etc.)
-          @operators_by_normalised_name = {}
+          # Build a normalised name cache for fuzzy matching.
+          # Stores ARRAYS of operators per key to handle collisions (e.g., multiple operators
+          # with same canonical name but different ICAO codes).
+          @operators_by_normalised_name = Hash.new { |h, k| h[k] = [] }
           ::Operator.find_each do |op|
             normalised_key = aggressive_canonical_key(op.name)
-            @operators_by_normalised_name[normalised_key] = op if normalised_key.present?
+            @operators_by_normalised_name[normalised_key] << op if normalised_key.present?
           end
+
+          # Track unmatched operators for reporting
+          @unmatched_operators = Hash.new { |h, k| h[k] = { icao: nil, aircraft: [] } }
 
           # Preload existing aircraft by icao for O(1) lookups
           @aircraft_cache = {}
@@ -467,8 +475,9 @@ module Processors
         # Matching strategy:
         # 1. Try ICAO code lookup (most reliable)
         # 2. Try exact name match (case-insensitive)
-        # 3. Try normalised name match (strips "Pty Ltd", "Airlines", etc.)
-        # 4. Create new operator if no match found
+        # 3. Try normalised name match with best-candidate selection
+        # 4. Check for private owner (operator = owner means no Operator record needed)
+        # 5. Log unmatched commercial operators for review (no stub creation)
         #
         # @param record [::Aircraft] The aircraft record
         # @param sources [Array] The source records
@@ -480,37 +489,132 @@ module Processors
 
           return unless source_with_operator
 
-          # Strategy 1: Try ICAO lookup first (from cache)
-          operator = @operators_by_icao[source_with_operator.operator_icao] if source_with_operator.operator_icao.present?
+          # Strategy 1: Try ICAO lookup first (most reliable, from cache)
+          if source_with_operator.operator_icao.present?
+            operator = @operators_by_icao[source_with_operator.operator_icao]
+            if operator
+              record.operator = operator
+              return
+            end
+            # Has ICAO but no match - log for review, don't fall through
+            log_unmatched_operator(record.icao, source_with_operator.operator_name, source_with_operator.operator_icao)
+            return
+          end
 
           # Strategy 2: Try exact name match (case-insensitive)
-          if operator.nil? && source_with_operator.operator_name.present?
+          if source_with_operator.operator_name.present?
             operator = @operators_by_name[source_with_operator.operator_name.downcase]
-          end
-
-          # Strategy 3: Try normalised name match
-          # This handles cases like "VIRGIN AUSTRALIA INTERNATIONAL AIRLINES PTY LTD" -> "Virgin Australia"
-          if operator.nil? && source_with_operator.operator_name.present?
-            source_normalised_key = aggressive_canonical_key(source_with_operator.operator_name)
-            operator = @operators_by_normalised_name[source_normalised_key] if source_normalised_key.present?
-          end
-
-          # Strategy 4: Create an operator if not found and add to cache
-          if operator.nil? && source_with_operator.operator_name.present?
-            country = cached_country_for_source(source_with_operator)
-            if country
-              operator = ::Operator.create!(
-                name: source_with_operator.operator_name,
-                country: country
-              )
-              # Add to all caches for subsequent lookups
-              @operators_by_name[operator.name.downcase] = operator
-              normalised_key = aggressive_canonical_key(operator.name)
-              @operators_by_normalised_name[normalised_key] = operator if normalised_key.present?
+            if operator
+              record.operator = operator
+              return
             end
           end
 
-          record.operator = operator if operator.present?
+          # Strategy 3: Try normalised name match with best-candidate selection
+          if source_with_operator.operator_name.present?
+            source_normalised_key = aggressive_canonical_key(source_with_operator.operator_name)
+            if source_normalised_key.present?
+              country_id = cached_country_for_source(source_with_operator)&.id
+              operator = find_best_operator_for_key(source_normalised_key, country_id: country_id)
+              if operator
+                record.operator = operator
+                return
+              end
+            end
+          end
+
+          # Strategy 4: Check for private owner (operator = owner means no Operator record needed)
+          if source_with_operator.operator_name.present?
+            owner_name = sources.map(&:owner).compact.first
+            if owner_name.present? && names_effectively_match?(source_with_operator.operator_name, owner_name)
+              # Private owner - the owner field is sufficient, no Operator record needed.
+              # Leave operator_id nil (which is now allowed).
+              return
+            end
+
+            # Unmatched commercial operator - log for review (don't create stub)
+            log_unmatched_operator(record.icao, source_with_operator.operator_name, nil)
+          end
+        end
+
+        # Finds the best operator from candidates sharing a canonical key.
+        # Prefers: parent operators > operators with ICAO > operators with IATA > others.
+        # Optionally filters by country.
+        #
+        # @param key [String] The canonical name key
+        # @param country_id [Integer, nil] Optional country ID to filter by
+        # @return [Operator, nil] The best matching operator, or nil if none
+        def find_best_operator_for_key(key, country_id: nil)
+          candidates = @operators_by_normalised_name[key]
+          return nil if candidates.empty?
+
+          # Filter by country if provided
+          if country_id
+            country_candidates = candidates.select { |op| op.country_id == country_id }
+            candidates = country_candidates if country_candidates.any?
+          end
+
+          # Prefer parent operators for ambiguous matches (they represent the organisation)
+          parent = candidates.find(&:parent?)
+          return parent if parent
+
+          # Otherwise prefer operators with ICAO > IATA > neither
+          candidates.max_by do |op|
+            score = 0
+            score += 100 if op.icao_code.present?
+            score += 50 if op.iata_code.present?
+            score
+          end
+        end
+
+        # Checks if two names are effectively the same after canonicalisation.
+        #
+        # @param name1 [String] First name
+        # @param name2 [String] Second name
+        # @return [Boolean] True if names match after canonicalisation
+        def names_effectively_match?(name1, name2)
+          aggressive_canonical_key(name1) == aggressive_canonical_key(name2)
+        end
+
+        # Logs an unmatched operator for later review.
+        # Collects aircraft ICAO codes per operator name for reporting.
+        #
+        # @param aircraft_icao [String] The aircraft's Mode S hex code
+        # @param operator_name [String] The operator name from the source
+        # @param operator_icao [String, nil] The operator's ICAO code if known
+        def log_unmatched_operator(aircraft_icao, operator_name, operator_icao)
+          return if operator_name.blank?
+
+          key = operator_name.downcase
+          @unmatched_operators[key][:icao] ||= operator_icao
+          @unmatched_operators[key][:aircraft] << aircraft_icao
+        end
+
+        # Reports unmatched operators at the end of processing.
+        # Logs a summary of operators that couldn't be matched, sorted by aircraft count.
+        def report_unmatched_operators
+          return if @unmatched_operators.blank? || @unmatched_operators.empty?
+
+          total_aircraft = @unmatched_operators.values.sum { |data| data[:aircraft].size }
+          Rails.logger.info "=== Unmatched Operators (#{@unmatched_operators.size} unique names, #{total_aircraft} aircraft) ==="
+
+          # Show top 50 by aircraft count
+          @unmatched_operators
+            .sort_by { |_name, data| -data[:aircraft].size }
+            .first(50)
+            .each do |name, data|
+              Rails.logger.info format(
+                '  %5d aircraft | ICAO: %-3s | %s',
+                data[:aircraft].size,
+                data[:icao] || 'nil',
+                name
+              )
+            end
+
+          if @unmatched_operators.size > 50
+            remaining = @unmatched_operators.size - 50
+            Rails.logger.info "  ... and #{remaining} more unmatched operators"
+          end
         end
 
         # Assigns the registration country to an aircraft based on source data.

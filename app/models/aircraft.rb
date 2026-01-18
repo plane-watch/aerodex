@@ -17,7 +17,7 @@
 #  updated_at              :datetime         not null
 #  cabin_configuration     :string
 #  aircraft_name           :string
-#  status                  :integer          default(0)
+#  status                  :integer          default("0")
 #  model                   :string
 #  registration_country_id :integer          not null
 #  field_provenance        :jsonb            default("{}"), not null
@@ -38,7 +38,7 @@ class Aircraft < ApplicationRecord
   ActiveRecord::Relation.include Pagy::Meilisearch
 
   belongs_to :aircraft_type, counter_cache: true
-  belongs_to :operator, counter_cache: true
+  belongs_to :operator, counter_cache: true, optional: true
   belongs_to :registration_country, class_name: 'Country'
 
   has_one :manufacturer, through: :aircraft_type
@@ -51,7 +51,6 @@ class Aircraft < ApplicationRecord
   validates :registration, presence: true, aircraft_registration: true
   validates :serial_number, presence: true, allow_blank: false
   validates :owner, presence: true, allow_blank: false
-  validates :operator, presence: true, allow_blank: false
   validates :registration_date, presence: true, allow_blank: true
 
   scope :meilisearch_import, -> { includes(:operator, aircraft_type: [:manufacturer]) }

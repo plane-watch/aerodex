@@ -4,6 +4,7 @@
 #
 #  id         :integer          not null, primary key
 #  icao_code  :string
+#  country    :string
 #  region     :string
 #  bounds     :polygon
 #  created_at :datetime         not null

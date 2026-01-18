@@ -50,18 +50,30 @@ module OperatorNameCanonicalisation
   # The word boundary ensures we don't match partial words.
   CORPORATE_SUFFIX_PATTERN = /\s*\b(#{CORPORATE_SUFFIXES.map { |s| Regexp.escape(s) }.join('|')})\s*\z/i
 
-  # Common airline/operator terms that don't add uniqueness value
-  COMMON_TERMS = %w[
+  # Generic terms that don't add uniqueness value - safe to strip for canonicalisation.
+  # These terms are common across almost all operators and don't differentiate them.
+  GENERIC_TERMS = %w[
     airlines airline airways airway aviation air aero aeronautics
     helicopters helicopter heli heliservices
-    services service express cargo freight transport
-    international regional national
+    services service
     flying flight flights
     charter charters
-    group
+    group holdings
   ].freeze
 
-  COMMON_TERMS_PATTERN = /\b(#{COMMON_TERMS.join('|')})\b/i
+  # NOTE: The following terms MUST NOT be stripped as they indicate different operators:
+  # - regional (e.g., "Virgin Australia Regional Airlines" ≠ "Virgin Australia")
+  # - international (e.g., separate international subsidiary)
+  # - domestic, national (indicates operational scope)
+  # - cargo, freight (cargo operators have separate AOCs)
+  # - express, link (regional/feeder services, e.g., "QantasLink")
+  # - transport (may indicate different division)
+
+  GENERIC_TERMS_PATTERN = /\b(#{GENERIC_TERMS.join('|')})\b/i
+
+  # Legacy aliases for backwards compatibility (some code may reference COMMON_TERMS)
+  COMMON_TERMS = GENERIC_TERMS
+  COMMON_TERMS_PATTERN = GENERIC_TERMS_PATTERN
 
   # Generates a canonical key for grouping similar names.
   # Names that produce the same key will be considered duplicates.
@@ -91,15 +103,21 @@ module OperatorNameCanonicalisation
     key
   end
 
-  # Generates an aggressive canonical key that also strips common airline terms.
+  # Generates an aggressive canonical key that strips generic airline terms.
   # Use this for finding potential duplicates that differ by "Airlines" vs "Airways" etc.
+  #
+  # Note: Differentiating terms like "regional", "cargo", "international" are preserved
+  # because they typically indicate separate operators with different AOCs.
   #
   # @param name [String] The operator name
   # @return [String] Aggressively normalised key
   #
   # @example
-  #   aggressive_canonical_key("Qantas Airways")   # => "qantas"
-  #   aggressive_canonical_key("Qantas Airlines")  # => "qantas"
+  #   aggressive_canonical_key("Qantas Airways")                    # => "qantas"
+  #   aggressive_canonical_key("Qantas Airlines")                   # => "qantas"
+  #   aggressive_canonical_key("Virgin Australia")                  # => "virginaustralia"
+  #   aggressive_canonical_key("Virgin Australia Regional Airlines")# => "virginaustraliaregional"
+  #   aggressive_canonical_key("QantasLink")                        # => "qantaslink"
   def aggressive_canonical_key(name)
     return '' if name.blank?
 

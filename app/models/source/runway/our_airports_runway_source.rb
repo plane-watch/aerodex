@@ -7,8 +7,8 @@
 #  length_ft                 :decimal(, )
 #  width_ft                  :decimal(, )
 #  surface                   :string
-#  lighted                   :boolean          default(FALSE)
-#  closed                    :boolean          default(FALSE)
+#  lighted                   :boolean          default("false")
+#  closed                    :boolean          default("false")
 #  le_ident                  :string
 #  le_latitude               :decimal(9, 6)
 #  le_longitude              :decimal(9, 6)
@@ -26,7 +26,7 @@
 #  data                      :jsonb            default("\"{}\""), not null
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
-#  excluded                  :boolean          default(FALSE), not null
+#  excluded                  :boolean          default("false"), not null
 #  exclusion_reason          :string
 #  excluded_at               :datetime
 #  excluded_by               :string

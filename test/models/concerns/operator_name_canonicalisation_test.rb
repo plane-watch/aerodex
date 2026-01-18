@@ -227,4 +227,61 @@ class OperatorNameCanonicalisationTest < ActiveSupport::TestCase
 
     assert TestCanonicaliser.different_operators?(op1, op2)
   end
+
+  # ==========================================================================
+  # Tests for differentiating term preservation (task-003)
+  # ==========================================================================
+
+  test 'aggressive_canonical_key preserves regional to differentiate subsidiaries' do
+    # Virgin Australia and Virgin Australia Regional Airlines should NOT merge
+    key_mainline = TestCanonicaliser.aggressive_canonical_key('Virgin Australia')
+    key_regional = TestCanonicaliser.aggressive_canonical_key('Virgin Australia Regional Airlines')
+
+    assert_not_equal key_mainline, key_regional
+    assert_equal 'virginaustralia', key_mainline
+    assert_equal 'virginaustraliaregional', key_regional
+  end
+
+  test 'aggressive_canonical_key preserves international to differentiate subsidiaries' do
+    key_domestic = TestCanonicaliser.aggressive_canonical_key('Acme Airways')
+    key_international = TestCanonicaliser.aggressive_canonical_key('Acme International Airways')
+
+    assert_not_equal key_domestic, key_international
+    assert_includes key_international, 'international'
+  end
+
+  test 'aggressive_canonical_key preserves cargo to differentiate cargo operators' do
+    key_passenger = TestCanonicaliser.aggressive_canonical_key('Qantas Airways')
+    key_cargo = TestCanonicaliser.aggressive_canonical_key('Qantas Cargo')
+
+    assert_not_equal key_passenger, key_cargo
+    assert_equal 'qantas', key_passenger
+    assert_equal 'qantascargo', key_cargo
+  end
+
+  test 'aggressive_canonical_key preserves freight to differentiate freight operators' do
+    key_passenger = TestCanonicaliser.aggressive_canonical_key('FedEx Airlines')
+    key_freight = TestCanonicaliser.aggressive_canonical_key('FedEx Freight')
+
+    assert_not_equal key_passenger, key_freight
+    assert_includes key_freight, 'freight'
+  end
+
+  test 'aggressive_canonical_key preserves express and link for feeder services' do
+    # QantasLink should be separate from Qantas
+    key_mainline = TestCanonicaliser.aggressive_canonical_key('Qantas Airways')
+    key_link = TestCanonicaliser.aggressive_canonical_key('QantasLink')
+
+    assert_not_equal key_mainline, key_link
+    assert_equal 'qantas', key_mainline
+    assert_equal 'qantaslink', key_link
+  end
+
+  test 'aggressive_canonical_key preserves transport to differentiate divisions' do
+    key_basic = TestCanonicaliser.aggressive_canonical_key('Delta Airlines')
+    key_transport = TestCanonicaliser.aggressive_canonical_key('Delta Transport')
+
+    assert_not_equal key_basic, key_transport
+    assert_includes key_transport, 'transport'
+  end
 end
