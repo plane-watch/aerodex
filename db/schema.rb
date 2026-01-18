@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_18_115040) do
+ActiveRecord::Schema[8.1].define(version: 2026_01_18_115713) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -387,6 +387,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_18_115040) do
     t.index ["status"], name: "index_staged_batches_on_status"
   end
 
+  create_table "staged_changes", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.jsonb "diff", default: {}, null: false
+    t.integer "operation", null: false
+    t.bigint "record_id"
+    t.string "record_identifier", null: false
+    t.string "record_type", null: false
+    t.uuid "staged_batch_id", null: false
+    t.index ["record_identifier"], name: "index_staged_changes_on_record_identifier"
+    t.index ["record_type", "record_id"], name: "index_staged_changes_on_record_type_and_record_id"
+    t.index ["staged_batch_id"], name: "index_staged_changes_on_staged_batch_id"
+  end
+
   create_table "user_contributions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "entity_id", null: false
@@ -443,6 +456,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_18_115040) do
   add_foreign_key "routes", "operators"
   add_foreign_key "staged_batches", "users", column: "created_by_id"
   add_foreign_key "staged_batches", "users", column: "reviewed_by_id"
+  add_foreign_key "staged_changes", "staged_batches"
   add_foreign_key "user_contributions", "users"
   add_foreign_key "user_contributions", "users", column: "reviewed_by_id"
 end
