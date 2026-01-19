@@ -114,6 +114,97 @@ module Processors
           { total: total, updated: updated }
         end
 
+        # Creates parent-child relationships for operators with IDENTICAL names
+        # but different ICAO codes.
+        #
+        # This handles cases like Royal Air Force (UK) which has multiple ICAO codes
+        # (RFR, RRF, RRR, SHF) representing different operational units, all with
+        # the exact same name "Royal Air Force".
+        #
+        # NOTE: Only groups operators with identical names (case-insensitive).
+        # Operators with different names that share a canonical key (e.g.,
+        # "Air Hong Kong" vs "Hong Kong Airlines") are NOT grouped, as these
+        # are typically different organisations.
+        #
+        # @param dry_run [Boolean] If true, only report what would be created
+        # @return [Hash] Statistics about the operation
+        #
+        # @example
+        #   Processors::Operator::Operator.create_parent_child_relationships(dry_run: true)
+        #   Processors::Operator::Operator.create_parent_child_relationships
+        def create_parent_child_relationships(dry_run: false)
+          stats = { groups_found: 0, parents_created: 0, children_linked: 0, skipped: 0 }
+
+          # Group by (normalised_name, country_id) - normalised = downcased + whitespace normalised
+          # This groups only operators with IDENTICAL names (not just similar canonical keys)
+          groups = ::Operator.includes(:country).group_by do |op|
+            normalised_name = op.name&.downcase&.gsub(/\s+/, ' ')&.strip
+            [normalised_name, op.country_id]
+          end
+
+          groups.each do |(name, country_id), operators|
+            # Skip single operators or empty names
+            next if operators.size < 2
+            next if name.blank?
+
+            # Check if they have different ICAO codes (genuine siblings, not duplicates)
+            icao_codes = operators.map(&:icao_code).compact.uniq
+            next unless icao_codes.size > 1
+
+            stats[:groups_found] += 1
+
+            # Skip if any operator is already in a parent-child relationship
+            if operators.any? { |op| op.parent_operator_id.present? || op.child_operators.exists? }
+              Rails.logger.info "Skipping group '#{name}' - already has parent-child relationships"
+              stats[:skipped] += 1
+              next
+            end
+
+            # Find or create parent - prefer an operator without ICAO code as parent
+            parent = operators.find { |op| op.icao_code.blank? }
+
+            if parent.nil?
+              # No natural parent - create one from the first operator's name
+              if dry_run
+                Rails.logger.info "Would create parent for group '#{name}' (#{operators.size} operators)"
+              else
+                country = ::Country.find_by(id: country_id)
+                parent = ::Operator.create!(
+                  name: operators.first.name,
+                  country: country,
+                  icao_code: nil,
+                  iata_code: nil
+                )
+                # Set minimal provenance
+                parent.set_derived_provenance(:name, source_name: 'ParentChildProcessor', confidence: 50)
+                parent.save!
+                stats[:parents_created] += 1
+                Rails.logger.info "Created parent operator: #{parent.name} (ID: #{parent.id})"
+              end
+            end
+
+            # Link children to parent
+            operators.each do |op|
+              next if op == parent
+              next if op.parent_operator_id.present?
+
+              if dry_run
+                Rails.logger.info "Would link '#{op.name}' (ICAO: #{op.icao_code}) to parent '#{parent.name}'"
+              else
+                op.update!(parent_operator_id: parent.id)
+                stats[:children_linked] += 1
+              end
+            end
+          end
+
+          Rails.logger.info "Parent-child relationships: #{stats[:groups_found]} groups found, " \
+                            "#{stats[:parents_created]} parents created, " \
+                            "#{stats[:children_linked]} children linked, " \
+                            "#{stats[:skipped]} skipped"
+
+          stats
+        end
+
         # Combines a single operator by ICAO code, IATA code, or name.
         #
         # @param identifier [String] The ICAO code, IATA code, or operator name

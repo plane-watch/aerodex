@@ -473,6 +473,7 @@ module Processors
         # Uses pre-loaded cache to avoid N+1 queries.
         #
         # Matching strategy:
+        # 0. Check for human-confirmed match decision (highest priority)
         # 1. Try ICAO code lookup (most reliable)
         # 2. Try exact name match (case-insensitive)
         # 3. Try normalised name match with best-candidate selection
@@ -488,6 +489,18 @@ module Processors
             .max_by { |s| TrustCalculator.new(s, field: :operator_name, entity_type: ENTITY_TYPE).calculate }
 
           return unless source_with_operator
+
+          # Strategy 0: Check for human-confirmed match decision (highest priority)
+          if source_with_operator.operator_name.present?
+            operator = find_operator_by_match_decision(
+              source_with_operator.operator_name,
+              source_with_operator.operator_icao
+            )
+            if operator
+              record.operator = operator
+              return
+            end
+          end
 
           # Strategy 1: Try ICAO lookup first (most reliable, from cache)
           if source_with_operator.operator_icao.present?
@@ -574,6 +587,21 @@ module Processors
         # @return [Boolean] True if names match after canonicalisation
         def names_effectively_match?(name1, name2)
           aggressive_canonical_key(name1) == aggressive_canonical_key(name2)
+        end
+
+        # Finds an operator using a human-confirmed match decision.
+        # Match decisions take precedence over algorithmic matching.
+        #
+        # @param name [String] The operator name from the source
+        # @param icao_code [String, nil] The operator ICAO code from the source
+        # @return [Operator, nil] The confirmed operator, or nil if no decision exists
+        def find_operator_by_match_decision(name, icao_code)
+          return nil if name.blank?
+
+          # Use the model's class method if available
+          return nil unless defined?(::OperatorMatchDecision)
+
+          ::OperatorMatchDecision.find_confirmed_operator(name, icao_code: icao_code)
         end
 
         # Logs an unmatched operator for later review.
