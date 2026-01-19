@@ -173,4 +173,154 @@ class StagedBatchTest < ActiveSupport::TestCase
       batch.apply!(by: nil)
     end
   end
+
+  test "reject! transitions status to rejected" do
+    batch = StagedBatch.create!(
+      processor_type: "Processors::Operator::Operator",
+      entity_type: "Operator",
+      status: :pending
+    )
+
+    batch.reject!(by: nil)
+
+    assert_equal "rejected", batch.status
+    assert_not_nil batch.reviewed_at
+  end
+
+  test "reject! stores reason in notes field" do
+    user = User.create!(email: "reviewer@example.com")
+    batch = StagedBatch.create!(
+      processor_type: "Processors::Operator::Operator",
+      entity_type: "Operator",
+      status: :pending
+    )
+
+    reason = "Data looks incorrect, needs verification"
+    batch.reject!(by: user, reason: reason)
+
+    assert_equal reason, batch.notes
+    assert_equal user, batch.reviewed_by
+  end
+
+  test "reject! raises error if not pending" do
+    batch = StagedBatch.create!(
+      processor_type: "Processors::Operator::Operator",
+      entity_type: "Operator",
+      status: :applied
+    )
+
+    assert_raises(StagedBatch::InvalidStatusError) do
+      batch.reject!(by: nil)
+    end
+  end
+
+  test "apply! raises ApplyError for empty batch" do
+    batch = StagedBatch.create!(
+      processor_type: "Processors::Country::Country",
+      entity_type: "Country",
+      status: :pending
+    )
+
+    assert_raises(StagedBatch::ApplyError) do
+      batch.apply!(by: nil)
+    end
+  end
+
+  test "apply! applies batch with multiple record types" do
+    batch = StagedBatch.create!(
+      processor_type: "Processors::MultiType::Processor",
+      entity_type: "Mixed",
+      status: :pending
+    )
+
+    # Add a Country create
+    batch.staged_changes.create!(
+      record_type: "Country",
+      record_identifier: "AA",
+      operation: :create,
+      diff: {
+        "name" => [nil, "Test Country A"],
+        "iso_2char_code" => [nil, "AA"],
+        "iso_3char_code" => [nil, "AAA"]
+      }
+    )
+
+    # Add an Operator create
+    batch.staged_changes.create!(
+      record_type: "Operator",
+      record_identifier: "TEST-OP",
+      operation: :create,
+      diff: {
+        "name" => [nil, "Test Operator"],
+        "iata_code" => [nil, "TO"],
+        "icao_code" => [nil, "TST"]
+      }
+    )
+
+    assert_difference ["Country.count", "Operator.count"], 1 do
+      batch.apply!(by: nil)
+    end
+
+    country = Country.find_by(iso_2char_code: "AA")
+    assert_equal "Test Country A", country.name
+
+    operator = Operator.find_by(icao_code: "TST")
+    assert_equal "Test Operator", operator.name
+  end
+
+  test "apply! rolls back transaction on stale data" do
+    # Create an existing country
+    country = Country.create!(
+      name: "Original",
+      iso_2char_code: "BB",
+      iso_3char_code: "BBB"
+    )
+
+    batch = StagedBatch.create!(
+      processor_type: "Processors::Country::Country",
+      entity_type: "Country",
+      status: :pending,
+      created_at: 1.hour.ago
+    )
+
+    # Add a create for a new country
+    batch.staged_changes.create!(
+      record_type: "Country",
+      record_identifier: "CC",
+      operation: :create,
+      diff: {
+        "name" => [nil, "New Country"],
+        "iso_2char_code" => [nil, "CC"],
+        "iso_3char_code" => [nil, "CCC"]
+      }
+    )
+
+    # Add an update for the existing country
+    batch.staged_changes.create!(
+      record_type: "Country",
+      record_identifier: "BB",
+      record_id: country.id,
+      operation: :update,
+      diff: { "name" => ["Original", "Updated"] }
+    )
+
+    # Modify the existing country after batch was created
+    country.update!(name: "External Change")
+
+    # Attempt to apply should fail with stale data error
+    assert_raises(StagedBatch::StaleDataError) do
+      batch.apply!(by: nil)
+    end
+
+    # Verify the batch status is still pending (transaction rolled back)
+    batch.reload
+    assert_equal "pending", batch.status
+
+    # Verify no new country was created (transaction rolled back)
+    assert_nil Country.find_by(iso_2char_code: "CC")
+
+    # Verify existing country was not updated (transaction rolled back)
+    country.reload
+    assert_equal "External Change", country.name
+  end
 end

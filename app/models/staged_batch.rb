@@ -55,6 +55,7 @@ class StagedBatch < ApplicationRecord
   # @raise [ApplyError] If apply fails
   def apply!(by:)
     raise InvalidStatusError, "Batch must be pending to apply (current: #{status})" unless pending?
+    raise ApplyError, "Cannot apply batch with no changes" if staged_changes.empty?
 
     transaction do
       check_for_stale_data!
@@ -88,9 +89,12 @@ class StagedBatch < ApplicationRecord
   private
 
   # Checks if any target records have been modified since the batch was created.
+  # Only checks update operations - create operations will fail naturally if unique
+  # constraints are violated and will be converted to StaleDataError in apply_creates.
   #
   # @raise [StaleDataError] If stale data is detected
   def check_for_stale_data!
+    # Check updates for external modifications
     staged_changes.updates.find_each do |change|
       record = change.record
       next unless record
@@ -110,8 +114,8 @@ class StagedBatch < ApplicationRecord
     changes_by_type.each do |record_type, changes|
       model_class = record_type.constantize
 
-      creates = changes.select(&:operation_create?)
-      updates = changes.select(&:operation_update?)
+      creates = changes.select { |c| c.operation == "create" }
+      updates = changes.select { |c| c.operation == "update" }
 
       apply_creates(model_class, creates) if creates.any?
       apply_updates(model_class, updates) if updates.any?
@@ -119,9 +123,11 @@ class StagedBatch < ApplicationRecord
   end
 
   # Applies create operations using insert_all.
+  # Converts unique constraint violations into StaleDataError.
   #
   # @param model_class [Class] The model class
   # @param changes [Array<StagedChange>] The create changes
+  # @raise [StaleDataError] If a unique constraint is violated
   def apply_creates(model_class, changes)
     now = Time.current
     records = changes.map do |change|
@@ -132,6 +138,8 @@ class StagedBatch < ApplicationRecord
     end
 
     model_class.insert_all(records)
+  rescue ActiveRecord::RecordNotUnique => e
+    raise StaleDataError, "Record already exists (unique constraint violation): #{e.message}"
   end
 
   # Applies update operations using upsert_all.
@@ -153,9 +161,13 @@ class StagedBatch < ApplicationRecord
   # Runs post-apply hooks like reindexing.
   def run_post_apply_hooks
     # Reindex affected models for search
-    entity_type.constantize.reindex! if entity_type.constantize.respond_to?(:reindex!)
-  rescue NameError
-    # Entity type may not be a direct model class
-    Rails.logger.warn "Could not reindex #{entity_type} - not a model class"
+    model_class = entity_type.safe_constantize
+    return unless model_class&.respond_to?(:reindex!)
+
+    model_class.reindex!
+  rescue StandardError => e
+    # Log but don't fail the apply - batch is already committed
+    Rails.logger.error "Failed to reindex #{entity_type}: #{e.message}"
+    # TODO: Consider adding a 'reindex_failed' flag to the batch
   end
 end
