@@ -114,8 +114,8 @@ class StagedBatch < ApplicationRecord
     changes_by_type.each do |record_type, changes|
       model_class = record_type.constantize
 
-      creates = changes.select { |c| c.operation == "create" }
-      updates = changes.select { |c| c.operation == "update" }
+      creates = changes.select { |c| c.operation == :create }
+      updates = changes.select { |c| c.operation == :update }
 
       apply_creates(model_class, creates) if creates.any?
       apply_updates(model_class, updates) if updates.any?
