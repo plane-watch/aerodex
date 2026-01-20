@@ -45,11 +45,8 @@ class ProcessorJob < ApplicationJob
         status: :failed,
         error_message: "#{e.class}: #{e.message}\n#{e.backtrace&.first(BACKTRACE_LINES)&.join("\n")}"
       )
-      # Don't re-raise - we've handled the error by marking the batch as failed.
-      # This prevents ActiveJob retry from creating duplicate failed batches.
-    else
-      # No batch was created, so re-raise to let ActiveJob handle retry
-      raise
     end
+    # Always re-raise so ActiveJob, error tracking, and monitoring can handle it
+    raise
   end
 end

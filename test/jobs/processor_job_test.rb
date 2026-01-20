@@ -66,8 +66,10 @@ class ProcessorJobTest < ActiveJob::TestCase
 
     stub_const("ProcessorJobTest::FailingProcessor", failing_processor)
 
-    # Should not re-raise (error is handled by marking batch as failed)
-    ProcessorJob.perform_now("ProcessorJobTest::FailingProcessor")
+    # Should mark batch as failed AND re-raise
+    assert_raises(StandardError) do
+      ProcessorJob.perform_now("ProcessorJobTest::FailingProcessor")
+    end
 
     batch = StagedBatch.last
     assert_equal "failed", batch.status
@@ -101,7 +103,10 @@ class ProcessorJobTest < ActiveJob::TestCase
 
     stub_const("ProcessorJobTest::BacktraceProcessor", failing_processor)
 
-    ProcessorJob.perform_now("ProcessorJobTest::BacktraceProcessor")
+    # Should mark batch as failed AND re-raise
+    assert_raises(StandardError) do
+      ProcessorJob.perform_now("ProcessorJobTest::BacktraceProcessor")
+    end
 
     batch = StagedBatch.last
     assert_includes batch.error_message, "StandardError: Test error"
