@@ -1,0 +1,22 @@
+<tr class="<%= 'bg-yellow-50' if batch.pending? %>">
+  <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">
+    <%= batch.entity_type %>
+  </td>
+  <td class="whitespace-nowrap px-3 py-4 text-sm">
+    <span class="<%= status_badge_classes(batch.status) %>">
+      <%= batch.status.titleize %>
+    </span>
+  </td>
+  <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+    <%= format_batch_summary(batch.summary) %>
+  </td>
+  <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+    <%= time_ago_in_words(batch.created_at) %> ago
+  </td>
+  <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+    <%= batch.reviewed_by&.name || "—" %>
+  </td>
+  <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+    <%= link_to "View", admin_staged_batch_path(batch), class: "text-indigo-600 hover:text-indigo-900" %>
+  </td>
+</tr>
