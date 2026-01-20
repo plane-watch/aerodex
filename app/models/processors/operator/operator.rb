@@ -230,53 +230,49 @@ module Processors
         # 5. Creates the canonical Operator with provenance tracking
         # 6. Processes any remaining unmatched OpenTravel records
         #
-        # @return [Array<Hash>, true] Returns array of errors if any, otherwise true
-        def combine_sources
-          preload_reference_data
+        # @param triggered_by [User, nil] The user who triggered the run
+        # @return [StagedBatch] The batch containing staged changes
+        def combine_sources(triggered_by: nil)
+          with_staged_batch(entity_type: "Operator", triggered_by: triggered_by) do
+            preload_reference_data
 
-          errors = []
-          conflicts = []
+            errors = []
+            conflicts = []
 
-          progress_bar = create_progress_bar(@vrs_records.count)
+            progress_bar = create_progress_bar(@vrs_records.count)
 
-          with_bulk_import do
-            ::Operator.transaction do
-              # Phase 1: Process VRS records, matching with OTD where possible
-              @vrs_records.each do |vrs_record|
-                otd_record = find_matching_otd(vrs_record)
+            # Phase 1: Process VRS records, matching with OTD where possible
+            @vrs_records.each do |vrs_record|
+              otd_record = find_matching_otd(vrs_record)
 
-                result = if otd_record.present?
-                           @remaining_otd_ids.delete(otd_record.id)
-                           merge_sources(vrs_record, otd_record, conflicts)
-                         else
-                           create_from_single_source(vrs_record)
-                         end
+              result = if otd_record.present?
+                         @remaining_otd_ids.delete(otd_record.id)
+                         merge_sources(vrs_record, otd_record, conflicts)
+                       else
+                         create_from_single_source(vrs_record)
+                       end
 
-                errors << result[:error] if result[:error]
-                progress_bar.increment!
-              end
+              errors << result[:error] if result[:error]
+              progress_bar.increment!
+            end
 
-              # Phase 2: Process remaining unmatched OTD records
-              progress_bar = create_progress_bar(@remaining_otd_ids.count)
-              @remaining_otd_ids.each do |otd_id|
-                otd_record = @otd_by_id[otd_id]
-                result = create_from_single_source(otd_record)
-                errors << result[:error] if result[:error]
-                progress_bar.increment!
-              end
+            # Phase 2: Process remaining unmatched OTD records
+            progress_bar = create_progress_bar(@remaining_otd_ids.count)
+            @remaining_otd_ids.each do |otd_id|
+              otd_record = @otd_by_id[otd_id]
+              result = create_from_single_source(otd_record)
+              errors << result[:error] if result[:error]
+              progress_bar.increment!
+            end
+
+            # Log any conflicts for review
+            log_conflicts(conflicts) if conflicts.any?
+
+            # Store errors in batch notes if any
+            if errors.any?
+              current_batch.notes = "Processing completed with #{errors.count} errors"
             end
           end
-
-          # Log any conflicts for review
-          log_conflicts(conflicts) if conflicts.any?
-
-          # Force Meilisearch reindex
-          ::Operator.reindex!
-
-          # Create an import report
-          new_import_report(errors, @vrs_records.count + @remaining_otd_ids.count)
-
-          errors.any? ? errors : true
         ensure
           clear_caches
         end
@@ -467,7 +463,8 @@ module Processors
           operator.last_combined_at = Time.current
 
           if operator.valid?
-            operator.save!
+            # Stage the change instead of saving directly
+            stage_operator_change(operator, is_new: is_new)
             { operator: operator, created: is_new, updated: !is_new }
           else
             {
@@ -529,7 +526,8 @@ module Processors
           operator.last_combined_at = Time.current
 
           if operator.valid?
-            operator.save!
+            # Stage the change instead of saving directly
+            stage_operator_change(operator, is_new: is_new)
             { operator: operator, created: is_new, updated: !is_new }
           else
             {
@@ -589,6 +587,17 @@ module Processors
             Rails.logger.debug "Conflict on #{conflict[:field]}: " \
                                "#{conflict[:candidates].map { |c| "#{c[:source_type]}=#{c[:value].inspect}" }.join(' vs ')}"
           end
+        end
+
+        # Stages an operator change for later application.
+        #
+        # @param operator [::Operator] The operator to stage
+        # @param is_new [Boolean] Whether this is a new record
+        def stage_operator_change(operator, is_new:)
+          operation = is_new ? :create : :update
+          identifier = operator.icao_code || operator.iata_code || operator.name
+
+          stage_change(operator, operation: operation, identifier: identifier)
         end
 
         # Resolves the country for an operator from AirlineCodes data.
