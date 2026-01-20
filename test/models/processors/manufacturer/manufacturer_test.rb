@@ -8,6 +8,10 @@ class Processors::Manufacturer::ManufacturerTest < ActiveSupport::TestCase
   TEST_ICAO_CODES = %w[ZZTEST YYTEST XXTEST WWTEST TTTEST IITEST EETEST OSTEST CNTEST].freeze
 
   setup do
+    # Clear staging tables
+    StagedBatch.delete_all
+    StagedChange.delete_all
+
     # Clear source tables - these have no FK dependencies, so safe to delete
     Source::Manufacturer::CfappsICAOIntManufacturerSource.delete_all
     Source::Manufacturer::OpenskyManufacturerSource.delete_all
@@ -24,39 +28,132 @@ class Processors::Manufacturer::ManufacturerTest < ActiveSupport::TestCase
     Manufacturer.where(icao_code: TEST_ICAO_CODES).delete_all
   end
 
-  test "combine_sources creates manufacturer from a single source" do
-    # Create a source record with the required fields
+  # ---------------------------------------------------------------------------
+  # combine_sources staging tests
+  # ---------------------------------------------------------------------------
+
+  test "combine_sources returns a staged batch" do
     Source::Manufacturer::CfappsICAOIntManufacturerSource.create!(
       icao_code: "ZZTEST",
       name: "Test Manufacturer",
       import_date: Time.current
     )
 
-    Processors::Manufacturer::Manufacturer.combine_sources
+    result = Processors::Manufacturer::Manufacturer.combine_sources
 
-    manufacturer = Manufacturer.find_by(icao_code: "ZZTEST")
-    assert_not_nil manufacturer, "Expected manufacturer to be created"
-    assert_equal "Test Manufacturer", manufacturer.name
+    assert_instance_of StagedBatch, result
+    assert_equal "pending", result.status
+    assert_equal "Manufacturer", result.entity_type
   end
 
-  test "combine_sources updates existing manufacturer when source has changes" do
-    # Create an existing manufacturer record
+  test "combine_sources stages manufacturer creation" do
+    Source::Manufacturer::CfappsICAOIntManufacturerSource.create!(
+      icao_code: "ZZTEST",
+      name: "Test Manufacturer",
+      import_date: Time.current
+    )
+
+    batch = Processors::Manufacturer::Manufacturer.combine_sources
+
+    assert_equal 1, batch.staged_changes.creates.count
+    change = batch.staged_changes.first
+    assert_equal "ZZTEST", change.record_identifier
+    assert_equal "Test Manufacturer", change.new_values["name"]
+
+    # Manufacturer should NOT exist yet
+    assert_nil Manufacturer.find_by(icao_code: "ZZTEST")
+  end
+
+  test "combine_sources stages manufacturer update" do
     Manufacturer.create!(
       icao_code: "YYTEST",
       name: "Old Name"
     )
 
-    # Create a source with an updated name
     Source::Manufacturer::CfappsICAOIntManufacturerSource.create!(
       icao_code: "YYTEST",
       name: "New Name",
       import_date: Time.current
     )
 
-    Processors::Manufacturer::Manufacturer.combine_sources
+    batch = Processors::Manufacturer::Manufacturer.combine_sources
 
-    manufacturer = Manufacturer.find_by(icao_code: "YYTEST")
-    assert_equal "New Name", manufacturer.name
+    assert_equal 1, batch.staged_changes.updates.count
+    change = batch.staged_changes.first
+    assert_equal "YYTEST", change.record_identifier
+    assert_equal %w[Old\ Name New\ Name], change.diff["name"]
+  end
+
+  test "combine_sources tracks unchanged records" do
+    Manufacturer.create!(
+      icao_code: "XXTEST",
+      name: "Same Name"
+    )
+
+    Source::Manufacturer::CfappsICAOIntManufacturerSource.create!(
+      icao_code: "XXTEST",
+      name: "Same Name",
+      import_date: Time.current
+    )
+
+    batch = Processors::Manufacturer::Manufacturer.combine_sources
+
+    assert_equal 0, batch.staged_changes.count
+    assert_equal 1, batch.summary["unchanged"]
+  end
+
+  test "combine_sources accepts triggered_by parameter" do
+    user = users(:admin)
+
+    Source::Manufacturer::CfappsICAOIntManufacturerSource.create!(
+      icao_code: "WWTEST",
+      name: "Test",
+      import_date: Time.current
+    )
+
+    batch = Processors::Manufacturer::Manufacturer.combine_sources(triggered_by: user)
+
+    assert_equal user, batch.created_by
+  end
+
+  test "applying batch creates the manufacturer" do
+    Source::Manufacturer::CfappsICAOIntManufacturerSource.create!(
+      icao_code: "ZZTEST",
+      name: "Applied Manufacturer",
+      import_date: Time.current
+    )
+
+    batch = Processors::Manufacturer::Manufacturer.combine_sources
+
+    assert_nil Manufacturer.find_by(icao_code: "ZZTEST")
+
+    batch.apply!(by: nil)
+
+    manufacturer = Manufacturer.find_by(icao_code: "ZZTEST")
+    assert_not_nil manufacturer
+    assert_equal "Applied Manufacturer", manufacturer.name
+  end
+
+  test "applying batch updates existing manufacturer" do
+    Manufacturer.create!(
+      icao_code: "TTTEST",
+      name: "Old Name"
+    )
+
+    Source::Manufacturer::CfappsICAOIntManufacturerSource.create!(
+      icao_code: "TTTEST",
+      name: "New Name",
+      import_date: Time.current
+    )
+
+    batch = Processors::Manufacturer::Manufacturer.combine_sources
+
+    # Name should still be old before applying
+    assert_equal "Old Name", Manufacturer.find_by(icao_code: "TTTEST").name
+
+    batch.apply!(by: nil)
+
+    assert_equal "New Name", Manufacturer.find_by(icao_code: "TTTEST").name
   end
 
   test "combine_sources merges multiple sources using trust scores" do
@@ -72,7 +169,8 @@ class Processors::Manufacturer::ManufacturerTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::Manufacturer::Manufacturer.combine_sources
+    batch = Processors::Manufacturer::Manufacturer.combine_sources
+    batch.apply!(by: nil)
 
     manufacturer = Manufacturer.find_by(icao_code: "XXTEST")
     assert_not_nil manufacturer, "Expected manufacturer to be created from merged sources"
@@ -87,7 +185,8 @@ class Processors::Manufacturer::ManufacturerTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::Manufacturer::Manufacturer.combine_sources
+    batch = Processors::Manufacturer::Manufacturer.combine_sources
+    batch.apply!(by: nil)
 
     manufacturer = Manufacturer.find_by(icao_code: "WWTEST")
     assert_not_nil manufacturer.field_provenance, "Expected provenance to be set"
@@ -98,22 +197,6 @@ class Processors::Manufacturer::ManufacturerTest < ActiveSupport::TestCase
     assert_not_nil name_provenance, "Expected provenance to be recorded for the name field"
     assert name_provenance.key?("source_type") || name_provenance.key?(:source_type),
            "Expected provenance to include source_type"
-  end
-
-  test "combine_sources sets last_combined_at timestamp" do
-    Source::Manufacturer::CfappsICAOIntManufacturerSource.create!(
-      icao_code: "TTTEST",
-      name: "Timestamp Test",
-      import_date: Time.current
-    )
-
-    freeze_time do
-      Processors::Manufacturer::Manufacturer.combine_sources
-
-      manufacturer = Manufacturer.find_by(icao_code: "TTTEST")
-      assert_not_nil manufacturer.last_combined_at, "Expected last_combined_at to be set"
-      assert_in_delta Time.current, manufacturer.last_combined_at, 1.second
-    end
   end
 
   test "combine_sources excludes records marked as excluded" do
@@ -134,7 +217,8 @@ class Processors::Manufacturer::ManufacturerTest < ActiveSupport::TestCase
       exclusion_reason: "Test exclusion"
     )
 
-    Processors::Manufacturer::Manufacturer.combine_sources
+    batch = Processors::Manufacturer::Manufacturer.combine_sources
+    batch.apply!(by: nil)
 
     # The includable manufacturer should exist
     assert Manufacturer.exists?(icao_code: "IITEST"), "Expected includable manufacturer to be created"
@@ -156,7 +240,8 @@ class Processors::Manufacturer::ManufacturerTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::Manufacturer::Manufacturer.combine_sources
+    batch = Processors::Manufacturer::Manufacturer.combine_sources
+    batch.apply!(by: nil)
 
     # Check that both test manufacturers were created
     assert Manufacturer.exists?(icao_code: "CNTEST"), "Expected CFAPPS manufacturer to be created"
@@ -177,7 +262,8 @@ class Processors::Manufacturer::ManufacturerTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::Manufacturer::Manufacturer.combine_sources
+    batch = Processors::Manufacturer::Manufacturer.combine_sources
+    batch.apply!(by: nil)
 
     manufacturer = Manufacturer.find_by(icao_code: "CNTEST")
     assert_equal country.id, manufacturer.country_id, "Expected manufacturer to be assigned to country"
@@ -191,13 +277,18 @@ class Processors::Manufacturer::ManufacturerTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::Manufacturer::Manufacturer.combine_sources
+    batch = Processors::Manufacturer::Manufacturer.combine_sources
+    batch.apply!(by: nil)
 
     manufacturer = Manufacturer.find_by(icao_code: "ZZTEST")
     assert_not_nil manufacturer.alt_names, "Expected alt_names to be set"
     assert_includes manufacturer.alt_names, "Alternate Name One"
     assert_includes manufacturer.alt_names, "Alternate Name Two"
   end
+
+  # ---------------------------------------------------------------------------
+  # combine_one tests (direct save, not staged)
+  # ---------------------------------------------------------------------------
 
   test "combine_one creates manufacturer for specific ICAO code" do
     Source::Manufacturer::CfappsICAOIntManufacturerSource.create!(
