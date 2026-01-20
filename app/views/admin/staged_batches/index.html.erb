@@ -1,0 +1,15 @@
+<%# Placeholder view - full implementation in Task 5.4.1 %>
+<h1>Staged Batches</h1>
+
+<table>
+  <tbody>
+    <% @batches.each do |batch| %>
+      <tr>
+        <td><%= batch.id %></td>
+        <td><%= batch.processor_type %></td>
+        <td><%= batch.entity_type %></td>
+        <td><%= batch.status %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

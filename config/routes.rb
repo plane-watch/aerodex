@@ -4,6 +4,18 @@ Rails.application.routes.draw do
   # Search autocomplete suggestions API
   get 'search/suggestions', to: 'search_suggestions#index', as: :search_suggestions
 
+  # Admin namespace
+  namespace :admin do
+    resources :staged_batches, only: [:index, :show] do
+      member do
+        post :apply
+        post :reject
+        post :rollback
+      end
+    end
+    resources :processors, only: [:index, :create]
+  end
+
   resources :aircraft
   resources :aircraft_types, only: [:index, :show]
   resources :manufacturers, only: [:index, :show]
