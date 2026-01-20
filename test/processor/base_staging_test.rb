@@ -76,8 +76,9 @@ class ProcessorBaseStagingTest < ActiveSupport::TestCase
     assert_equal [nil, "Test Country"], change.diff["name"]
   end
 
-  test "summary is updated with counts" do
+  test "summary is persisted with counts" do
     batch = TestProcessor.combine_sources
+    batch.reload # Verify the summary was actually persisted to the database
     assert_equal 1, batch.summary["created"]
     assert_equal 0, batch.summary["updated"]
   end

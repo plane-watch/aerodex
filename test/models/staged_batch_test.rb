@@ -89,6 +89,16 @@ class StagedBatchTest < ActiveSupport::TestCase
       entity_type: "Operator",
       status: :pending
     )
+    # Must have at least one change to apply
+    batch.staged_changes.create!(
+      record_type: "Operator",
+      record_identifier: "TEST",
+      operation: :create,
+      diff: {
+        "name" => [nil, "Test Operator"],
+        "icao_code" => [nil, "TST"]
+      }
+    )
 
     batch.apply!(by: nil)
 
@@ -188,7 +198,7 @@ class StagedBatchTest < ActiveSupport::TestCase
   end
 
   test "reject! stores reason in notes field" do
-    user = User.create!(email: "reviewer@example.com")
+    user = User.create!(email: "reviewer@example.com", password: "password123")
     batch = StagedBatch.create!(
       processor_type: "Processors::Operator::Operator",
       entity_type: "Operator",
@@ -266,6 +276,53 @@ class StagedBatchTest < ActiveSupport::TestCase
 
     operator = Operator.find_by(icao_code: "TST")
     assert_equal "Test Operator", operator.name
+  end
+
+  test "apply! handles staged changes with different attribute sets" do
+    # Regression test: insert_all requires all records to have the same keys.
+    # Different staged changes may capture different attributes in their diffs.
+    batch = StagedBatch.create!(
+      processor_type: "Processors::Operator::Operator",
+      entity_type: "Operator",
+      status: :pending
+    )
+
+    # First operator has name and icao_code
+    batch.staged_changes.create!(
+      record_type: "Operator",
+      record_identifier: "OP1",
+      operation: :create,
+      diff: {
+        "name" => [nil, "Operator One"],
+        "icao_code" => [nil, "OP1"]
+      }
+    )
+
+    # Second operator has name, icao_code, AND iata_code (different keys)
+    batch.staged_changes.create!(
+      record_type: "Operator",
+      record_identifier: "OP2",
+      operation: :create,
+      diff: {
+        "name" => [nil, "Operator Two"],
+        "icao_code" => [nil, "OP2"],
+        "iata_code" => [nil, "O2"]
+      }
+    )
+
+    # Should not raise "All objects being inserted must have the same keys"
+    assert_difference "Operator.count", 2 do
+      batch.apply!(by: nil)
+    end
+
+    op1 = Operator.find_by(icao_code: "OP1")
+    op2 = Operator.find_by(icao_code: "OP2")
+
+    assert_equal "Operator One", op1.name
+    assert_nil op1.iata_code
+
+    assert_equal "Operator Two", op2.name
+    assert_equal "O2", op2.iata_code
   end
 
   test "apply! rolls back transaction on stale data" do
