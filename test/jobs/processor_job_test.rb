@@ -48,6 +48,67 @@ class ProcessorJobTest < ActiveJob::TestCase
     assert_equal job.job_id, batch.job_id
   end
 
+  test "perform marks batch as failed when processor raises error" do
+    failing_processor = Class.new do
+      def self.combine_sources(triggered_by: nil)
+        batch = StagedBatch.create!(
+          processor_type: name,
+          entity_type: "Mock",
+          status: :pending
+        )
+        raise StandardError, "Processing failed"
+      end
+
+      def self.name
+        "ProcessorJobTest::FailingProcessor"
+      end
+    end
+
+    stub_const("ProcessorJobTest::FailingProcessor", failing_processor)
+
+    # Should not re-raise (error is handled by marking batch as failed)
+    ProcessorJob.perform_now("ProcessorJobTest::FailingProcessor")
+
+    batch = StagedBatch.last
+    assert_equal "failed", batch.status
+    assert_includes batch.error_message, "StandardError: Processing failed"
+  end
+
+  test "perform re-raises when processor class cannot be loaded" do
+    assert_raises(NameError) do
+      ProcessorJob.perform_now("NonExistent::Processor")
+    end
+
+    # Should not create any batches
+    assert_equal 0, StagedBatch.count
+  end
+
+  test "error message includes backtrace" do
+    failing_processor = Class.new do
+      def self.combine_sources(triggered_by: nil)
+        batch = StagedBatch.create!(
+          processor_type: name,
+          entity_type: "Mock",
+          status: :pending
+        )
+        raise StandardError, "Test error"
+      end
+
+      def self.name
+        "ProcessorJobTest::BacktraceProcessor"
+      end
+    end
+
+    stub_const("ProcessorJobTest::BacktraceProcessor", failing_processor)
+
+    ProcessorJob.perform_now("ProcessorJobTest::BacktraceProcessor")
+
+    batch = StagedBatch.last
+    assert_includes batch.error_message, "StandardError: Test error"
+    # Error message should include file paths from backtrace
+    assert_match(/\.rb:\d+/, batch.error_message)
+  end
+
   private
 
   def stub_const(name, value)

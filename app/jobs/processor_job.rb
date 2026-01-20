@@ -35,8 +35,12 @@ class ProcessorJob < ApplicationJob
     # Update the batch with job tracking info
     batch.update!(job_id: @job_id) if batch.is_a?(StagedBatch)
   rescue StandardError => e
-    # If we have a batch, mark it as failed
-    if batch.is_a?(StagedBatch)
+    # If we have a batch, mark it as failed.
+    # We need both checks because:
+    # 1. defined?(batch) - ensures the variable was assigned before the error
+    # 2. batch.is_a?(StagedBatch) - ensures it's the correct type
+    # Without defined?(), we'd get NameError if the error occurs before line 33
+    if defined?(batch) && batch.is_a?(StagedBatch)
       batch.update!(
         status: :failed,
         error_message: "#{e.class}: #{e.message}\n#{e.backtrace&.first(BACKTRACE_LINES)&.join("\n")}"
