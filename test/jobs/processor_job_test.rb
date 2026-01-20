@@ -16,6 +16,19 @@ class ProcessorJobTest < ActiveJob::TestCase
     end
   end
 
+  def setup
+    @stubbed_constants = []
+  end
+
+  def teardown
+    # Clean up any constants we stubbed
+    @stubbed_constants.each do |name|
+      parts = name.split("::")
+      parent = parts[0..-2].inject(Object) { |mod, part| mod.const_get(part) }
+      parent.send(:remove_const, parts.last) if parent.const_defined?(parts.last, false)
+    end
+  end
+
   test "perform creates a staged batch" do
     # Register the mock processor
     stub_const("Processors::Mock::Mock", MockProcessor)
@@ -39,7 +52,20 @@ class ProcessorJobTest < ActiveJob::TestCase
 
   def stub_const(name, value)
     parts = name.split("::")
-    parent = parts[0..-2].inject(Object) { |mod, part| mod.const_get(part) rescue mod.const_set(part, Module.new) }
-    parent.const_set(parts.last, value) unless parent.const_defined?(parts.last)
+
+    # Build parent module hierarchy
+    parent = parts[0..-2].inject(Object) do |mod, part|
+      begin
+        mod.const_get(part)
+      rescue NameError
+        mod.const_set(part, Module.new)
+      end
+    end
+
+    # Set the constant
+    unless parent.const_defined?(parts.last, false)
+      parent.const_set(parts.last, value)
+      @stubbed_constants << name
+    end
   end
 end

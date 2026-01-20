@@ -14,6 +14,9 @@
 class ProcessorJob < ApplicationJob
   queue_as :processors
 
+  # Maximum number of backtrace lines to capture in error messages
+  BACKTRACE_LINES = 10
+
   # Called before perform to set up tracking.
   before_perform do |job|
     @job_id = job.job_id
@@ -33,12 +36,16 @@ class ProcessorJob < ApplicationJob
     batch.update!(job_id: @job_id) if batch.is_a?(StagedBatch)
   rescue StandardError => e
     # If we have a batch, mark it as failed
-    if defined?(batch) && batch.is_a?(StagedBatch)
+    if batch.is_a?(StagedBatch)
       batch.update!(
         status: :failed,
-        error_message: "#{e.class}: #{e.message}\n#{e.backtrace&.first(10)&.join("\n")}"
+        error_message: "#{e.class}: #{e.message}\n#{e.backtrace&.first(BACKTRACE_LINES)&.join("\n")}"
       )
+      # Don't re-raise - we've handled the error by marking the batch as failed.
+      # This prevents ActiveJob retry from creating duplicate failed batches.
+    else
+      # No batch was created, so re-raise to let ActiveJob handle retry
+      raise
     end
-    raise
   end
 end
