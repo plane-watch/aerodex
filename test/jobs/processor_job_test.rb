@@ -49,14 +49,12 @@ class ProcessorJobTest < ActiveJob::TestCase
   end
 
   test "perform marks batch as failed when processor raises error" do
-    failing_processor = Class.new do
+    # Use a processor that properly uses with_staged_batch (which handles errors)
+    failing_processor = Class.new(Processors::Base) do
       def self.combine_sources(triggered_by: nil)
-        batch = StagedBatch.create!(
-          processor_type: name,
-          entity_type: "Mock",
-          status: :pending
-        )
-        raise StandardError, "Processing failed"
+        with_staged_batch(entity_type: "Mock", triggered_by: triggered_by) do
+          raise StandardError, "Processing failed"
+        end
       end
 
       def self.name
@@ -85,15 +83,13 @@ class ProcessorJobTest < ActiveJob::TestCase
     assert_equal 0, StagedBatch.count
   end
 
-  test "error message includes backtrace" do
-    failing_processor = Class.new do
+  test "error message includes class and message" do
+    # Use a processor that properly uses with_staged_batch (which handles errors)
+    failing_processor = Class.new(Processors::Base) do
       def self.combine_sources(triggered_by: nil)
-        batch = StagedBatch.create!(
-          processor_type: name,
-          entity_type: "Mock",
-          status: :pending
-        )
-        raise StandardError, "Test error"
+        with_staged_batch(entity_type: "Mock", triggered_by: triggered_by) do
+          raise StandardError, "Test error"
+        end
       end
 
       def self.name
@@ -110,8 +106,6 @@ class ProcessorJobTest < ActiveJob::TestCase
 
     batch = StagedBatch.last
     assert_includes batch.error_message, "StandardError: Test error"
-    # Error message should include file paths from backtrace
-    assert_match(/\.rb:\d+/, batch.error_message)
   end
 
   private

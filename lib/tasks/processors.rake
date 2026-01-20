@@ -25,10 +25,17 @@ namespace :processors do
     entity_type = args[:entity_type]
     abort "Usage: rake processors:run_sync[EntityType]" if entity_type.blank?
 
-    processor_class = "Processors::#{entity_type}::#{entity_type}".constantize
+    processor_class = "Processors::#{entity_type}::#{entity_type}"
+
+    # Verify the processor exists
+    begin
+      processor_class.constantize
+    rescue NameError
+      abort "Unknown processor: #{processor_class}"
+    end
 
     puts "Running #{processor_class}..."
-    batch = processor_class.combine_sources
+    batch = ProcessorJob.perform_now(processor_class)
 
     puts "Completed."
     puts "Batch ID: #{batch.id}"

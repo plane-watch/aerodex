@@ -34,6 +34,8 @@ class ProcessorJob < ApplicationJob
 
     # Update the batch with job tracking info
     batch.update!(job_id: @job_id) if batch.is_a?(StagedBatch)
+
+    batch
   rescue StandardError => e
     # If we have a batch, mark it as failed.
     # We need both checks because:
