@@ -138,6 +138,13 @@ class StagedBatch < ApplicationRecord
       attrs
     end
 
+    # Normalise all records to have the same keys (insert_all requirement).
+    # Different staged changes may have different attributes captured.
+    all_keys = records.flat_map(&:keys).uniq
+    records = records.map do |record|
+      all_keys.each_with_object({}) { |key, hash| hash[key] = record[key] }
+    end
+
     model_class.insert_all(records)
   rescue ActiveRecord::RecordNotUnique => e
     raise StaleDataError, "Record already exists (unique constraint violation): #{e.message}"
@@ -154,6 +161,12 @@ class StagedBatch < ApplicationRecord
       attrs[:id] = change.record_id
       attrs[:updated_at] = now
       attrs
+    end
+
+    # Normalise all records to have the same keys (upsert_all requirement).
+    all_keys = records.flat_map(&:keys).uniq
+    records = records.map do |record|
+      all_keys.each_with_object({}) { |key, hash| hash[key] = record[key] }
     end
 
     model_class.upsert_all(records, unique_by: :id)
