@@ -1,0 +1,11 @@
+<% content_for :page_title, "Processors" %>
+
+<table>
+  <tbody>
+    <% @processors.each do |processor| %>
+      <tr>
+        <td><%= processor[:entity_type] %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
