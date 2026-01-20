@@ -214,6 +214,32 @@
                 <%= nav_link_to countries_path, 'Countries', icon: 'fa-solid fa-flag' %>
               </li>
             </ul>
+            <% if current_user&.admin? %>
+              <ul role="list" class="-mx-2 space-y-1">
+                <div class="mt-2 text-xs font-semibold leading-6 text-gray-400">Admin</div>
+                <li>
+                  <%= link_to admin_staged_batches_path, class: "text-gray-300 hover:-mb-0.5 hover:border-b-2 hover:border-yellow-500 group flex items-center gap-x-3 p-2 text-sm leading-6 font-semibold" do %>
+                    <i class="size-6 group-hover:text-yellow-500 fa-solid fa-layer-group"></i>
+                    <span class="group-hover:bg-linear-to-r group-hover:from-violet-500 group-hover:to-fuchsia-500 group-hover:text-transparent group-hover:bg-clip-text">
+                      Staged Batches
+                    </span>
+                    <% if pending_batches_count > 0 %>
+                      <span class="ml-auto inline-flex items-center rounded-full bg-yellow-400 px-2 py-0.5 text-xs font-medium text-yellow-900">
+                        <%= pending_batches_count %>
+                      </span>
+                    <% end %>
+                  <% end %>
+                </li>
+                <li>
+                  <%= link_to admin_processors_path, class: "text-gray-300 hover:-mb-0.5 hover:border-b-2 hover:border-yellow-500 group flex items-center gap-x-3 p-2 text-sm leading-6 font-semibold" do %>
+                    <i class="size-6 group-hover:text-yellow-500 fa-solid fa-gears"></i>
+                    <span class="group-hover:bg-linear-to-r group-hover:from-violet-500 group-hover:to-fuchsia-500 group-hover:text-transparent group-hover:bg-clip-text">
+                      Processors
+                    </span>
+                  <% end %>
+                </li>
+              </ul>
+            <% end %>
           </li>
           <li class="mt-auto pb-2">
             <a href="#" class="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-400 hover:bg-gray-800 hover:text-white">
