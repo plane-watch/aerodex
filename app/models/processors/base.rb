@@ -165,5 +165,118 @@ module Processors
 
       Rails.logger.info 'Counter caches reset.'
     end
+
+    # =========================================================================
+    # Staged Batch Methods
+    # =========================================================================
+
+    # Thread-local storage for the current batch during processing.
+    #
+    # @return [StagedBatch, nil] The current batch or nil if not in a batch
+    def self.current_batch
+      Thread.current[:processor_current_batch]
+    end
+
+    # Sets the current batch in thread-local storage.
+    #
+    # @param batch [StagedBatch, nil] The batch to set
+    def self.current_batch=(batch)
+      Thread.current[:processor_current_batch] = batch
+    end
+
+    # Wraps a processor run with staged batch tracking.
+    #
+    # Creates a StagedBatch at the start, yields to the processing block,
+    # and finalises the batch status and summary on completion.
+    #
+    # @param entity_type [String] The entity type being processed (e.g., "Aircraft")
+    # @param triggered_by [User, nil] The user who triggered the run
+    # @yield The processing block
+    # @return [StagedBatch] The completed batch
+    def self.with_staged_batch(entity_type:, triggered_by: nil)
+      check_pending_batch!(entity_type)
+
+      self.current_batch = StagedBatch.create!(
+        processor_type: name,
+        entity_type: entity_type,
+        status: :processing,
+        created_by: triggered_by,
+        started_at: Time.current,
+        summary: { "created" => 0, "updated" => 0, "unchanged" => 0 }
+      )
+
+      yield
+
+      current_batch.update!(
+        status: :pending,
+        completed_at: Time.current
+      )
+
+      current_batch
+    rescue StandardError => e
+      if current_batch&.persisted?
+        current_batch.update!(
+          status: :failed,
+          completed_at: Time.current,
+          error_message: "#{e.class}: #{e.message}"
+        )
+      end
+      raise
+    ensure
+      self.current_batch = nil
+    end
+
+    # Stages a change for a record.
+    #
+    # Captures the diff of the record's changes and stores it in the current
+    # batch for later review and approval.
+    #
+    # @param record [ApplicationRecord] The record being changed
+    # @param operation [Symbol] :create or :update
+    # @param identifier [String] Human-readable identifier for the record
+    # @raise [RuntimeError] If called outside of a with_staged_batch block
+    # @raise [ArgumentError] If an unknown operation is specified
+    def self.stage_change(record, operation:, identifier:)
+      raise "No current batch - call within with_staged_batch block" unless current_batch
+
+      diff = case operation
+             when :create
+               # For creates, all non-nil attributes are "new"
+               record.attributes.compact.transform_values { |v| [nil, v] }
+             when :update
+               # For updates, use ActiveRecord's changes hash
+               record.changes.transform_values { |old_new| old_new }
+             else
+               raise ArgumentError, "Unknown operation: #{operation}"
+             end
+
+      current_batch.staged_changes.create!(
+        record_type: record.class.name,
+        record_id: record.id,
+        record_identifier: identifier,
+        operation: operation,
+        diff: diff
+      )
+
+      # Update summary counts
+      key = operation == :create ? "created" : "updated"
+      current_batch.summary[key] += 1
+    end
+
+    # Checks for pending batches and handles according to configuration.
+    #
+    # Currently blocks processing if a pending batch exists for the same
+    # entity type to prevent conflicting changes.
+    #
+    # @param entity_type [String] The entity type to check
+    # @raise [RuntimeError] If a pending batch exists
+    def self.check_pending_batch!(entity_type)
+      pending = StagedBatch.pending.where(entity_type: entity_type).first
+      return unless pending
+
+      # For now, we block. TODO: Make this configurable (block vs supersede)
+      raise "Pending batch exists for #{entity_type} (ID: #{pending.id}). " \
+            "Approve or reject it before running again."
+    end
   end
 end
