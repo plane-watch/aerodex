@@ -181,26 +181,27 @@ class StagedBatch < ApplicationRecord
     raise StaleDataError, "Record already exists (unique constraint violation): #{e.message}"
   end
 
-  # Applies update operations using upsert_all.
+  # Applies update operations using individual updates.
+  #
+  # We don't use upsert_all here because PostgreSQL validates NOT NULL constraints
+  # on the INSERT values BEFORE evaluating the ON CONFLICT clause. This means we'd
+  # need to provide all non-nullable columns even for updates, which defeats the
+  # purpose of partial updates.
+  #
+  # Instead, we update each record individually using update_columns, which is
+  # still efficient and works correctly with partial column sets.
   #
   # @param model_class [Class] The model class
   # @param changes [Array<StagedChange>] The update changes
   def apply_updates(model_class, changes)
     now = Time.current
-    records = changes.map do |change|
+
+    changes.each do |change|
       attrs = change.new_values.symbolize_keys
-      attrs[:id] = change.record_id
       attrs[:updated_at] = now
-      attrs
-    end
 
-    # Normalise all records to have the same keys (upsert_all requirement).
-    all_keys = records.flat_map(&:keys).uniq
-    records = records.map do |record|
-      all_keys.each_with_object({}) { |key, hash| hash[key] = record[key] }
+      model_class.where(id: change.record_id).update_all(attrs)
     end
-
-    model_class.upsert_all(records, unique_by: :id)
   end
 
   # Runs post-apply hooks like reindexing.

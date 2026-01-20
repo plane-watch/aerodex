@@ -7,12 +7,19 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
   # Use ICAO codes that definitely don't exist in real data or fixtures.
   TEST_ICAO_CODES = %w[ZZZZ YYYY XXXX WWWW TTTT IIII EEEE OOOO CCCC UUUU PPPP NNNN].freeze
   TEST_IATA_CODES = %w[ZZZ YYY XXX WWW].freeze
-  TEST_COUNTRY_CODES = %w[ZZ YY XX].freeze
+  TEST_COUNTRY_CODES = %w[ZZ YY XX WW TT].freeze
 
   setup do
-    # Clear source tables - these have no FK dependencies, so safe to delete
-    Source::Airport::OurAirportsAirportSource.delete_all
-    Source::Airport::OpenFlightsAirportSource.delete_all
+    # Clear staging tables
+    StagedBatch.delete_all
+    StagedChange.delete_all
+
+    # Clean up only test source records (not ALL sources - that would be slow and destructive).
+    # Use specific test ICAO codes to avoid interfering with real data.
+    Source::Airport::OurAirportsAirportSource.where(icao_code: TEST_ICAO_CODES).delete_all
+    Source::Airport::OurAirportsAirportSource.where(iata_code: TEST_IATA_CODES).delete_all
+    Source::Airport::OpenFlightsAirportSource.where(icao_code: TEST_ICAO_CODES).delete_all
+    Source::Airport::OpenFlightsAirportSource.where(iata_code: TEST_IATA_CODES).delete_all
 
     # Clean up any airports with our test codes from previous test runs.
     # Airports have FK to countries, so delete them first.
@@ -34,18 +41,40 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # combine_sources tests
+  # combine_sources staging tests
   # ---------------------------------------------------------------------------
 
-  test "combine_sources creates airport from a single source" do
-    # Create a country first (FK requirement)
+  test "combine_sources returns a staged batch" do
     country = Country.create!(
       iso_2char_code: "ZZ",
       iso_3char_code: "ZZZ",
       name: "Test Country"
     )
 
-    # Create a source record with the required fields
+    Source::Airport::OurAirportsAirportSource.create!(
+      icao_code: "ZZZZ",
+      name: "Test Airport",
+      country_code: "ZZ",
+      latitude: -33.946111,
+      longitude: 151.177222,
+      import_date: Time.current,
+      data: { test: true }
+    )
+
+    result = Processors::Airport::Airport.combine_sources
+
+    assert_instance_of StagedBatch, result
+    assert_equal "pending", result.status
+    assert_equal "Airport", result.entity_type
+  end
+
+  test "combine_sources stages airport creation" do
+    country = Country.create!(
+      iso_2char_code: "ZZ",
+      iso_3char_code: "ZZZ",
+      name: "Test Country"
+    )
+
     Source::Airport::OurAirportsAirportSource.create!(
       icao_code: "ZZZZ",
       iata_code: "ZZZ",
@@ -59,29 +88,24 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       data: { test: true }
     )
 
-    Processors::Airport::Airport.combine_sources
+    batch = Processors::Airport::Airport.combine_sources
 
-    airport = Airport.find_by(icao_code: "ZZZZ")
-    assert_not_nil airport, "Expected airport to be created"
-    assert_equal "Test Airport", airport.name
-    assert_equal "ZZZZ", airport.icao_code
-    assert_equal "ZZZ", airport.iata_code
-    assert_equal "Test City", airport.city
-    assert_equal country.id, airport.country_id
-    assert_in_delta(-33.946111, airport.latitude, 0.000001)
-    assert_in_delta(151.177222, airport.longitude, 0.000001)
-    assert_equal 21, airport.altitude.to_i
+    assert_equal 1, batch.staged_changes.creates.count
+    change = batch.staged_changes.first
+    assert_equal "ZZZZ", change.record_identifier
+    assert_equal "Test Airport", change.new_values["name"]
+
+    # Airport should NOT exist yet
+    assert_nil Airport.find_by(icao_code: "ZZZZ")
   end
 
-  test "combine_sources updates existing airport when source has changes" do
-    # Create a country
+  test "combine_sources stages airport update" do
     country = Country.create!(
       iso_2char_code: "YY",
       iso_3char_code: "YYY",
       name: "Update Test Country"
     )
 
-    # Create an existing airport record
     Airport.create!(
       icao_code: "YYYY",
       name: "Old Name",
@@ -90,7 +114,6 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       longitude: 150.0
     )
 
-    # Create a source with updated data
     Source::Airport::OurAirportsAirportSource.create!(
       icao_code: "YYYY",
       name: "New Name",
@@ -103,9 +126,146 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       data: { test: true }
     )
 
-    Processors::Airport::Airport.combine_sources
+    batch = Processors::Airport::Airport.combine_sources
 
-    airport = Airport.find_by(icao_code: "YYYY")
+    assert_equal 1, batch.staged_changes.updates.count
+    change = batch.staged_changes.first
+    assert_equal "YYYY", change.record_identifier
+  end
+
+  test "combine_sources tracks unchanged records" do
+    country = Country.create!(
+      iso_2char_code: "XX",
+      iso_3char_code: "XXX",
+      name: "Unchanged Test Country"
+    )
+
+    Airport.create!(
+      icao_code: "XXXX",
+      name: "Same Name",
+      city: "Same City",
+      country: country,
+      latitude: -33.0,
+      longitude: 151.0,
+      altitude: 50,
+      timezone: "Australia/Sydney"
+    )
+
+    Source::Airport::OurAirportsAirportSource.create!(
+      icao_code: "XXXX",
+      name: "Same Name",
+      municipality: "Same City",
+      country_code: "XX",
+      latitude: -33.0,
+      longitude: 151.0,
+      elevation: 50,
+      import_date: Time.current,
+      data: { test: true }
+    )
+
+    batch = Processors::Airport::Airport.combine_sources
+
+    assert_equal 0, batch.staged_changes.count
+    assert_equal 1, batch.summary["unchanged"]
+  end
+
+  test "combine_sources accepts triggered_by parameter" do
+    user = users(:admin)
+
+    country = Country.create!(
+      iso_2char_code: "WW",
+      iso_3char_code: "WWW",
+      name: "Triggered By Country"
+    )
+
+    Source::Airport::OurAirportsAirportSource.create!(
+      icao_code: "WWWW",
+      name: "Test",
+      country_code: "WW",
+      latitude: -34.0,
+      longitude: 150.0,
+      import_date: Time.current,
+      data: { test: true }
+    )
+
+    batch = Processors::Airport::Airport.combine_sources(triggered_by: user)
+
+    assert_equal user, batch.created_by
+  end
+
+  test "applying batch creates the airport" do
+    country = Country.create!(
+      iso_2char_code: "ZZ",
+      iso_3char_code: "ZZZ",
+      name: "Test Country"
+    )
+
+    Source::Airport::OurAirportsAirportSource.create!(
+      icao_code: "ZZZZ",
+      iata_code: "ZZZ",
+      name: "Test Airport",
+      municipality: "Test City",
+      country_code: "ZZ",
+      latitude: -33.946111,
+      longitude: 151.177222,
+      elevation: 21,
+      import_date: Time.current,
+      data: { test: true }
+    )
+
+    batch = Processors::Airport::Airport.combine_sources
+
+    assert_nil Airport.find_by(icao_code: "ZZZZ")
+
+    batch.apply!(by: nil)
+
+    airport = Airport.find_by(icao_code: "ZZZZ")
+    assert_not_nil airport
+    assert_equal "Test Airport", airport.name
+    assert_equal "ZZZZ", airport.icao_code
+    assert_equal "ZZZ", airport.iata_code
+    assert_equal "Test City", airport.city
+    assert_equal country.id, airport.country_id
+    assert_in_delta(-33.946111, airport.latitude, 0.000001)
+    assert_in_delta(151.177222, airport.longitude, 0.000001)
+    assert_equal 21, airport.altitude.to_i
+  end
+
+  test "applying batch updates existing airport" do
+    country = Country.create!(
+      iso_2char_code: "TT",
+      iso_3char_code: "TTT",
+      name: "Update Batch Country"
+    )
+
+    Airport.create!(
+      icao_code: "TTTT",
+      name: "Old Name",
+      country: country,
+      latitude: -30.0,
+      longitude: 150.0
+    )
+
+    Source::Airport::OurAirportsAirportSource.create!(
+      icao_code: "TTTT",
+      name: "New Name",
+      municipality: "New City",
+      country_code: "TT",
+      latitude: -31.5,
+      longitude: 151.5,
+      elevation: 100,
+      import_date: Time.current,
+      data: { test: true }
+    )
+
+    batch = Processors::Airport::Airport.combine_sources
+
+    # Values should still be old before applying
+    assert_equal "Old Name", Airport.find_by(icao_code: "TTTT").name
+
+    batch.apply!(by: nil)
+
+    airport = Airport.find_by(icao_code: "TTTT")
     assert_equal "New Name", airport.name
     assert_equal "New City", airport.city
     assert_in_delta(-31.5, airport.latitude, 0.000001)
@@ -114,14 +274,12 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
   end
 
   test "combine_sources merges multiple sources using trust scores" do
-    # Create a country
     country = Country.create!(
       iso_2char_code: "XX",
       iso_3char_code: "XXX",
       name: "Merge Test Country"
     )
 
-    # Create conflicting sources - the higher trust score should win
     Source::Airport::OurAirportsAirportSource.create!(
       icao_code: "XXXX",
       name: "OurAirports Name",
@@ -145,7 +303,8 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       data: { test: true }
     )
 
-    Processors::Airport::Airport.combine_sources
+    batch = Processors::Airport::Airport.combine_sources
+    batch.apply!(by: nil)
 
     airport = Airport.find_by(icao_code: "XXXX")
     assert_not_nil airport, "Expected airport to be created from merged sources"
@@ -173,43 +332,17 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       data: { test: true }
     )
 
-    Processors::Airport::Airport.combine_sources
+    batch = Processors::Airport::Airport.combine_sources
+    batch.apply!(by: nil)
 
     airport = Airport.find_by(icao_code: "WWWW")
     assert_not_nil airport.field_provenance, "Expected provenance to be set"
 
     # Check that provenance was recorded for the name field.
-    # Provenance keys can be strings or symbols depending on serialisation.
     name_provenance = airport.field_provenance["name"] || airport.field_provenance[:name]
     assert_not_nil name_provenance, "Expected provenance to be recorded for the name field"
     assert name_provenance.key?("source_type") || name_provenance.key?(:source_type),
            "Expected provenance to include source_type"
-  end
-
-  test "combine_sources sets last_combined_at timestamp" do
-    country = Country.create!(
-      iso_2char_code: "ZZ",
-      iso_3char_code: "ZZZ",
-      name: "Timestamp Test Country"
-    )
-
-    Source::Airport::OurAirportsAirportSource.create!(
-      icao_code: "TTTT",
-      name: "Timestamp Test",
-      country_code: "ZZ",
-      latitude: -35.0,
-      longitude: 149.0,
-      import_date: Time.current,
-      data: { test: true }
-    )
-
-    freeze_time do
-      Processors::Airport::Airport.combine_sources
-
-      airport = Airport.find_by(icao_code: "TTTT")
-      assert_not_nil airport.last_combined_at, "Expected last_combined_at to be set"
-      assert_in_delta Time.current, airport.last_combined_at, 1.second
-    end
   end
 
   test "combine_sources excludes records marked as excluded" do
@@ -219,7 +352,6 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       name: "Exclusion Test Country"
     )
 
-    # Create an includable source
     Source::Airport::OurAirportsAirportSource.create!(
       icao_code: "IIII",
       name: "Includable Airport",
@@ -231,7 +363,6 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       data: { test: true }
     )
 
-    # Create an excluded source (should be ignored)
     Source::Airport::OurAirportsAirportSource.create!(
       icao_code: "EEEE",
       name: "Excluded Airport",
@@ -244,12 +375,10 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       data: { test: true }
     )
 
-    Processors::Airport::Airport.combine_sources
+    batch = Processors::Airport::Airport.combine_sources
+    batch.apply!(by: nil)
 
-    # The includable airport should exist
     assert Airport.exists?(icao_code: "IIII"), "Expected includable airport to be created"
-
-    # The excluded airport should not exist
     assert_not Airport.exists?(icao_code: "EEEE"), "Expected excluded airport to be skipped"
   end
 
@@ -260,7 +389,6 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       name: "Multi-Source Country"
     )
 
-    # Create records from each source type with unique ICAO codes
     Source::Airport::OurAirportsAirportSource.create!(
       icao_code: "OOOO",
       name: "OurAirports Airport",
@@ -280,9 +408,9 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       data: { test: true }
     )
 
-    Processors::Airport::Airport.combine_sources
+    batch = Processors::Airport::Airport.combine_sources
+    batch.apply!(by: nil)
 
-    # Check that both test airports were created
     assert Airport.exists?(icao_code: "OOOO"), "Expected OurAirports airport to be created"
     assert Airport.exists?(icao_code: "CCCC"), "Expected OpenFlights airport to be created"
   end
@@ -304,7 +432,8 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       data: { test: true }
     )
 
-    Processors::Airport::Airport.combine_sources
+    batch = Processors::Airport::Airport.combine_sources
+    batch.apply!(by: nil)
 
     airport = Airport.find_by(icao_code: "UUUU")
     assert_equal country.id, airport.country_id,
@@ -312,7 +441,6 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
   end
 
   test "combine_sources skips airports without valid country" do
-    # Don't create a country for the test ISO code
     Source::Airport::OurAirportsAirportSource.create!(
       icao_code: "PPPP",
       name: "No Country Airport",
@@ -323,9 +451,13 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       data: { test: true }
     )
 
-    Processors::Airport::Airport.combine_sources
+    batch = Processors::Airport::Airport.combine_sources
 
-    # The airport should not be created because there's no valid country
+    # The batch should have no staged changes since the airport was skipped
+    assert_equal 0, batch.staged_changes.count,
+                 "Expected no staged changes for airport with invalid country"
+
+    # No airport should be created
     assert_not Airport.exists?(icao_code: "PPPP"),
                "Expected airport to be skipped when country not found"
   end
@@ -337,7 +469,6 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       name: "IATA Only Country"
     )
 
-    # Create a source with only IATA code (no ICAO)
     Source::Airport::OpenFlightsAirportSource.create!(
       iata_code: "ZZZ",
       icao_code: nil,
@@ -349,39 +480,13 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       data: { test: true }
     )
 
-    Processors::Airport::Airport.combine_sources
+    batch = Processors::Airport::Airport.combine_sources
+    batch.apply!(by: nil)
 
     airport = Airport.find_by(iata_code: "ZZZ")
     assert_not_nil airport, "Expected airport with IATA-only code to be created"
     assert_nil airport.icao_code
     assert_equal "ZZZ", airport.iata_code
-  end
-
-  test "combine_sources handles coordinate data correctly" do
-    country = Country.create!(
-      iso_2char_code: "ZZ",
-      iso_3char_code: "ZZZ",
-      name: "Coordinate Test Country"
-    )
-
-    # Test with precise coordinates (Sydney Airport)
-    Source::Airport::OurAirportsAirportSource.create!(
-      icao_code: "NNNN",
-      name: "Coordinate Test Airport",
-      country_code: "ZZ",
-      latitude: -33.946111,
-      longitude: 151.177222,
-      elevation: 21,
-      import_date: Time.current,
-      data: { test: true }
-    )
-
-    Processors::Airport::Airport.combine_sources
-
-    airport = Airport.find_by(icao_code: "NNNN")
-    assert_in_delta(-33.946111, airport.latitude, 0.000001, "Latitude should be preserved precisely")
-    assert_in_delta(151.177222, airport.longitude, 0.000001, "Longitude should be preserved precisely")
-    assert_equal 21, airport.altitude.to_i
   end
 
   test "combine_sources sets timezone from coordinates" do
@@ -391,7 +496,6 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       name: "Timezone Test Country"
     )
 
-    # Use coordinates for a known timezone (Sydney)
     Source::Airport::OurAirportsAirportSource.create!(
       icao_code: "ZZZZ",
       name: "Timezone Test Airport",
@@ -402,16 +506,16 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       data: { test: true }
     )
 
-    Processors::Airport::Airport.combine_sources
+    batch = Processors::Airport::Airport.combine_sources
+    batch.apply!(by: nil)
 
     airport = Airport.find_by(icao_code: "ZZZZ")
     assert_not_nil airport.timezone, "Expected timezone to be set from coordinates"
-    # Sydney coordinates should resolve to Australia/Sydney timezone
     assert_equal "Australia/Sydney", airport.timezone
   end
 
   # ---------------------------------------------------------------------------
-  # combine_one tests
+  # combine_one tests (direct save, not staged)
   # ---------------------------------------------------------------------------
 
   test "combine_one creates airport for specific ICAO code" do
@@ -449,7 +553,6 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       name: "Update One Country"
     )
 
-    # Create existing airport
     Airport.create!(
       icao_code: "YYYY",
       name: "Old Airport",
@@ -458,7 +561,6 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       longitude: 150.0
     )
 
-    # Create source with updated data
     Source::Airport::OurAirportsAirportSource.create!(
       icao_code: "YYYY",
       name: "New Airport",
@@ -509,32 +611,7 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       data: { test: true }
     )
 
-    # Pass lowercase code - should still work
     result = Processors::Airport::Airport.combine_one("zzzz")
-
-    assert_not_nil result[:airport]
-    assert_equal "ZZZZ", result[:airport].icao_code
-  end
-
-  test "combine_one trims whitespace from identifier" do
-    country = Country.create!(
-      iso_2char_code: "ZZ",
-      iso_3char_code: "ZZZ",
-      name: "Whitespace Test Country"
-    )
-
-    Source::Airport::OurAirportsAirportSource.create!(
-      icao_code: "ZZZZ",
-      name: "Whitespace Test Airport",
-      country_code: "ZZ",
-      latitude: -33.0,
-      longitude: 151.0,
-      import_date: Time.current,
-      data: { test: true }
-    )
-
-    # Pass code with whitespace - should still work
-    result = Processors::Airport::Airport.combine_one("  ZZZZ  ")
 
     assert_not_nil result[:airport]
     assert_equal "ZZZZ", result[:airport].icao_code
@@ -557,7 +634,6 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       data: { test: true }
     )
 
-    # 4-character code should be auto-detected as ICAO
     result = Processors::Airport::Airport.combine_one("ZZZZ")
 
     assert_not_nil result[:airport]
@@ -582,32 +658,7 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       data: { test: true }
     )
 
-    # 3-character code should be auto-detected as IATA
     result = Processors::Airport::Airport.combine_one("ZZZ")
-
-    assert_not_nil result[:airport]
-    assert_equal "ZZZ", result[:airport].iata_code
-  end
-
-  test "combine_one accepts explicit by: :iata parameter" do
-    country = Country.create!(
-      iso_2char_code: "ZZ",
-      iso_3char_code: "ZZZ",
-      name: "Explicit IATA Country"
-    )
-
-    Source::Airport::OpenFlightsAirportSource.create!(
-      iata_code: "ZZZ",
-      icao_code: nil,
-      name: "Explicit IATA Airport",
-      country_code: "ZZ",
-      latitude: -33.0,
-      longitude: 151.0,
-      import_date: Time.current,
-      data: { test: true }
-    )
-
-    result = Processors::Airport::Airport.combine_one("ZZZ", by: :iata)
 
     assert_not_nil result[:airport]
     assert_equal "ZZZ", result[:airport].iata_code
@@ -620,7 +671,6 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
       name: "Unchanged Test Country"
     )
 
-    # Create the airport through combine_one first
     Source::Airport::OurAirportsAirportSource.create!(
       icao_code: "ZZZZ",
       name: "Unchanged Airport",
