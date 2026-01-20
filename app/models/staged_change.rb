@@ -1,3 +1,23 @@
+# == Schema Information
+#
+# Table name: staged_changes
+#
+#  id                :integer          not null, primary key
+#  staged_batch_id   :uuid             not null
+#  record_type       :string           not null
+#  record_id         :integer
+#  record_identifier :string           not null
+#  operation         :integer          not null
+#  diff              :jsonb            default("{}"), not null
+#  created_at        :datetime         not null
+#
+# Indexes
+#
+#  index_staged_changes_on_record_identifier          (record_identifier)
+#  index_staged_changes_on_record_type_and_record_id  (record_type,record_id)
+#  index_staged_changes_on_staged_batch_id            (staged_batch_id)
+#
+
 # frozen_string_literal: true
 
 # Represents an individual record change within a StagedBatch.

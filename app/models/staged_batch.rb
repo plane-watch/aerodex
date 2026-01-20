@@ -1,3 +1,34 @@
+# == Schema Information
+#
+# Table name: staged_batches
+#
+#  id             :uuid             not null, primary key
+#  processor_type :string           not null
+#  entity_type    :string           not null
+#  status         :integer          default(0), not null
+#  summary        :jsonb            default("{}"), not null
+#  created_by_id  :integer
+#  reviewed_by_id :integer
+#  job_id         :string
+#  started_at     :datetime
+#  completed_at   :datetime
+#  applied_at     :datetime
+#  reviewed_at    :datetime
+#  notes          :text
+#  error_message  :text
+#  created_at     :datetime         not null
+#  updated_at     :datetime         not null
+#
+# Indexes
+#
+#  index_staged_batches_on_created_at      (created_at)
+#  index_staged_batches_on_created_by_id   (created_by_id)
+#  index_staged_batches_on_entity_type     (entity_type)
+#  index_staged_batches_on_job_id          (job_id)
+#  index_staged_batches_on_reviewed_by_id  (reviewed_by_id)
+#  index_staged_batches_on_status          (status)
+#
+
 # frozen_string_literal: true
 
 # Represents a batch of staged changes from a processor run.

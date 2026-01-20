@@ -1,5 +1,5 @@
-import {Controller} from "@hotwired/stimulus"
-import {get} from "@rails/request.js"
+import { Controller } from "@hotwired/stimulus"
+import { get } from "@rails/request.js"
 
 /**
  * Orchestrates the field-specific search input with inline chips (tag-input style).
@@ -246,24 +246,24 @@ export default class extends Controller {
     const chipColour = tokenData.negated ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
     const hoverColour = tokenData.negated ? 'hover:bg-red-200' : 'hover:bg-blue-200'
     const strokeColour = tokenData.negated
-        ? 'stroke-red-700/50 group-hover:stroke-red-700/75'
-        : 'stroke-blue-700/50 group-hover:stroke-blue-700/75'
+      ? 'stroke-red-700/50 group-hover:stroke-red-700/75'
+      : 'stroke-blue-700/50 group-hover:stroke-blue-700/75'
 
     const negationHtml = tokenData.negated
-        ? '<span class="text-red-500 font-bold">NOT</span>'
-        : ''
+      ? '<span class="text-red-500 font-bold">NOT</span>'
+      : ''
 
     const fieldHtml = tokenData.field
-        ? `<span class="font-semibold">${this.escapeHtml(tokenData.field)}:</span>`
-        : ''
+      ? `<span class="font-semibold">${this.escapeHtml(tokenData.field)}:</span>`
+      : ''
 
     const displayValue = tokenData.value.includes(' ') && tokenData.exact
-        ? `"${tokenData.value}"`
-        : tokenData.value
+      ? `"${tokenData.value}"`
+      : tokenData.value
 
     const partialHtml = !tokenData.exact
-        ? '<span class="text-gray-500">*</span>'
-        : ''
+      ? '<span class="text-gray-500">*</span>'
+      : ''
 
     return `
       <span data-token='${JSON.stringify(tokenData)}'
@@ -311,7 +311,7 @@ export default class extends Controller {
    * @returns {Object} { mode: 'field'|'value'|'none', field?: string, prefix?: string }
    */
   getAutocompleteMode() {
-    if (!this.hasInputTarget) return {mode: 'none'}
+    if (!this.hasInputTarget) return { mode: 'none' }
 
     const value = this.inputTarget.value
     const cursorPos = this.inputTarget.selectionStart
@@ -323,16 +323,16 @@ export default class extends Controller {
     if (colonMatch) {
       const field = colonMatch[1]
       const prefix = colonMatch[2] !== undefined ? colonMatch[2] : colonMatch[3]
-      return {mode: 'value', field: field, prefix: prefix || ''}
+      return { mode: 'value', field: field, prefix: prefix || '' }
     }
 
     // Check if we're typing a word (field mode)
     const wordMatch = textBeforeCursor.match(/(?:^|\s)(\w+)$/)
     if (wordMatch && wordMatch[1].length >= this.constructor.MIN_AUTOCOMPLETE_CHARS) {
-      return {mode: 'field', prefix: wordMatch[1]}
+      return { mode: 'field', prefix: wordMatch[1] }
     }
 
-    return {mode: 'none'}
+    return { mode: 'none' }
   }
 
   /**
@@ -417,8 +417,8 @@ export default class extends Controller {
 
     this.dropdownTarget.innerHTML = suggestions.map((suggestion, index) => {
       const displayText = mode === 'field'
-          ? `<span class="font-medium">${suggestion.value}</span>:<span class="text-gray-500 ml-1">${suggestion.display}</span>`
-          : `<span>${suggestion.value}</span>${suggestion.hits ? `<span class="text-gray-400 ml-2">(${suggestion.hits})</span>` : ''}`
+        ? `<span class="font-medium">${suggestion.value}</span>:<span class="text-gray-500 ml-1">${suggestion.display}</span>`
+        : `<span>${suggestion.value}</span>${suggestion.hits ? `<span class="text-gray-400 ml-2">(${suggestion.hits})</span>` : ''}`
 
       return `
         <div class="px-3 py-2 cursor-pointer hover:bg-gray-100"
@@ -479,8 +479,8 @@ export default class extends Controller {
       // If no partial word exists (e.g., input is empty), just insert the field name
       const hasPartialWord = /(\w+)$/.test(textBefore)
       const newTextBefore = hasPartialWord
-          ? textBefore.replace(/(\w+)$/, `${value}:`)
-          : textBefore + `${value}:`
+        ? textBefore.replace(/(\w+)$/, `${value}:`)
+        : textBefore + `${value}:`
       input.value = newTextBefore + textAfter
       input.selectionStart = input.selectionEnd = newTextBefore.length
     } else {
@@ -536,7 +536,7 @@ export default class extends Controller {
         item.classList.add('bg-blue-100')
         item.classList.remove('hover:bg-gray-100')
         // Scroll into view if needed
-        item.scrollIntoView({block: 'nearest'})
+        item.scrollIntoView({ block: 'nearest' })
       } else {
         item.classList.remove('bg-blue-100')
         item.classList.add('hover:bg-gray-100')
@@ -553,7 +553,7 @@ export default class extends Controller {
     this.dropdownTarget.classList.remove('hidden')
 
     // Add click outside listener
-    document.addEventListener('click', this.onClickOutside.bind(this), {once: true})
+    document.addEventListener('click', this.onClickOutside.bind(this), { once: true })
   }
 
   /**

@@ -174,5 +174,33 @@ class Admin::StagedBatchesControllerTest < ActionDispatch::IntegrationTest
 
     get admin_staged_batch_path(batch, search: "VH")
     assert_response :success
+    assert_match "VH-ABC", response.body
+    assert_no_match(/N12345/, response.body)
+  end
+
+  test "show filters changes by operation" do
+    sign_in @admin
+    batch = StagedBatch.create!(
+      processor_type: "Processors::Test::Test",
+      entity_type: "Test",
+      status: :pending
+    )
+    batch.staged_changes.create!(
+      record_type: "Test",
+      record_identifier: "CREATE-1",
+      operation: :create,
+      diff: { "name" => [nil, "New Record"] }
+    )
+    batch.staged_changes.create!(
+      record_type: "Test",
+      record_identifier: "UPDATE-1",
+      operation: :update,
+      diff: { "name" => ["Old Name", "New Name"] }
+    )
+
+    get admin_staged_batch_path(batch, operation: "create")
+    assert_response :success
+    assert_match "CREATE-1", response.body
+    assert_no_match(/UPDATE-1/, response.body)
   end
 end
