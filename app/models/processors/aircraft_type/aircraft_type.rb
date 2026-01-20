@@ -107,69 +107,108 @@ module Processors
           sources
         end
 
-        # Combines aircraft type data from all available sources into canonical AircraftType records.
+        # Combines aircraft type data from all available sources into staged changes.
         # Groups sources by (type_code, name) to preserve variant information.
         #
-        # @return [Array<Hash>, true] Returns array of errors if any, otherwise true
-        def combine_sources
-          preload_reference_data
+        # If stub manufacturers are created during processing, they are tracked in a
+        # separate StagedBatch for visibility. The stubs are saved immediately (so we
+        # have IDs for FK references), but the batch provides an audit trail.
+        #
+        # @param triggered_by [User, nil] The user who triggered the run
+        # @return [StagedBatch] The batch containing staged changes
+        def combine_sources(triggered_by: nil)
+          @created_stub_manufacturers = []
 
-          grouped_sources = group_sources_by_type_code_and_name
-          errors = []
-          conflicts = []
-          pending_inserts = []
-          pending_updates = []
+          aircraft_type_batch = with_staged_batch(entity_type: "AircraftType", triggered_by: triggered_by) do
+            preload_reference_data
 
-          progress_bar = create_progress_bar(grouped_sources.count)
+            grouped_sources = group_sources_by_type_code_and_name
+            conflicts = []
 
-          with_bulk_import do
+            progress_bar = create_progress_bar(grouped_sources.count)
+
             grouped_sources.each do |key, sources|
               type_code, name = key
-              result = merge_sources_for_variant(type_code, name, sources, conflicts)
+              result = merge_sources_for_variant_staged(type_code, name, sources, conflicts)
 
               if result[:error]
-                errors << result[:error]
-              elsif result[:attributes]
-                if result[:new_record]
-                  pending_inserts << result[:attributes]
-                else
-                  pending_updates << result[:attributes]
-                end
+                # Store errors in batch notes
+                current_batch.notes ||= ""
+                current_batch.notes += "Error: #{result[:error]}\n"
               end
 
               progress_bar.increment!
-
-              # Flush batches periodically
-              if pending_inserts.size >= BATCH_SIZE
-                flush_inserts(pending_inserts)
-                pending_inserts.clear
-              end
-              if pending_updates.size >= BATCH_SIZE
-                flush_updates(pending_updates)
-                pending_updates.clear
-              end
             end
 
-            # Flush remaining records
-            flush_inserts(pending_inserts) if pending_inserts.any?
-            flush_updates(pending_updates) if pending_updates.any?
+            # Log any conflicts for review
+            log_conflicts(conflicts) if conflicts.any?
+
+            # Store conflict count in batch notes if any
+            if conflicts.any?
+              current_batch.notes ||= ""
+              current_batch.notes += "Processing completed with #{conflicts.count} field conflicts\n"
+            end
           end
 
-          # Log any conflicts for review
-          log_conflicts(conflicts) if conflicts.any?
+          # Create a separate batch for stub manufacturers if any were created
+          if @created_stub_manufacturers.any?
+            create_stub_manufacturers_batch(triggered_by, aircraft_type_batch)
+          end
 
-          # Reindex and reset counter caches
-          finalize_combine(
-            ::AircraftType,
-            counter_caches: { ::Manufacturer => :aircraft_types_count }
-          )
-
-          # Create an import report
-          new_import_report(errors, grouped_sources.count)
-
-          errors.any? ? errors : true
+          aircraft_type_batch
         ensure
           clear_caches
+          @created_stub_manufacturers = nil
+        end
+
+        # Creates a StagedBatch documenting stub manufacturers that were auto-created.
+        #
+        # The stubs are already saved (we needed their IDs), but this batch provides
+        # visibility into what was created and allows for review/cleanup.
+        #
+        # @param triggered_by [User, nil] The user who triggered the run
+        # @param aircraft_type_batch [StagedBatch] The related AircraftType batch
+        def create_stub_manufacturers_batch(triggered_by, aircraft_type_batch)
+          stub_batch = StagedBatch.create!(
+            processor_type: "Processors::AircraftType::AircraftType",
+            entity_type: "Manufacturer",
+            status: "applied", # Already applied - these are informational records
+            created_by_id: triggered_by&.id,
+            applied_at: Time.current,
+            reviewed_by_id: triggered_by&.id,
+            reviewed_at: Time.current,
+            summary: {
+              "creates" => @created_stub_manufacturers.size,
+              "updates" => 0,
+              "unchanged" => 0
+            },
+            notes: "Stub manufacturers auto-created during AircraftType processing (batch ##{aircraft_type_batch.id}). " \
+                   "These records have placeholder names derived from ICAO codes and need enrichment."
+          )
+
+          # Create StagedChange records for each stub (for audit trail)
+          # For creates, the diff shows the new values (no old values)
+          @created_stub_manufacturers.each do |manufacturer|
+            StagedChange.create!(
+              staged_batch: stub_batch,
+              record_type: "Manufacturer",
+              record_id: manufacturer.id,
+              record_identifier: manufacturer.icao_code,
+              operation: "create",
+              diff: {
+                "icao_code" => [nil, manufacturer.icao_code],
+                "name" => [nil, manufacturer.name]
+              }
+            )
+          end
+
+          # Add reference to the stub batch in the aircraft type batch notes
+          aircraft_type_batch.notes ||= ""
+          aircraft_type_batch.notes += "#{@created_stub_manufacturers.size} stub manufacturer(s) were auto-created " \
+                                        "(see batch ##{stub_batch.id} for details).\n"
+          aircraft_type_batch.save!
+
+          Rails.logger.info "Created stub manufacturers batch ##{stub_batch.id} with #{@created_stub_manufacturers.size} records"
         end
 
         # Preloads all reference data needed for combining into memory.
@@ -285,7 +324,96 @@ module Processors
           groups
         end
 
+        # Merges sources for a single (type_code, name) variant and stages the change.
+        #
+        # @param type_code [String] The aircraft type code
+        # @param name [String] The aircraft variant name
+        # @param sources [Array] The source records to merge
+        # @param conflicts [Array] Array to collect conflict information
+        # @return [Hash] Result with :record, or :error key
+        def merge_sources_for_variant_staged(type_code, name, sources, conflicts)
+          # Find existing record from cache using (type_code, name) as the key
+          cache_key = "#{type_code}:#{name}"
+          record = @aircraft_types_cache[cache_key]
+
+          if record.nil?
+            record = ::AircraftType.new(type_code: type_code, name: name)
+            @aircraft_types_cache[cache_key] = record
+          end
+
+          is_new_record = record.new_record?
+
+          # Pick manufacturer using FieldMerger for consistency with other fields
+          manufacturer_merger = FieldMerger.new(sources: sources, field: :manufacturer, entity_type: ENTITY_TYPE)
+          manufacturer_code = manufacturer_merger.best_value
+          manufacturer = find_or_create_manufacturer(manufacturer_code)
+          record.manufacturer = manufacturer
+
+          if manufacturer_merger.has_conflict?
+            conflict = manufacturer_merger.conflict_details
+            conflict[:identifier] = "#{type_code} - #{name}"
+            conflicts << conflict
+          end
+
+          # Build merged values for remaining fields and track provenance info
+          provenance_updates = []
+
+          # Track provenance for the key fields (type_code, name) from first source
+          first_source = sources.first
+          provenance_updates << { field: :type_code, source: first_source, confidence: 100 }
+          provenance_updates << { field: :name, source: first_source, confidence: 100 }
+
+          if manufacturer_merger.best_source && manufacturer_code.present?
+            provenance_updates << { field: :manufacturer, source: manufacturer_merger.best_source,
+                                    confidence: manufacturer_merger.best_confidence }
+          end
+
+          # Merge remaining fields (wtc, engines, engine_type)
+          MERGE_FIELDS.each do |field|
+            merger = FieldMerger.new(sources: sources, field: field, entity_type: ENTITY_TYPE)
+
+            record.public_send("#{field}=", merger.best_value)
+
+            if merger.best_source && merger.best_value.present?
+              provenance_updates << { field: field, source: merger.best_source, confidence: merger.best_confidence }
+            end
+
+            if merger.has_conflict?
+              conflict = merger.conflict_details
+              conflict[:identifier] = "#{type_code} - #{name}"
+              conflicts << conflict
+            end
+          end
+
+          # Check for meaningful changes (content fields, not just metadata like provenance)
+          meaningful_changes = record.changes.keys - %w[field_provenance last_combined_at]
+
+          if is_new_record
+            # Set provenance for new records
+            provenance_updates.each do |update|
+              record.set_provenance(update[:field], source: update[:source], confidence: update[:confidence])
+            end
+            record.last_combined_at = Time.current
+            identifier = "#{type_code} - #{name}"
+            stage_change(record, operation: :create, identifier: identifier)
+            { record: record, created: true }
+          elsif meaningful_changes.any?
+            # Set provenance for updated records
+            provenance_updates.each do |update|
+              record.set_provenance(update[:field], source: update[:source], confidence: update[:confidence])
+            end
+            record.last_combined_at = Time.current
+            identifier = "#{type_code} - #{name}"
+            stage_change(record, operation: :update, identifier: identifier)
+            { record: record, updated: true }
+          else
+            current_batch.summary["unchanged"] += 1
+            { record: record, unchanged: true }
+          end
+        end
+
         # Merges sources for a single (type_code, name) variant and returns attributes for batching.
+        # Used by combine_one for direct saves.
         #
         # @param type_code [String] The aircraft type code
         # @param name [String] The aircraft variant name
@@ -467,6 +595,9 @@ module Processors
 
           # Add to cache for subsequent lookups
           @manufacturers_by_code[icao_code] = manufacturer
+
+          # Track for the stub manufacturers batch
+          @created_stub_manufacturers << manufacturer if @created_stub_manufacturers
 
           Rails.logger.info "Created stub manufacturer: #{icao_code} => #{name}"
           manufacturer

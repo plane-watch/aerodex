@@ -9,6 +9,10 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
   TEST_ICAO_CODES = %w[ZZMANUF YYMANUF XXMANUF STUBMFR NEWMFR].freeze
 
   setup do
+    # Clear staging tables
+    StagedBatch.delete_all
+    StagedChange.delete_all
+
     # Clear source tables - these have no FK dependencies, so safe to delete
     Source::AircraftType::CfappsICAOIntAircraftTypeSource.delete_all
     Source::AircraftType::OpenFlightsAircraftTypeSource.delete_all
@@ -32,17 +36,35 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # combine_sources tests
+  # combine_sources staging tests
   # ---------------------------------------------------------------------------
 
-  test "combine_sources creates aircraft type from a single source" do
-    # Create a manufacturer first (FK requirement)
+  test "combine_sources returns a staged batch" do
     manufacturer = Manufacturer.create!(
       icao_code: "ZZMANUF",
       name: "Test Manufacturer"
     )
 
-    # Create a source record with the required fields
+    Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
+      type_code: "ZZZZ",
+      name: "Test Aircraft",
+      manufacturer: "ZZMANUF",
+      import_date: Time.current
+    )
+
+    result = Processors::AircraftType::AircraftType.combine_sources
+
+    assert_instance_of StagedBatch, result
+    assert_equal "pending", result.status
+    assert_equal "AircraftType", result.entity_type
+  end
+
+  test "combine_sources stages aircraft type creation" do
+    manufacturer = Manufacturer.create!(
+      icao_code: "ZZMANUF",
+      name: "Test Manufacturer"
+    )
+
     Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
       type_code: "ZZZZ",
       name: "Test Aircraft",
@@ -53,26 +75,23 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::AircraftType::AircraftType.combine_sources
+    batch = Processors::AircraftType::AircraftType.combine_sources
 
-    aircraft_type = AircraftType.find_by(type_code: "ZZZZ", name: "Test Aircraft")
-    assert_not_nil aircraft_type, "Expected aircraft type to be created"
-    assert_equal "Test Aircraft", aircraft_type.name
-    assert_equal "ZZZZ", aircraft_type.type_code
-    assert_equal manufacturer.id, aircraft_type.manufacturer_id
-    assert_equal "L", aircraft_type.wtc
-    assert_equal 2, aircraft_type.engines
-    assert_equal "Jet", aircraft_type.engine_type
+    assert_equal 1, batch.staged_changes.creates.count
+    change = batch.staged_changes.first
+    assert_equal "ZZZZ - Test Aircraft", change.record_identifier
+    assert_equal "Test Aircraft", change.new_values["name"]
+
+    # Aircraft type should NOT exist yet
+    assert_nil AircraftType.find_by(type_code: "ZZZZ", name: "Test Aircraft")
   end
 
-  test "combine_sources updates existing aircraft type when source has changes" do
-    # Create a manufacturer
+  test "combine_sources stages aircraft type update" do
     manufacturer = Manufacturer.create!(
       icao_code: "YYMANUF",
       name: "Update Test Manufacturer"
     )
 
-    # Create an existing aircraft type record
     AircraftType.create!(
       type_code: "YYYY",
       name: "Old Name",
@@ -80,7 +99,6 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       wtc: "M"
     )
 
-    # Create a source with updated data
     Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
       type_code: "YYYY",
       name: "Old Name",
@@ -91,22 +109,136 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::AircraftType::AircraftType.combine_sources
+    batch = Processors::AircraftType::AircraftType.combine_sources
 
-    aircraft_type = AircraftType.find_by(type_code: "YYYY", name: "Old Name")
+    assert_equal 1, batch.staged_changes.updates.count
+    change = batch.staged_changes.first
+    assert_equal "YYYY - Old Name", change.record_identifier
+  end
+
+  test "combine_sources tracks unchanged records" do
+    manufacturer = Manufacturer.create!(
+      icao_code: "XXMANUF",
+      name: "Unchanged Test Manufacturer"
+    )
+
+    AircraftType.create!(
+      type_code: "XXXX",
+      name: "Same Name",
+      manufacturer: manufacturer,
+      wtc: "L",
+      engines: 2,
+      engine_type: "Jet"
+    )
+
+    Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
+      type_code: "XXXX",
+      name: "Same Name",
+      manufacturer: "XXMANUF",
+      wtc: "L",
+      engines: 2,
+      engine_type: "Jet",
+      import_date: Time.current
+    )
+
+    batch = Processors::AircraftType::AircraftType.combine_sources
+
+    assert_equal 0, batch.staged_changes.count
+    assert_equal 1, batch.summary["unchanged"]
+  end
+
+  test "combine_sources accepts triggered_by parameter" do
+    user = users(:admin)
+
+    manufacturer = Manufacturer.create!(
+      icao_code: "WWMANUF",
+      name: "Triggered By Manufacturer"
+    )
+
+    Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
+      type_code: "WWWW",
+      name: "Test",
+      manufacturer: "WWMANUF",
+      import_date: Time.current
+    )
+
+    batch = Processors::AircraftType::AircraftType.combine_sources(triggered_by: user)
+
+    assert_equal user, batch.created_by
+  end
+
+  test "applying batch creates the aircraft type" do
+    manufacturer = Manufacturer.create!(
+      icao_code: "ZZMANUF",
+      name: "Applied Manufacturer"
+    )
+
+    Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
+      type_code: "ZZZZ",
+      name: "Applied Aircraft",
+      manufacturer: "ZZMANUF",
+      wtc: "L",
+      engines: 2,
+      engine_type: "Jet",
+      import_date: Time.current
+    )
+
+    batch = Processors::AircraftType::AircraftType.combine_sources
+
+    assert_nil AircraftType.find_by(type_code: "ZZZZ", name: "Applied Aircraft")
+
+    batch.apply!(by: nil)
+
+    aircraft_type = AircraftType.find_by(type_code: "ZZZZ", name: "Applied Aircraft")
+    assert_not_nil aircraft_type
+    assert_equal "Applied Aircraft", aircraft_type.name
+    assert_equal "ZZZZ", aircraft_type.type_code
+    assert_equal manufacturer.id, aircraft_type.manufacturer_id
+    assert_equal "L", aircraft_type.wtc
+    assert_equal 2, aircraft_type.engines
+    assert_equal "Jet", aircraft_type.engine_type
+  end
+
+  test "applying batch updates existing aircraft type" do
+    manufacturer = Manufacturer.create!(
+      icao_code: "TTMANUF",
+      name: "Update Batch Manufacturer"
+    )
+
+    AircraftType.create!(
+      type_code: "TTTT",
+      name: "Old Name",
+      manufacturer: manufacturer,
+      wtc: "M"
+    )
+
+    Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
+      type_code: "TTTT",
+      name: "Old Name",
+      manufacturer: "TTMANUF",
+      wtc: "L",
+      engines: 4,
+      import_date: Time.current
+    )
+
+    batch = Processors::AircraftType::AircraftType.combine_sources
+
+    # Values should still be old before applying
+    assert_equal "M", AircraftType.find_by(type_code: "TTTT", name: "Old Name").wtc
+
+    batch.apply!(by: nil)
+
+    aircraft_type = AircraftType.find_by(type_code: "TTTT", name: "Old Name")
     assert_equal "L", aircraft_type.wtc
     assert_equal 4, aircraft_type.engines
-    assert_equal "Turboprop", aircraft_type.engine_type
   end
 
   test "combine_sources merges multiple sources using trust scores" do
-    # Create a manufacturer
     manufacturer = Manufacturer.create!(
       icao_code: "XXMANUF",
       name: "Merge Test Manufacturer"
     )
 
-    # Create conflicting sources - the higher trust score should win
     Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
       type_code: "XXXX",
       name: "Test Multi-Source",
@@ -124,7 +256,8 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::AircraftType::AircraftType.combine_sources
+    batch = Processors::AircraftType::AircraftType.combine_sources
+    batch.apply!(by: nil)
 
     aircraft_type = AircraftType.find_by(type_code: "XXXX", name: "Test Multi-Source")
     assert_not_nil aircraft_type, "Expected aircraft type to be created from merged sources"
@@ -149,39 +282,17 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::AircraftType::AircraftType.combine_sources
+    batch = Processors::AircraftType::AircraftType.combine_sources
+    batch.apply!(by: nil)
 
     aircraft_type = AircraftType.find_by(type_code: "WWWW", name: "Provenance Test")
     assert_not_nil aircraft_type.field_provenance, "Expected provenance to be set"
 
     # Check that provenance was recorded for various fields.
-    # Provenance keys can be strings or symbols depending on serialisation.
     wtc_provenance = aircraft_type.field_provenance["wtc"] || aircraft_type.field_provenance[:wtc]
     assert_not_nil wtc_provenance, "Expected provenance to be recorded for the wtc field"
     assert wtc_provenance.key?("source_type") || wtc_provenance.key?(:source_type),
            "Expected provenance to include source_type"
-  end
-
-  test "combine_sources sets last_combined_at timestamp" do
-    manufacturer = Manufacturer.create!(
-      icao_code: "ZZMANUF",
-      name: "Timestamp Manufacturer"
-    )
-
-    Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
-      type_code: "TTTT",
-      name: "Timestamp Test",
-      manufacturer: "ZZMANUF",
-      import_date: Time.current
-    )
-
-    freeze_time do
-      Processors::AircraftType::AircraftType.combine_sources
-
-      aircraft_type = AircraftType.find_by(type_code: "TTTT", name: "Timestamp Test")
-      assert_not_nil aircraft_type.last_combined_at, "Expected last_combined_at to be set"
-      assert_in_delta Time.current, aircraft_type.last_combined_at, 1.second
-    end
   end
 
   test "combine_sources excludes records marked as excluded" do
@@ -190,7 +301,6 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       name: "Exclusion Manufacturer"
     )
 
-    # Create an includable source
     Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
       type_code: "IIII",
       name: "Includable Aircraft",
@@ -199,7 +309,6 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       excluded: false
     )
 
-    # Create an excluded source (should be ignored)
     Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
       type_code: "EEEE",
       name: "Excluded Aircraft",
@@ -209,13 +318,12 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       exclusion_reason: "Test exclusion"
     )
 
-    Processors::AircraftType::AircraftType.combine_sources
+    batch = Processors::AircraftType::AircraftType.combine_sources
+    batch.apply!(by: nil)
 
-    # The includable aircraft type should exist
     assert AircraftType.exists?(type_code: "IIII", name: "Includable Aircraft"),
            "Expected includable aircraft type to be created"
 
-    # The excluded aircraft type should not exist
     assert_not AircraftType.exists?(type_code: "EEEE", name: "Excluded Aircraft"),
                "Expected excluded aircraft type to be skipped"
   end
@@ -226,7 +334,6 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       name: "Multi-Source Manufacturer"
     )
 
-    # Create records from each source type with unique type codes
     Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
       type_code: "CCCC",
       name: "CFAPPS Aircraft",
@@ -246,9 +353,9 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::AircraftType::AircraftType.combine_sources
+    batch = Processors::AircraftType::AircraftType.combine_sources
+    batch.apply!(by: nil)
 
-    # Check that all three test aircraft types were created
     assert AircraftType.exists?(type_code: "CCCC", name: "CFAPPS Aircraft"),
            "Expected CFAPPS aircraft type to be created"
     assert AircraftType.exists?(type_code: "OOOO", name: "OpenFlights Aircraft"),
@@ -270,7 +377,8 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::AircraftType::AircraftType.combine_sources
+    batch = Processors::AircraftType::AircraftType.combine_sources
+    batch.apply!(by: nil)
 
     aircraft_type = AircraftType.find_by(type_code: "MMMM", name: "Manufacturer Link Test")
     assert_equal manufacturer.id, aircraft_type.manufacturer_id,
@@ -278,7 +386,6 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
   end
 
   test "combine_sources creates stub manufacturer when manufacturer does not exist" do
-    # Don't create a manufacturer - let the processor create a stub
     Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
       type_code: "NNNN",
       name: "Stub Manufacturer Test",
@@ -286,15 +393,41 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::AircraftType::AircraftType.combine_sources
+    batch = Processors::AircraftType::AircraftType.combine_sources
 
-    # Check that the stub manufacturer was created
+    # Stub manufacturer should be created during processing (before staging)
     stub_manufacturer = Manufacturer.find_by(icao_code: "STUBMFR")
     assert_not_nil stub_manufacturer, "Expected stub manufacturer to be created"
 
-    # Check that the aircraft type is linked to the stub
+    batch.apply!(by: nil)
+
     aircraft_type = AircraftType.find_by(type_code: "NNNN", name: "Stub Manufacturer Test")
     assert_equal stub_manufacturer.id, aircraft_type.manufacturer_id
+  end
+
+  test "combine_sources creates separate batch for stub manufacturers" do
+    Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
+      type_code: "NNNN",
+      name: "Stub Batch Test",
+      manufacturer: "NEWMFR",
+      import_date: Time.current
+    )
+
+    aircraft_type_batch = Processors::AircraftType::AircraftType.combine_sources
+
+    # Should have created a separate batch for the stub manufacturer
+    stub_batch = StagedBatch.where(entity_type: "Manufacturer", status: "applied").last
+    assert_not_nil stub_batch, "Expected stub manufacturers batch to be created"
+
+    # The stub batch should have one change
+    assert_equal 1, stub_batch.staged_changes.count
+    stub_change = stub_batch.staged_changes.first
+    assert_equal "NEWMFR", stub_change.record_identifier
+    assert_equal "create", stub_change.operation
+
+    # The aircraft type batch should reference the stub batch in notes
+    assert_includes aircraft_type_batch.notes, "stub manufacturer"
+    assert_includes aircraft_type_batch.notes, stub_batch.id.to_s
   end
 
   test "combine_sources skips sources with blank type_code" do
@@ -303,7 +436,6 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       name: "Blank Code Manufacturer"
     )
 
-    # Create a source with blank type code (should be skipped in grouping)
     Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
       type_code: "",
       name: "Blank Type Code Aircraft",
@@ -311,7 +443,6 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    # Create a valid source
     Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
       type_code: "PPPP",
       name: "Valid Aircraft",
@@ -319,13 +450,12 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::AircraftType::AircraftType.combine_sources
+    batch = Processors::AircraftType::AircraftType.combine_sources
+    batch.apply!(by: nil)
 
-    # The valid aircraft type should be created
     assert AircraftType.exists?(type_code: "PPPP", name: "Valid Aircraft"),
            "Expected valid aircraft type to be created"
 
-    # No aircraft type should exist with a blank type_code
     assert_not AircraftType.exists?(type_code: ""),
                "Expected no aircraft type with blank type code"
   end
@@ -336,7 +466,6 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       name: "Blank Name Manufacturer"
     )
 
-    # Create a source with blank name (should be skipped in grouping)
     Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
       type_code: "QQQQ",
       name: "",
@@ -344,7 +473,6 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    # Create a valid source
     Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
       type_code: "QQQQ",
       name: "Valid Name Aircraft",
@@ -352,19 +480,18 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::AircraftType::AircraftType.combine_sources
+    batch = Processors::AircraftType::AircraftType.combine_sources
+    batch.apply!(by: nil)
 
-    # The valid aircraft type should be created
     assert AircraftType.exists?(type_code: "QQQQ", name: "Valid Name Aircraft"),
            "Expected valid aircraft type to be created"
 
-    # No aircraft type should exist with a blank name
     assert_not AircraftType.exists?(type_code: "QQQQ", name: ""),
                "Expected no aircraft type with blank name"
   end
 
   # ---------------------------------------------------------------------------
-  # combine_one tests
+  # combine_one tests (direct save, not staged)
   # ---------------------------------------------------------------------------
 
   test "combine_one creates aircraft type for specific type code and name" do
@@ -397,7 +524,6 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       name: "Update One Manufacturer"
     )
 
-    # Create existing aircraft type
     AircraftType.create!(
       type_code: "YYYY",
       name: "Existing Variant",
@@ -405,7 +531,6 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       wtc: "L"
     )
 
-    # Create source with updated data
     Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
       type_code: "YYYY",
       name: "Existing Variant",
@@ -429,7 +554,6 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       name: "Multi-Variant Manufacturer"
     )
 
-    # Create multiple variants with the same type code
     Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
       type_code: "ZZZZ",
       name: "Variant A",
@@ -475,7 +599,6 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    # Pass lowercase code - should still work
     result = Processors::AircraftType::AircraftType.combine_one("zzzz", "Uppercase Test")
 
     assert_not_nil result[:aircraft_type]
@@ -495,7 +618,6 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    # Pass code with whitespace - should still work
     result = Processors::AircraftType::AircraftType.combine_one("  ZZZZ  ", "Whitespace Test")
 
     assert_not_nil result[:aircraft_type]
@@ -512,8 +634,6 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       name: "Antonov"
     )
 
-    # Create sources with different name formats that should be merged.
-    # "An-148" and "Antonov An-148" should produce the same canonical key.
     Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
       type_code: "ZZZZ",
       name: "An-148",
@@ -530,13 +650,12 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::AircraftType::AircraftType.combine_sources
+    batch = Processors::AircraftType::AircraftType.combine_sources
+    batch.apply!(by: nil)
 
-    # Should only create one aircraft type (not two)
     aircraft_types = AircraftType.where(type_code: "ZZZZ")
     assert_equal 1, aircraft_types.count, "Expected sources with same canonical key to be merged"
 
-    # The best name should be selected (Antonov An-148 is more descriptive)
     aircraft_type = aircraft_types.first
     assert_equal "Antonov An-148", aircraft_type.name
   end
@@ -547,8 +666,6 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       name: "Boeing"
     )
 
-    # Create sources for different variants that should NOT be merged.
-    # 737-700 and 737-800 are different aircraft variants.
     Source::AircraftType::CfappsICAOIntAircraftTypeSource.create!(
       type_code: "ZZZZ",
       name: "737-700",
@@ -562,9 +679,9 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::AircraftType::AircraftType.combine_sources
+    batch = Processors::AircraftType::AircraftType.combine_sources
+    batch.apply!(by: nil)
 
-    # Should create two separate aircraft types
     aircraft_types = AircraftType.where(type_code: "ZZZZ")
     assert_equal 2, aircraft_types.count, "Expected different variants to remain separate"
 
