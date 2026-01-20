@@ -209,7 +209,8 @@ module Processors
 
       current_batch.update!(
         status: :pending,
-        completed_at: Time.current
+        completed_at: Time.current,
+        summary: current_batch.summary
       )
 
       current_batch
