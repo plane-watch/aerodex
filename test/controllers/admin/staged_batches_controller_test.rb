@@ -131,4 +131,48 @@ class Admin::StagedBatchesControllerTest < ActionDispatch::IntegrationTest
     batch.reload
     assert_equal "rejected", batch.status
   end
+
+  # Show tests
+  test "show displays batch details" do
+    sign_in @admin
+    batch = StagedBatch.create!(
+      processor_type: "Processors::Test::Test",
+      entity_type: "Test",
+      status: :pending
+    )
+    batch.staged_changes.create!(
+      record_type: "Test",
+      record_identifier: "TEST-1",
+      operation: :create,
+      diff: { "name" => [nil, "Test"] }
+    )
+
+    get admin_staged_batch_path(batch)
+    assert_response :success
+    assert_select "h3", "Batch Details"
+  end
+
+  test "show filters changes by search" do
+    sign_in @admin
+    batch = StagedBatch.create!(
+      processor_type: "Processors::Test::Test",
+      entity_type: "Test",
+      status: :pending
+    )
+    batch.staged_changes.create!(
+      record_type: "Test",
+      record_identifier: "VH-ABC",
+      operation: :create,
+      diff: { "name" => [nil, "Test"] }
+    )
+    batch.staged_changes.create!(
+      record_type: "Test",
+      record_identifier: "N12345",
+      operation: :create,
+      diff: { "name" => [nil, "Other"] }
+    )
+
+    get admin_staged_batch_path(batch, search: "VH")
+    assert_response :success
+  end
 end
