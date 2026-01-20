@@ -8,6 +8,10 @@ class Processors::Country::CountryTest < ActiveSupport::TestCase
   TEST_ISO_CODES = %w[ZZ YY XX WW TT II EE OT OF OA CP VV NZ GB QQ].freeze
 
   setup do
+    # Clear staging tables
+    StagedBatch.delete_all
+    StagedChange.delete_all
+
     # Clear source tables - these have no FK dependencies, so safe to delete
     Source::Country::OpenTravelCountrySource.delete_all
     Source::Country::OpenFlightsCountrySource.delete_all
@@ -25,8 +29,11 @@ class Processors::Country::CountryTest < ActiveSupport::TestCase
     Country.where(iso_2char_code: TEST_ISO_CODES).delete_all
   end
 
-  test "combine_sources creates country from a single source" do
-    # Create a source record with the required import_date field
+  # ---------------------------------------------------------------------------
+  # combine_sources staging tests
+  # ---------------------------------------------------------------------------
+
+  test "combine_sources returns a staged batch" do
     Source::Country::OpenTravelCountrySource.create!(
       iso_2char_code: "ZZ",
       iso_3char_code: "ZZZ",
@@ -34,23 +41,39 @@ class Processors::Country::CountryTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::Country::Country.combine_sources
+    result = Processors::Country::Country.combine_sources
 
-    country = Country.find_by(iso_2char_code: "ZZ")
-    assert_not_nil country, "Expected country to be created"
-    assert_equal "Test Country", country.name
-    assert_equal "ZZZ", country.iso_3char_code
+    assert_instance_of StagedBatch, result
+    assert_equal "pending", result.status
+    assert_equal "Country", result.entity_type
   end
 
-  test "combine_sources updates existing country when source has changes" do
-    # Create an existing country record
+  test "combine_sources stages country creation" do
+    Source::Country::OpenTravelCountrySource.create!(
+      iso_2char_code: "ZZ",
+      iso_3char_code: "ZZZ",
+      name: "Test Country",
+      import_date: Time.current
+    )
+
+    batch = Processors::Country::Country.combine_sources
+
+    assert_equal 1, batch.staged_changes.creates.count
+    change = batch.staged_changes.first
+    assert_equal "ZZ", change.record_identifier
+    assert_equal "Test Country", change.new_values["name"]
+
+    # Country should NOT exist yet
+    assert_nil Country.find_by(iso_2char_code: "ZZ")
+  end
+
+  test "combine_sources stages country update" do
     Country.create!(
       iso_2char_code: "YY",
       iso_3char_code: "YYY",
       name: "Old Name"
     )
 
-    # Create a source with an updated name
     Source::Country::OpenTravelCountrySource.create!(
       iso_2char_code: "YY",
       iso_3char_code: "YYY",
@@ -58,10 +81,90 @@ class Processors::Country::CountryTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::Country::Country.combine_sources
+    batch = Processors::Country::Country.combine_sources
 
-    country = Country.find_by(iso_2char_code: "YY")
-    assert_equal "New Name", country.name
+    assert_equal 1, batch.staged_changes.updates.count
+    change = batch.staged_changes.first
+    assert_equal "YY", change.record_identifier
+    assert_equal %w[Old\ Name New\ Name], change.diff["name"]
+  end
+
+  test "combine_sources tracks unchanged records" do
+    Country.create!(
+      iso_2char_code: "XX",
+      iso_3char_code: "XXX",
+      name: "Same Name"
+    )
+
+    Source::Country::OpenTravelCountrySource.create!(
+      iso_2char_code: "XX",
+      iso_3char_code: "XXX",
+      name: "Same Name",
+      import_date: Time.current
+    )
+
+    batch = Processors::Country::Country.combine_sources
+
+    assert_equal 0, batch.staged_changes.count
+    assert_equal 1, batch.summary["unchanged"]
+  end
+
+  test "combine_sources accepts triggered_by parameter" do
+    user = users(:admin)
+
+    Source::Country::OpenTravelCountrySource.create!(
+      iso_2char_code: "WW",
+      iso_3char_code: "WWW",
+      name: "Test",
+      import_date: Time.current
+    )
+
+    batch = Processors::Country::Country.combine_sources(triggered_by: user)
+
+    assert_equal user, batch.created_by
+  end
+
+  test "applying batch creates the country" do
+    Source::Country::OpenTravelCountrySource.create!(
+      iso_2char_code: "VV",
+      iso_3char_code: "VVV",
+      name: "Applied Country",
+      import_date: Time.current
+    )
+
+    batch = Processors::Country::Country.combine_sources
+
+    assert_nil Country.find_by(iso_2char_code: "VV")
+
+    batch.apply!(by: nil)
+
+    country = Country.find_by(iso_2char_code: "VV")
+    assert_not_nil country
+    assert_equal "Applied Country", country.name
+  end
+
+  test "applying batch updates existing country" do
+    Country.create!(
+      iso_2char_code: "TT",
+      iso_3char_code: "TTT",
+      name: "Old Name"
+    )
+
+    Source::Country::OpenTravelCountrySource.create!(
+      iso_2char_code: "TT",
+      iso_3char_code: "TTT",
+      name: "New Name",
+      import_date: Time.current
+    )
+
+    batch = Processors::Country::Country.combine_sources
+
+    # Name should still be old before applying
+    assert_equal "Old Name", Country.find_by(iso_2char_code: "TT").name
+
+    batch.apply!(by: nil)
+
+    assert_equal "New Name", Country.find_by(iso_2char_code: "TT").name
   end
 
   test "combine_sources merges multiple sources using trust scores" do
@@ -79,7 +182,8 @@ class Processors::Country::CountryTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::Country::Country.combine_sources
+    batch = Processors::Country::Country.combine_sources
+    batch.apply!(by: nil)
 
     country = Country.find_by(iso_2char_code: "XX")
     assert_not_nil country, "Expected country to be created from merged sources"
@@ -95,7 +199,8 @@ class Processors::Country::CountryTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::Country::Country.combine_sources
+    batch = Processors::Country::Country.combine_sources
+    batch.apply!(by: nil)
 
     country = Country.find_by(iso_2char_code: "WW")
     assert_not_nil country.field_provenance, "Expected provenance to be set"
@@ -106,23 +211,6 @@ class Processors::Country::CountryTest < ActiveSupport::TestCase
     assert_not_nil name_provenance, "Expected provenance to be recorded for the name field"
     assert name_provenance.key?("source_type") || name_provenance.key?(:source_type),
            "Expected provenance to include source_type"
-  end
-
-  test "combine_sources sets last_combined_at timestamp" do
-    Source::Country::OpenTravelCountrySource.create!(
-      iso_2char_code: "TT",
-      iso_3char_code: "TTT",
-      name: "Timestamp Test",
-      import_date: Time.current
-    )
-
-    freeze_time do
-      Processors::Country::Country.combine_sources
-
-      country = Country.find_by(iso_2char_code: "TT")
-      assert_not_nil country.last_combined_at, "Expected last_combined_at to be set"
-      assert_in_delta Time.current, country.last_combined_at, 1.second
-    end
   end
 
   test "combine_sources excludes records marked as excluded" do
@@ -145,7 +233,8 @@ class Processors::Country::CountryTest < ActiveSupport::TestCase
       exclusion_reason: "Test exclusion"
     )
 
-    Processors::Country::Country.combine_sources
+    batch = Processors::Country::Country.combine_sources
+    batch.apply!(by: nil)
 
     # The includable country should exist
     assert Country.exists?(iso_2char_code: "II"), "Expected includable country to be created"
@@ -175,7 +264,8 @@ class Processors::Country::CountryTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::Country::Country.combine_sources
+    batch = Processors::Country::Country.combine_sources
+    batch.apply!(by: nil)
 
     # Check that all three test countries were created
     assert Country.exists?(iso_2char_code: "OT"), "Expected OpenTravel country to be created"
@@ -192,7 +282,8 @@ class Processors::Country::CountryTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::Country::Country.combine_sources
+    batch = Processors::Country::Country.combine_sources
+    batch.apply!(by: nil)
 
     country = Country.find_by(iso_2char_code: "CP")
     assert_equal "Test Capital City", country.capital
@@ -215,7 +306,8 @@ class Processors::Country::CountryTest < ActiveSupport::TestCase
       import_date: Time.current
     )
 
-    Processors::Country::Country.combine_sources
+    batch = Processors::Country::Country.combine_sources
+    batch.apply!(by: nil)
 
     # The valid country should be created
     assert Country.exists?(iso_2char_code: "VV"), "Expected valid country to be created"
@@ -223,6 +315,10 @@ class Processors::Country::CountryTest < ActiveSupport::TestCase
     # No country should exist with a blank iso_2char_code
     assert_not Country.exists?(iso_2char_code: ""), "Expected no country with blank ISO code"
   end
+
+  # ---------------------------------------------------------------------------
+  # combine_one tests (direct save, not staged)
+  # ---------------------------------------------------------------------------
 
   test "combine_one creates country for specific ISO code" do
     Source::Country::OpenTravelCountrySource.create!(

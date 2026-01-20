@@ -65,35 +65,63 @@ module Processors
           sources
         end
 
-        # Combines country data from all available sources into canonical Country records.
+        # Combines country data from all available sources into staged changes.
         #
-        # @return [Array<Hash>, true] Returns array of errors if any, otherwise true
-        def combine_sources
-          # Collect all sources grouped by iso_2char_code (the unique identifier)
-          sources_by_iso = group_sources_by_iso
-          errors = []
-          conflicts = []
+        # @param triggered_by [User, nil] The user who triggered the run
+        # @return [StagedBatch] The batch containing staged changes
+        def combine_sources(triggered_by: nil)
+          with_staged_batch(entity_type: "Country", triggered_by: triggered_by) do
+            sources_by_iso = group_sources_by_iso
+            conflicts = []
 
-          progress_bar = create_progress_bar(sources_by_iso.count)
+            # Ensure trust scores are cached
+            SourceTrustScore.send(:ensure_cache_loaded)
 
-          ::Country.transaction do
+            progress_bar = create_progress_bar(sources_by_iso.count)
+
             sources_by_iso.each do |iso_code, sources|
-              result = merge_sources_for_iso(iso_code, sources, conflicts)
-              errors << result[:error] if result[:error]
+              record = ::Country.find_or_initialize_by(iso_2char_code: iso_code)
+
+              # Merge each field using FieldMerger
+              MERGE_FIELDS.each do |field|
+                merger = FieldMerger.new(sources: sources, field: field, entity_type: ENTITY_TYPE)
+
+                record.public_send("#{field}=", merger.best_value)
+
+                # Track provenance for this field
+                if merger.best_source && merger.best_value.present?
+                  record.set_provenance(field, source: merger.best_source, confidence: merger.best_confidence)
+                end
+
+                # Collect conflict information for logging
+                conflicts << merger.conflict_details if merger.has_conflict?
+              end
+
+              # Stage the change instead of saving
+              # Check for meaningful changes (content fields, not just metadata like provenance)
+              meaningful_changes = record.changes.keys - %w[field_provenance last_combined_at]
+
+              if record.new_record?
+                record.last_combined_at = Time.current
+                stage_change(record, operation: :create, identifier: iso_code)
+              elsif meaningful_changes.any?
+                record.last_combined_at = Time.current
+                stage_change(record, operation: :update, identifier: iso_code)
+              else
+                current_batch.summary["unchanged"] += 1
+              end
+
               progress_bar.increment!
             end
+
+            # Log any conflicts for review
+            log_conflicts(conflicts) if conflicts.any?
+
+            # Store conflict count in batch notes if any
+            if conflicts.any?
+              current_batch.notes = "Processing completed with #{conflicts.count} field conflicts"
+            end
           end
-
-          # Log any conflicts for review
-          log_conflicts(conflicts) if conflicts.any?
-
-          # Reindex for search
-          ::Country.reindex!
-
-          # Create an import report
-          new_import_report(errors, sources_by_iso.count)
-
-          errors.any? ? errors : true
         end
 
         private
