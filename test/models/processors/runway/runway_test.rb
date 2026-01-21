@@ -10,8 +10,12 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
   TEST_COUNTRY_CODES = %w[ZZ YY].freeze
 
   setup do
-    # Clear source tables - these have no FK dependencies, so safe to delete
-    Source::Runway::OurAirportsRunwaySource.delete_all
+    # Clear staging tables
+    StagedBatch.delete_all
+    StagedChange.delete_all
+
+    # Clean up only test source records (not ALL sources)
+    Source::Runway::OurAirportsRunwaySource.where(airport_ident: TEST_ICAO_CODES).delete_all
 
     # Clean up any runways for our test airports from previous test runs.
     # Runways have FK to airports, so get the airport IDs first.
@@ -74,10 +78,26 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # combine_sources tests
+  # combine_sources staging tests
   # ---------------------------------------------------------------------------
 
-  test "combine_sources creates runway from a single source" do
+  test "combine_sources returns a staged batch" do
+    airport = create_test_airport
+
+    create_runway_source(
+      le_ident: "99L",
+      he_ident: "17R",
+      surface: "ASP"
+    )
+
+    result = Processors::Runway::Runway.combine_sources
+
+    assert_instance_of StagedBatch, result
+    assert_equal "pending", result.status
+    assert_equal "Runway", result.entity_type
+  end
+
+  test "combine_sources stages runway creation" do
     airport = create_test_airport
 
     create_runway_source(
@@ -91,7 +111,33 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
       le_heading_deg: 170
     )
 
-    Processors::Runway::Runway.combine_sources
+    batch = Processors::Runway::Runway.combine_sources
+
+    assert_equal 1, batch.staged_changes.creates.count
+    change = batch.staged_changes.first
+    assert_equal "ZZZZ/99L", change.record_identifier
+    assert_equal "99L", change.new_values["le_ident"]
+
+    # Runway should NOT exist yet
+    assert_nil AirportRunway.find_by(airport_id: airport.id, le_ident: "99L")
+  end
+
+  test "applying batch creates the runway" do
+    airport = create_test_airport
+
+    create_runway_source(
+      le_ident: "99L",
+      he_ident: "17R",
+      length_ft: 12000,
+      width_ft: 150,
+      surface: "ASP",
+      lighted: true,
+      closed: false,
+      le_heading_deg: 170
+    )
+
+    batch = Processors::Runway::Runway.combine_sources
+    batch.apply!(by: nil)
 
     runway = AirportRunway.find_by(airport_id: airport.id, le_ident: "99L")
     assert_not_nil runway, "Expected runway to be created"
@@ -102,7 +148,7 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
     assert_not runway.closed, "Expected runway to not be closed"
   end
 
-  test "combine_sources updates existing runway when source has changes" do
+  test "combine_sources stages runway update" do
     airport = create_test_airport
 
     # Create an existing runway record
@@ -129,7 +175,42 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
       le_heading_deg: 170
     )
 
-    Processors::Runway::Runway.combine_sources
+    batch = Processors::Runway::Runway.combine_sources
+
+    assert_equal 1, batch.staged_changes.updates.count
+    change = batch.staged_changes.first
+    assert_equal "ZZZZ/99L", change.record_identifier
+  end
+
+  test "applying batch updates existing runway" do
+    airport = create_test_airport
+
+    # Create an existing runway record
+    existing_runway = AirportRunway.create!(
+      airport: airport,
+      le_ident: "99L",
+      he_ident: "17R",
+      length: 3000,
+      width: 40,
+      surface: "grass",
+      lighted: false,
+      closed: true
+    )
+
+    # Create a source with updated data
+    create_runway_source(
+      le_ident: "99L",
+      he_ident: "17R",
+      length_ft: 12000,
+      width_ft: 150,
+      surface: "ASP",
+      lighted: true,
+      closed: false,
+      le_heading_deg: 170
+    )
+
+    batch = Processors::Runway::Runway.combine_sources
+    batch.apply!(by: nil)
 
     runway = AirportRunway.find(existing_runway.id)
     assert runway.lighted, "Expected runway lighted to be updated"
@@ -157,7 +238,8 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
       surface: "CON"
     )
 
-    Processors::Runway::Runway.combine_sources
+    batch = Processors::Runway::Runway.combine_sources
+    batch.apply!(by: nil)
 
     # Check runways are linked to correct airports
     runway1 = AirportRunway.find_by(le_ident: "99L")
@@ -176,11 +258,11 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
       surface: "ASP"
     )
 
-    Processors::Runway::Runway.combine_sources
+    batch = Processors::Runway::Runway.combine_sources
 
-    # The runway should not be created because there's no matching airport
-    assert_not AirportRunway.joins(:airport).where(airports: { icao_code: "UNKN" }).exists?,
-               "Expected runway to be skipped when airport not found"
+    # The batch should have no staged changes since the airport wasn't found
+    assert_equal 0, batch.staged_changes.count,
+                 "Expected no staged changes for runway with unknown airport"
   end
 
   test "combine_sources normalises surface type" do
@@ -192,7 +274,8 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
       surface: "ASPH"  # Should normalise to "asphalt"
     )
 
-    Processors::Runway::Runway.combine_sources
+    batch = Processors::Runway::Runway.combine_sources
+    batch.apply!(by: nil)
 
     runway = AirportRunway.find_by(airport_id: airport.id, le_ident: "99L")
     assert_equal "asphalt", runway.surface, "Expected surface to be normalised"
@@ -209,7 +292,8 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
       surface: "ASP"
     )
 
-    Processors::Runway::Runway.combine_sources
+    batch = Processors::Runway::Runway.combine_sources
+    batch.apply!(by: nil)
 
     runway = AirportRunway.find_by(airport_id: airport.id, le_ident: "99L")
     # The source model converts feet to metres via length_metres/width_metres methods
@@ -227,7 +311,8 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
       le_heading_deg: 165.5
     )
 
-    Processors::Runway::Runway.combine_sources
+    batch = Processors::Runway::Runway.combine_sources
+    batch.apply!(by: nil)
 
     runway = AirportRunway.find_by(airport_id: airport.id, le_ident: "16L")
     assert_in_delta 165.5, runway.heading, 0.1, "Expected heading to be set from source"
@@ -241,7 +326,8 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
       he_ident: "34R"
     )
 
-    Processors::Runway::Runway.combine_sources
+    batch = Processors::Runway::Runway.combine_sources
+    batch.apply!(by: nil)
 
     runway = AirportRunway.find_by(airport_id: airport.id, le_ident: "16L")
     assert_equal "16L/34R", runway.runway_name, "Expected runway_name to be set from display_name"
@@ -260,7 +346,8 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
       closed: false
     )
 
-    Processors::Runway::Runway.combine_sources
+    batch = Processors::Runway::Runway.combine_sources
+    batch.apply!(by: nil)
 
     runway = AirportRunway.find_by(airport_id: airport.id, le_ident: "99L")
     assert_not_nil runway.field_provenance, "Expected provenance to be set"
@@ -282,7 +369,8 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
     )
 
     freeze_time do
-      Processors::Runway::Runway.combine_sources
+      batch = Processors::Runway::Runway.combine_sources
+      batch.apply!(by: nil)
 
       runway = AirportRunway.find_by(airport_id: airport.id, le_ident: "99L")
       assert_not_nil runway.last_combined_at, "Expected last_combined_at to be set"
@@ -312,7 +400,8 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
       exclusion_reason: "Test exclusion"
     )
 
-    Processors::Runway::Runway.combine_sources
+    batch = Processors::Runway::Runway.combine_sources
+    batch.apply!(by: nil)
 
     # The includable runway should exist
     assert AirportRunway.exists?(airport_id: airport.id, le_ident: "99L"),
@@ -331,7 +420,8 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
     create_runway_source(le_ident: "16R", he_ident: "34L", length_ft: 11500, width_ft: 145, surface: "ASP")
     create_runway_source(le_ident: "07", he_ident: "25", length_ft: 8000, width_ft: 100, surface: "CON")
 
-    Processors::Runway::Runway.combine_sources
+    batch = Processors::Runway::Runway.combine_sources
+    batch.apply!(by: nil)
 
     # All three runways should be created
     assert_equal 3, AirportRunway.where(airport_id: airport.id).count,
@@ -351,7 +441,8 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
       closed: true
     )
 
-    Processors::Runway::Runway.combine_sources
+    batch = Processors::Runway::Runway.combine_sources
+    batch.apply!(by: nil)
 
     runway = AirportRunway.find_by(airport_id: airport.id, le_ident: "99L")
     assert runway.closed, "Expected runway to be marked as closed"
@@ -370,11 +461,65 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
       closed: false
     )
 
-    Processors::Runway::Runway.combine_sources
+    batch = Processors::Runway::Runway.combine_sources
+    batch.apply!(by: nil)
 
     runway = AirportRunway.find_by(airport_id: airport.id, le_ident: "99L")
     assert_not runway.lighted, "Expected runway to not be lighted"
     assert_equal "grass", runway.surface, "Expected grass surface to be normalised"
+  end
+
+  test "combine_sources tracks unchanged records" do
+    airport = create_test_airport
+
+    # Create an existing runway record with same values as source.
+    # Note: Must match exactly what the processor produces, including
+    # precision of converted values (150 ft = 45.7m, 12000 ft = 3657.6m)
+    AirportRunway.create!(
+      airport: airport,
+      le_ident: "99L",
+      he_ident: "17R",
+      runway_name: "99L/17R",
+      heading: nil,
+      length: 3657.6,  # 12000 ft in metres
+      width: 45.7,     # 150 ft in metres (note: source rounds to 45.7)
+      surface: "asphalt",
+      lighted: true,
+      closed: false
+    )
+
+    # Create a source with same data (no heading)
+    create_runway_source(
+      le_ident: "99L",
+      he_ident: "17R",
+      length_ft: 12000,
+      width_ft: 150,
+      surface: "ASP",
+      lighted: true,
+      closed: false,
+      le_heading_deg: nil
+    )
+
+    batch = Processors::Runway::Runway.combine_sources
+
+    assert_equal 0, batch.staged_changes.count
+    assert_equal 1, batch.summary["unchanged"]
+  end
+
+  test "combine_sources accepts triggered_by parameter" do
+    user = users(:admin)
+
+    airport = create_test_airport
+
+    create_runway_source(
+      le_ident: "99L",
+      he_ident: "17R",
+      surface: "ASP"
+    )
+
+    batch = Processors::Runway::Runway.combine_sources(triggered_by: user)
+
+    assert_equal user, batch.created_by
   end
 
   # ---------------------------------------------------------------------------
@@ -517,7 +662,8 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
     create_runway_source(le_ident: "16L", he_ident: "34R")
     create_runway_source(le_ident: "16R", he_ident: "34L", length_ft: 11500, width_ft: 145)
 
-    Processors::Runway::Runway.combine_sources
+    batch = Processors::Runway::Runway.combine_sources
+    batch.apply!(by: nil)
 
     # Both runways should exist as separate records
     runway_16l = AirportRunway.find_by(airport_id: airport.id, le_ident: "16L")
@@ -549,7 +695,8 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
       surface: "CON"
     )
 
-    Processors::Runway::Runway.combine_sources
+    batch = Processors::Runway::Runway.combine_sources
+    batch.apply!(by: nil)
 
     # Both runways should exist as separate records
     runway1 = AirportRunway.find_by(airport_id: airport1.id, le_ident: "16L")
@@ -588,7 +735,8 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
       )
     end
 
-    Processors::Runway::Runway.combine_sources
+    batch = Processors::Runway::Runway.combine_sources
+    batch.apply!(by: nil)
 
     surface_tests.each do |le_ident, test_data|
       runway = AirportRunway.find_by(airport_id: airport.id, le_ident: le_ident)
@@ -608,7 +756,8 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
       surface: "UNUSUAL_SURFACE_TYPE"
     )
 
-    Processors::Runway::Runway.combine_sources
+    batch = Processors::Runway::Runway.combine_sources
+    batch.apply!(by: nil)
 
     runway = AirportRunway.find_by(airport_id: airport.id, le_ident: "99L")
     assert_equal "unknown", runway.surface, "Expected unknown surface to be normalised"
