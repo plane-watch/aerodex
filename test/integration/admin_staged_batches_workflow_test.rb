@@ -49,9 +49,11 @@ class AdminStagedBatchesWorkflowTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "h3", "Batch Details"
 
-    # 6. Apply the batch
+    # 6. Apply the batch (enqueues ApplyStagedBatchJob, so we need to run it)
     assert_difference "Country.count", 1 do
-      post apply_admin_staged_batch_path(batch)
+      perform_enqueued_jobs do
+        post apply_admin_staged_batch_path(batch)
+      end
     end
     assert_redirected_to admin_staged_batch_path(batch)
 
