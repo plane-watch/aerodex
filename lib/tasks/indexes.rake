@@ -71,4 +71,90 @@ namespace :indexes do
       puts "  #{model.name}: #{fields.join(', ')}"
     end
   end
+
+  desc 'Reset all counter caches (use after bulk imports)'
+  task reset_counters: :environment do
+    puts 'Resetting counter caches...'
+    puts
+
+    # Aircraft -> Operator (aircraft_count)
+    puts 'Operator.aircraft_count...'
+    Operator.connection.execute(<<~SQL.squish)
+      UPDATE operators
+      SET aircraft_count = (
+        SELECT COUNT(*)
+        FROM aircraft
+        WHERE aircraft.operator_id = operators.id
+      )
+    SQL
+
+    # Aircraft -> AircraftType (aircraft_count)
+    puts 'AircraftType.aircraft_count...'
+    AircraftType.connection.execute(<<~SQL.squish)
+      UPDATE aircraft_types
+      SET aircraft_count = (
+        SELECT COUNT(*)
+        FROM aircraft
+        WHERE aircraft.aircraft_type_id = aircraft_types.id
+      )
+    SQL
+
+    # AircraftType -> Manufacturer (aircraft_types_count)
+    puts 'Manufacturer.aircraft_types_count...'
+    Manufacturer.connection.execute(<<~SQL.squish)
+      UPDATE manufacturers
+      SET aircraft_types_count = (
+        SELECT COUNT(*)
+        FROM aircraft_types
+        WHERE aircraft_types.manufacturer_id = manufacturers.id
+      )
+    SQL
+
+    # Manufacturer.aircraft_count (sum of aircraft_types' aircraft_count)
+    puts 'Manufacturer.aircraft_count...'
+    Manufacturer.connection.execute(<<~SQL.squish)
+      UPDATE manufacturers
+      SET aircraft_count = (
+        SELECT COALESCE(SUM(aircraft_types.aircraft_count), 0)
+        FROM aircraft_types
+        WHERE aircraft_types.manufacturer_id = manufacturers.id
+      )
+    SQL
+
+    # AirportRunway -> Airport (airport_runways_count)
+    puts 'Airport.airport_runways_count...'
+    Airport.connection.execute(<<~SQL.squish)
+      UPDATE airports
+      SET airport_runways_count = (
+        SELECT COUNT(*)
+        FROM airport_runways
+        WHERE airport_runways.airport_id = airports.id
+      )
+    SQL
+
+    # Airport -> Country (airports_count)
+    puts 'Country.airports_count...'
+    Country.connection.execute(<<~SQL.squish)
+      UPDATE countries
+      SET airports_count = (
+        SELECT COUNT(*)
+        FROM airports
+        WHERE airports.country_id = countries.id
+      )
+    SQL
+
+    # Operator -> Country (operators_count)
+    puts 'Country.operators_count...'
+    Country.connection.execute(<<~SQL.squish)
+      UPDATE countries
+      SET operators_count = (
+        SELECT COUNT(*)
+        FROM operators
+        WHERE operators.country_id = countries.id
+      )
+    SQL
+
+    puts
+    puts 'Done.'
+  end
 end
