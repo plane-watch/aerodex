@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_20_103351) do
+ActiveRecord::Schema[8.1].define(version: 2026_01_21_052551) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -365,6 +365,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_20_103351) do
 
   create_table "staged_batches", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "applied_at"
+    t.integer "apply_progress", default: 0
+    t.integer "apply_total"
     t.datetime "completed_at"
     t.datetime "created_at", null: false
     t.bigint "created_by_id"
