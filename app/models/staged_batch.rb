@@ -18,6 +18,8 @@
 #  error_message  :text
 #  created_at     :datetime         not null
 #  updated_at     :datetime         not null
+#  apply_progress :integer          default(0)
+#  apply_total    :integer
 #
 # Indexes
 #
@@ -45,6 +47,7 @@
 # - superseded: A newer batch replaced this one
 # - rolled_back: Applied changes were reversed
 # - failed: Processing encountered an error
+# - applying: Batch is being applied in a background job
 #
 class StagedBatch < ApplicationRecord
   # Associations
@@ -61,7 +64,8 @@ class StagedBatch < ApplicationRecord
     rejected: 4,
     superseded: 5,
     rolled_back: 6,
-    failed: 7
+    failed: 7,
+    applying: 8
   }
 
   # Validations

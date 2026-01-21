@@ -18,6 +18,8 @@
 #  error_message  :text
 #  created_at     :datetime         not null
 #  updated_at     :datetime         not null
+#  apply_progress :integer          default(0)
+#  apply_total    :integer
 #
 # Indexes
 #
@@ -354,6 +356,15 @@ class StagedBatchTest < ActiveSupport::TestCase
 
     assert_equal "Operator Two", op2.name
     assert_equal "O2", op2.iata_code
+  end
+
+  test "applying status exists" do
+    batch = StagedBatch.new(
+      processor_type: "Test",
+      entity_type: "Test",
+      status: :applying
+    )
+    assert batch.applying?
   end
 
   test "apply! rolls back transaction on stale data" do
