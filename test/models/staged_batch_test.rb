@@ -411,15 +411,82 @@ class StagedBatchTest < ActiveSupport::TestCase
       batch.apply!(by: nil)
     end
 
-    # Verify the batch status is still pending (transaction rolled back)
-    batch.reload
-    assert_equal "pending", batch.status
-
     # Verify no new country was created (transaction rolled back)
     assert_nil Country.find_by(iso_2char_code: "CC")
 
     # Verify existing country was not updated (transaction rolled back)
     country.reload
     assert_equal "External Change", country.name
+
+    # Verify the batch status is marked as failed (error handling persists the failure)
+    batch.reload
+    assert_equal "failed", batch.status
+    assert_includes batch.error_message, "StaleDataError"
+  end
+
+  test "apply! works when status is applying" do
+    batch = StagedBatch.create!(
+      processor_type: "Processors::Country::Country",
+      entity_type: "Country",
+      status: :applying,
+      apply_progress: 0,
+      apply_total: 1
+    )
+    batch.staged_changes.create!(
+      record_type: "Country",
+      record_identifier: "WW",
+      operation: :create,
+      diff: {
+        "name" => [nil, "Test Country W"],
+        "iso_2char_code" => [nil, "WW"],
+        "iso_3char_code" => [nil, "WWW"]
+      }
+    )
+
+    batch.apply!(by: nil)
+
+    assert_equal "applied", batch.status
+  end
+
+  test "apply! rolls back all changes on validation failure" do
+    batch = StagedBatch.create!(
+      processor_type: "Processors::Operator::Operator",
+      entity_type: "Operator",
+      status: :applying
+    )
+
+    # First change will succeed
+    batch.staged_changes.create!(
+      record_type: "Operator",
+      record_identifier: "TST1",
+      operation: :create,
+      diff: {
+        "name" => [nil, "Valid Operator"],
+        "icao_code" => [nil, "TST"]
+      }
+    )
+
+    # Second change will fail (missing required name field)
+    batch.staged_changes.create!(
+      record_type: "Operator",
+      record_identifier: "TST2",
+      operation: :create,
+      diff: {
+        "icao_code" => [nil, "TS2"]
+        # Missing name - will fail validation (presence: true)
+      }
+    )
+
+    assert_raises(ActiveRecord::RecordInvalid) do
+      batch.apply!(by: nil)
+    end
+
+    # First operator should NOT exist (rolled back)
+    assert_nil Operator.find_by(icao_code: "TST")
+
+    # Batch should be marked as failed
+    batch.reload
+    assert_equal "failed", batch.status
+    assert_includes batch.error_message, "Validation failed"
   end
 end

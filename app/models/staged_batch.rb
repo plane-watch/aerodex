@@ -85,25 +85,34 @@ class StagedBatch < ApplicationRecord
   # Applies all staged changes to the database.
   #
   # @param by [User, nil] The user approving the batch
-  # @raise [InvalidStatusError] If batch is not pending
+  # @raise [InvalidStatusError] If batch is not pending or applying
   # @raise [StaleDataError] If any target record was modified after staging
   # @raise [ApplyError] If apply fails
   def apply!(by:)
-    raise InvalidStatusError, "Batch must be pending to apply (current: #{status})" unless pending?
+    raise InvalidStatusError, "Batch must be pending or applying (current: #{status})" unless pending? || applying?
     raise ApplyError, "Cannot apply batch with no changes" if staged_changes.empty?
 
     transaction do
       check_for_stale_data!
       apply_changes!
-      update!(
-        status: :applied,
-        applied_at: Time.current,
-        reviewed_by: by,
-        reviewed_at: Time.current
-      )
+
+      self.status = :applied
+      self.applied_at = Time.current
+      self.reviewed_by = by
+      self.reviewed_at = Time.current
+      self.apply_progress = 100
+      save!
     end
 
     run_post_apply_hooks
+  rescue StandardError => e
+    # Record the failure (outside transaction so it persists)
+    update!(
+      status: :failed,
+      error_message: "#{e.class}: #{e.message}",
+      apply_progress: 0
+    )
+    raise
   end
 
   # Rejects the batch, discarding all staged changes.
@@ -125,7 +134,7 @@ class StagedBatch < ApplicationRecord
 
   # Checks if any target records have been modified since the batch was created.
   # Only checks update operations - create operations will fail naturally if unique
-  # constraints are violated and will be converted to StaleDataError in apply_creates.
+  # constraints are violated during save!.
   #
   # @raise [StaleDataError] If stale data is detected
   def check_for_stale_data!
@@ -141,71 +150,38 @@ class StagedBatch < ApplicationRecord
     end
   end
 
-  # Applies all staged changes to the database.
+  # Applies all staged changes using standard ActiveRecord.
   def apply_changes!
-    # Group changes by record type for efficient bulk operations
-    changes_by_type = staged_changes.group_by(&:record_type)
-
-    changes_by_type.each do |record_type, changes|
-      model_class = record_type.constantize
-
-      # Note: c.operation returns a string ("create"/"update"), not a symbol
-      creates = changes.select { |c| c.operation == "create" }
-      updates = changes.select { |c| c.operation == "update" }
-
-      apply_creates(model_class, creates) if creates.any?
-      apply_updates(model_class, updates) if updates.any?
+    staged_changes.find_each.with_index do |change, index|
+      apply_single_change(change)
+      update_apply_progress(index)
     end
   end
 
-  # Applies create operations using insert_all.
-  # Converts unique constraint violations into StaleDataError.
+  # Applies a single staged change using save!/update!
   #
-  # @param model_class [Class] The model class
-  # @param changes [Array<StagedChange>] The create changes
-  # @raise [StaleDataError] If a unique constraint is violated
-  def apply_creates(model_class, changes)
-    now = Time.current
-    records = changes.map do |change|
-      attrs = change.new_values.symbolize_keys
-      attrs[:created_at] ||= now
-      attrs[:updated_at] ||= now
-      attrs
-    end
+  # @param change [StagedChange] The change to apply
+  def apply_single_change(change)
+    model_class = change.record_type.constantize
 
-    # Normalise all records to have the same keys (insert_all requirement).
-    # Different staged changes may have different attributes captured.
-    all_keys = records.flat_map(&:keys).uniq
-    records = records.map do |record|
-      all_keys.each_with_object({}) { |key, hash| hash[key] = record[key] }
+    if change.operation == "create"
+      record = model_class.new(change.new_values)
+      record.save!
+    else
+      record = model_class.find(change.record_id)
+      record.update!(change.new_values)
     end
-
-    model_class.insert_all(records)
-  rescue ActiveRecord::RecordNotUnique => e
-    raise StaleDataError, "Record already exists (unique constraint violation): #{e.message}"
   end
 
-  # Applies update operations using individual updates.
+  # Updates apply progress percentage.
   #
-  # We don't use upsert_all here because PostgreSQL validates NOT NULL constraints
-  # on the INSERT values BEFORE evaluating the ON CONFLICT clause. This means we'd
-  # need to provide all non-nullable columns even for updates, which defeats the
-  # purpose of partial updates.
-  #
-  # Instead, we update each record individually using update_columns, which is
-  # still efficient and works correctly with partial column sets.
-  #
-  # @param model_class [Class] The model class
-  # @param changes [Array<StagedChange>] The update changes
-  def apply_updates(model_class, changes)
-    now = Time.current
+  # @param index [Integer] Current change index (0-based)
+  def update_apply_progress(index)
+    total = apply_total || staged_changes.count
+    new_progress = ((index + 1) * 100 / total).to_i
+    return if new_progress == apply_progress
 
-    changes.each do |change|
-      attrs = change.new_values.symbolize_keys
-      attrs[:updated_at] = now
-
-      model_class.where(id: change.record_id).update_all(attrs)
-    end
+    update_column(:apply_progress, new_progress)
   end
 
   # Runs post-apply hooks like reindexing.
