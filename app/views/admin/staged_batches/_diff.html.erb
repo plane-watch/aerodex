@@ -2,7 +2,13 @@
 <%# locals: field, old_value, new_value %>
 <div class="flex items-start gap-2 py-1 text-sm font-mono">
   <span class="font-semibold text-gray-600 min-w-[120px]"><%= field %>:</span>
-  <span class="text-red-600 line-through"><%= old_value.nil? ? "null" : old_value.inspect %></span>
-  <span class="text-gray-400">&rarr;</span>
-  <span class="text-green-600"><%= new_value.nil? ? "null" : new_value.inspect %></span>
+  <% if foreign_key_field?(field) %>
+    <span class="text-red-600 line-through"><%= format_fk_value(field, old_value) %></span>
+    <span class="text-gray-400">&rarr;</span>
+    <span class="text-green-600"><%= format_fk_value(field, new_value) %></span>
+  <% else %>
+    <span class="text-red-600 line-through"><%= old_value.nil? ? "null" : old_value.inspect %></span>
+    <span class="text-gray-400">&rarr;</span>
+    <span class="text-green-600"><%= new_value.nil? ? "null" : new_value.inspect %></span>
+  <% end %>
 </div>
