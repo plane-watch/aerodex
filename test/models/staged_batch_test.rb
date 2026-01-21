@@ -489,4 +489,54 @@ class StagedBatchTest < ActiveSupport::TestCase
     assert_equal "failed", batch.status
     assert_includes batch.error_message, "Validation failed"
   end
+
+  test "apply! broadcasts progress updates" do
+    batch = StagedBatch.create!(
+      processor_type: "Processors::Country::Country",
+      entity_type: "Country",
+      status: :applying,
+      apply_progress: 0,
+      apply_total: 2
+    )
+
+    # Add two changes so we can track progress
+    batch.staged_changes.create!(
+      record_type: "Country",
+      record_identifier: "P1",
+      operation: :create,
+      diff: {
+        "name" => [nil, "Country P1"],
+        "iso_2char_code" => [nil, "P1"],
+        "iso_3char_code" => [nil, "PP1"]
+      }
+    )
+    batch.staged_changes.create!(
+      record_type: "Country",
+      record_identifier: "P2",
+      operation: :create,
+      diff: {
+        "name" => [nil, "Country P2"],
+        "iso_2char_code" => [nil, "P2"],
+        "iso_3char_code" => [nil, "PP2"]
+      }
+    )
+
+    broadcasts = []
+    # Capture broadcasts by temporarily replacing the class method
+    original_method = StagedBatchChannel.method(:broadcast_to)
+    StagedBatchChannel.define_singleton_method(:broadcast_to) do |_target, message|
+      broadcasts << message
+    end
+
+    begin
+      batch.apply!(by: nil)
+    ensure
+      # Restore the original method
+      StagedBatchChannel.define_singleton_method(:broadcast_to, original_method)
+    end
+
+    # Should have progress broadcasts and a completion broadcast
+    assert broadcasts.any? { |b| b[:event] == "progress" }
+    assert broadcasts.any? { |b| b[:event] == "complete" && b[:status] == "applied" }
+  end
 end

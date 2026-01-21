@@ -104,6 +104,7 @@ class StagedBatch < ApplicationRecord
       save!
     end
 
+    broadcast_completion
     run_post_apply_hooks
   rescue StandardError => e
     # Record the failure (outside transaction so it persists)
@@ -112,6 +113,7 @@ class StagedBatch < ApplicationRecord
       error_message: "#{e.class}: #{e.message}",
       apply_progress: 0
     )
+    broadcast_completion
     raise
   end
 
@@ -154,7 +156,7 @@ class StagedBatch < ApplicationRecord
   def apply_changes!
     staged_changes.find_each.with_index do |change, index|
       apply_single_change(change)
-      update_apply_progress(index)
+      broadcast_progress_if_needed(index)
     end
   end
 
@@ -173,15 +175,42 @@ class StagedBatch < ApplicationRecord
     end
   end
 
-  # Updates apply progress percentage.
+  # Minimum percentage change before broadcasting (prevents flooding)
+  PROGRESS_BROADCAST_INTERVAL = 1
+
+  # Broadcasts progress if the percentage has changed.
   #
   # @param index [Integer] Current change index (0-based)
-  def update_apply_progress(index)
+  def broadcast_progress_if_needed(index)
     total = apply_total || staged_changes.count
     new_progress = ((index + 1) * 100 / total).to_i
+
     return if new_progress == apply_progress
+    # Only broadcast at intervals, but always broadcast 100%
+    return if (new_progress % PROGRESS_BROADCAST_INTERVAL != 0) && new_progress != 100
 
     update_column(:apply_progress, new_progress)
+    broadcast_progress(new_progress)
+  end
+
+  # Broadcasts current progress to subscribed clients.
+  #
+  # @param progress [Integer] Progress percentage (0-100)
+  def broadcast_progress(progress)
+    StagedBatchChannel.broadcast_to(self, {
+      event: "progress",
+      progress: progress,
+      status: status
+    })
+  end
+
+  # Broadcasts completion (success or failure) to subscribed clients.
+  def broadcast_completion
+    StagedBatchChannel.broadcast_to(self, {
+      event: "complete",
+      status: status,
+      error_message: error_message
+    })
   end
 
   # Runs post-apply hooks like reindexing.
