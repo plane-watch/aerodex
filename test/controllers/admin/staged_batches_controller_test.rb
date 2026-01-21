@@ -59,7 +59,7 @@ class Admin::StagedBatchesControllerTest < ActionDispatch::IntegrationTest
   end
 
   # Apply tests
-  test "apply action applies pending batch" do
+  test "apply enqueues job and redirects" do
     sign_in @admin
     batch = StagedBatch.create!(
       processor_type: "Processors::Country::Country",
@@ -68,25 +68,25 @@ class Admin::StagedBatchesControllerTest < ActionDispatch::IntegrationTest
     )
     batch.staged_changes.create!(
       record_type: "Country",
-      record_identifier: "ZZ",
+      record_identifier: "CT",
       operation: :create,
       diff: {
-        "name" => [nil, "Test Country"],
-        "iso_2char_code" => [nil, "ZZ"],
-        "iso_3char_code" => [nil, "ZZZ"]
+        "name" => [nil, "Controller Test"],
+        "iso_2char_code" => [nil, "CT"],
+        "iso_3char_code" => [nil, "CTT"]
       }
     )
 
-    assert_difference "Country.count", 1 do
+    assert_enqueued_with(job: ApplyBatchJob) do
       post apply_admin_staged_batch_path(batch)
     end
 
-    assert_redirected_to admin_staged_batch_path(batch)
     batch.reload
-    assert_equal "applied", batch.status
+    assert_equal "applying", batch.status
+    assert_redirected_to admin_staged_batch_path(batch)
   end
 
-  test "apply action shows error for non-pending batch" do
+  test "apply rejects non-pending batch" do
     sign_in @admin
     batch = StagedBatch.create!(
       processor_type: "Processors::Test::Test",
@@ -95,9 +95,9 @@ class Admin::StagedBatchesControllerTest < ActionDispatch::IntegrationTest
     )
 
     post apply_admin_staged_batch_path(batch)
+
     assert_redirected_to admin_staged_batch_path(batch)
-    follow_redirect!
-    assert_match(/Failed to apply/, flash[:alert])
+    assert_equal "Batch is not pending", flash[:alert]
   end
 
   # Reject tests

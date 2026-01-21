@@ -31,10 +31,19 @@ module Admin
     end
 
     def apply
-      @batch.apply!(by: current_user)
-      redirect_to admin_staged_batch_path(@batch), notice: "Batch applied successfully."
-    rescue StagedBatch::InvalidStatusError, StagedBatch::StaleDataError, StagedBatch::ApplyError => e
-      redirect_to admin_staged_batch_path(@batch), alert: "Failed to apply batch: #{e.message}"
+      unless @batch.pending?
+        redirect_to admin_staged_batch_path(@batch), alert: "Batch is not pending"
+        return
+      end
+
+      @batch.update!(
+        status: :applying,
+        apply_progress: 0,
+        apply_total: @batch.staged_changes.count
+      )
+      ApplyBatchJob.perform_later(@batch.id, user_id: current_user.id)
+
+      redirect_to admin_staged_batch_path(@batch), notice: "Applying batch in background..."
     end
 
     def reject
