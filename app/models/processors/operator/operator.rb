@@ -236,6 +236,11 @@ module Processors
           with_staged_batch(entity_type: "Operator", triggered_by: triggered_by) do
             preload_reference_data
 
+            # Declare indexed fields for staged record lookups.
+            # This enables find_staged_or_persisted to find operators staged
+            # earlier in this batch when processing unmatched sources.
+            index_staged_records_by(::Operator, :icao_code, :name)
+
             errors = []
             conflicts = []
 
@@ -541,37 +546,35 @@ module Processors
         end
 
         # Finds an existing operator that matches any of the source records.
+        # Searches staged records first (for records staged earlier in this batch),
+        # then falls back to the database.
         # Searches by ICAO code first, then falls back to name match.
         # Does NOT search by IATA code as IATA codes can be shared across operators.
         #
         # @param sources [Array<ApplicationRecord>] The source records to search for
         # @return [::Operator, nil] The matching operator or nil
         def find_existing_operator_from_sources(sources)
-          # Check if any source has an ICAO code - this affects our search strategy.
-          # ICAO codes are authoritative unique identifiers. If a source has an ICAO code,
-          # we should ONLY match operators with that same ICAO code, not fall through
-          # to IATA/name matching which could find a different operator.
           icao_codes = sources.map(&:icao_code).compact.uniq
           has_icao = icao_codes.any?
 
-          # Try ICAO codes first (most reliable)
           if has_icao
-            operator = ::Operator.find_by(icao_code: icao_codes)
+            # Check staged cache first, then database
+            operator = find_staged_or_persisted(::Operator, icao_code: icao_codes)
             return operator if operator
 
             # Source has ICAO but no match found - do NOT fall through to IATA/name search.
-            # This would risk matching/updating a different operator that shares IATA code.
             return nil
           end
-
-          # Note: We intentionally do NOT search by IATA code. IATA codes can be
-          # legitimately shared across different operators (e.g., airline groups),
-          # so matching by IATA would risk finding the wrong operator.
 
           # Fall back to exact name match (case-insensitive) - only if no ICAO code
           names = sources.map(&:name).compact.uniq
           names.each do |name|
-            operator = ::Operator.find_by("LOWER(name) = ?", name.downcase)
+            # Check staged cache first (already case-insensitive)
+            operator = find_in_staged_cache(::Operator, name: name)
+            return operator if operator
+
+            # Fall back to case-insensitive database lookup
+            operator = ::Operator.where("LOWER(name) = ?", name.downcase).first
             return operator if operator
           end
 
