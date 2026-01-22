@@ -236,6 +236,38 @@ module Processors
       end
     end
 
+    # Looks up a record in the staged cache only.
+    #
+    # Searches by the provided criteria fields. Returns the first match found.
+    # Uses case-insensitive matching for string values.
+    #
+    # @param model_class [Class] The ActiveRecord model class
+    # @param criteria [Hash] Field/value pairs to search by
+    # @return [ApplicationRecord, nil] The cached record or nil
+    #
+    # @example Single value lookup
+    #   find_in_staged_cache(Operator, icao_code: "QFA")
+    #
+    # @example Array of values (returns first match)
+    #   find_in_staged_cache(Operator, icao_code: ["QFA", "JST"])
+    def self.find_in_staged_cache(model_class, **criteria)
+      model_cache = staged_records_cache[model_class]
+      return nil unless model_cache
+
+      criteria.each do |field, value|
+        next unless model_cache[field]
+
+        values = Array(value)
+        values.each do |v|
+          key = v.to_s.downcase
+          record = model_cache[field][key]
+          return record if record
+        end
+      end
+
+      nil
+    end
+
     # Wraps a processor run with staged batch tracking.
     #
     # Creates a StagedBatch at the start, yields to the processing block,

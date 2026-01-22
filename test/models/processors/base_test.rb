@@ -142,4 +142,82 @@ class Processors::BaseTest < ActiveSupport::TestCase
     cached = Processors::Base.staged_records_cache[Operator][:icao_code]["qfa"]
     assert_equal "New Name", cached.name
   end
+
+  # ---------------------------------------------------------------------------
+  # find_in_staged_cache tests
+  # ---------------------------------------------------------------------------
+
+  test "find_in_staged_cache returns cached record by single field" do
+    Processors::Base.send(:staged_records_cache=, {})
+    Processors::Base.index_staged_records_by(Operator, :icao_code)
+
+    operator = Operator.new(icao_code: "QFA", name: "Qantas")
+    Processors::Base.cache_staged_record(operator)
+
+    result = Processors::Base.find_in_staged_cache(Operator, icao_code: "QFA")
+    assert_equal operator, result
+  end
+
+  test "find_in_staged_cache is case-insensitive" do
+    Processors::Base.send(:staged_records_cache=, {})
+    Processors::Base.index_staged_records_by(Operator, :icao_code)
+
+    operator = Operator.new(icao_code: "QFA")
+    Processors::Base.cache_staged_record(operator)
+
+    assert_equal operator, Processors::Base.find_in_staged_cache(Operator, icao_code: "qfa")
+    assert_equal operator, Processors::Base.find_in_staged_cache(Operator, icao_code: "QFA")
+    assert_equal operator, Processors::Base.find_in_staged_cache(Operator, icao_code: "Qfa")
+  end
+
+  test "find_in_staged_cache returns nil when not found" do
+    Processors::Base.send(:staged_records_cache=, {})
+    Processors::Base.index_staged_records_by(Operator, :icao_code)
+
+    result = Processors::Base.find_in_staged_cache(Operator, icao_code: "NOTFOUND")
+    assert_nil result
+  end
+
+  test "find_in_staged_cache handles array of values" do
+    Processors::Base.send(:staged_records_cache=, {})
+    Processors::Base.index_staged_records_by(Operator, :icao_code)
+
+    operator = Operator.new(icao_code: "QFA")
+    Processors::Base.cache_staged_record(operator)
+
+    result = Processors::Base.find_in_staged_cache(Operator, icao_code: ["JST", "QFA", "SIA"])
+    assert_equal operator, result
+  end
+
+  test "find_in_staged_cache returns first match from array" do
+    Processors::Base.send(:staged_records_cache=, {})
+    Processors::Base.index_staged_records_by(Operator, :icao_code)
+
+    qantas = Operator.new(icao_code: "QFA", name: "Qantas")
+    jetstar = Operator.new(icao_code: "JST", name: "Jetstar")
+    Processors::Base.cache_staged_record(qantas)
+    Processors::Base.cache_staged_record(jetstar)
+
+    result = Processors::Base.find_in_staged_cache(Operator, icao_code: ["JST", "QFA"])
+    assert_equal jetstar, result
+  end
+
+  test "find_in_staged_cache returns nil if model not indexed" do
+    Processors::Base.send(:staged_records_cache=, {})
+    Processors::Base.index_staged_records_by(Manufacturer, :icao_code)
+
+    result = Processors::Base.find_in_staged_cache(Operator, icao_code: "QFA")
+    assert_nil result
+  end
+
+  test "find_in_staged_cache returns nil if field not indexed" do
+    Processors::Base.send(:staged_records_cache=, {})
+    Processors::Base.index_staged_records_by(Operator, :icao_code)
+
+    operator = Operator.new(icao_code: "QFA", name: "Qantas")
+    Processors::Base.cache_staged_record(operator)
+
+    result = Processors::Base.find_in_staged_cache(Operator, name: "Qantas")
+    assert_nil result
+  end
 end
