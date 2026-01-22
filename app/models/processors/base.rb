@@ -367,6 +367,9 @@ module Processors
         diff: diff
       )
 
+      # Cache the record for subsequent lookups within this batch
+      cache_staged_record(record)
+
       # Update summary counts
       key = operation == :create ? "created" : "updated"
       current_batch.summary[key] += 1

@@ -330,4 +330,42 @@ class Processors::BaseTest < ActiveSupport::TestCase
 
     assert_nil Processors::Base.staged_records_cache
   end
+
+  # ---------------------------------------------------------------------------
+  # stage_change caching tests
+  # ---------------------------------------------------------------------------
+
+  test "stage_change caches the record" do
+    test_processor = Class.new(Processors::Base)
+    test_processor.define_singleton_method(:name) { "TestProcessor" }
+
+    test_processor.with_staged_batch(entity_type: "Operator") do
+      Processors::Base.index_staged_records_by(Operator, :icao_code)
+
+      operator = Operator.new(icao_code: "ST1", name: "Stage Test")
+      Processors::Base.stage_change(operator, operation: :create, identifier: "ST1")
+
+      cached = Processors::Base.find_in_staged_cache(Operator, icao_code: "ST1")
+      assert_equal operator, cached
+    end
+  end
+
+  test "stage_change caches update operations" do
+    test_processor = Class.new(Processors::Base)
+    test_processor.define_singleton_method(:name) { "TestProcessor" }
+
+    existing = Operator.create!(icao_code: "UT1", name: "Old Name")
+
+    test_processor.with_staged_batch(entity_type: "Operator") do
+      Processors::Base.index_staged_records_by(Operator, :icao_code)
+
+      existing.name = "New Name"
+      Processors::Base.stage_change(existing, operation: :update, identifier: "UT1")
+
+      cached = Processors::Base.find_in_staged_cache(Operator, icao_code: "UT1")
+      assert_equal "New Name", cached.name
+    end
+  ensure
+    Operator.where(icao_code: "UT1").delete_all
+  end
 end
