@@ -268,6 +268,28 @@ module Processors
       nil
     end
 
+    # Looks up a record in the staged cache first, then falls back to the database.
+    #
+    # This is the primary lookup method for processors during batch processing.
+    # It ensures that recently staged records can be found even though they
+    # haven't been persisted yet.
+    #
+    # @param model_class [Class] The ActiveRecord model class
+    # @param criteria [Hash] Field/value pairs to search by
+    # @return [ApplicationRecord, nil] The record or nil
+    #
+    # @example
+    #   find_staged_or_persisted(Operator, icao_code: "QFA")
+    #   find_staged_or_persisted(Operator, icao_code: ["QFA", "JST"])
+    def self.find_staged_or_persisted(model_class, **criteria)
+      # Check staged cache first
+      record = find_in_staged_cache(model_class, **criteria)
+      return record if record
+
+      # Fall back to database
+      model_class.find_by(**criteria)
+    end
+
     # Wraps a processor run with staged batch tracking.
     #
     # Creates a StagedBatch at the start, yields to the processing block,

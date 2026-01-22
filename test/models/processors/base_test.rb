@@ -220,4 +220,69 @@ class Processors::BaseTest < ActiveSupport::TestCase
     result = Processors::Base.find_in_staged_cache(Operator, name: "Qantas")
     assert_nil result
   end
+
+  # ---------------------------------------------------------------------------
+  # find_staged_or_persisted tests
+  # ---------------------------------------------------------------------------
+
+  test "find_staged_or_persisted returns cached record if present" do
+    Processors::Base.send(:staged_records_cache=, {})
+    Processors::Base.index_staged_records_by(Operator, :icao_code)
+
+    cached_operator = Operator.new(icao_code: "TC1", name: "Cached")
+    Processors::Base.cache_staged_record(cached_operator)
+
+    result = Processors::Base.find_staged_or_persisted(Operator, icao_code: "TC1")
+    assert_equal cached_operator, result
+  end
+
+  test "find_staged_or_persisted falls back to database" do
+    Processors::Base.send(:staged_records_cache=, {})
+    Processors::Base.index_staged_records_by(Operator, :icao_code)
+
+    # Create a persisted operator
+    db_operator = Operator.create!(icao_code: "TD1", name: "Database Operator")
+
+    result = Processors::Base.find_staged_or_persisted(Operator, icao_code: "TD1")
+    assert_equal db_operator, result
+  ensure
+    Operator.where(icao_code: "TD1").delete_all
+  end
+
+  test "find_staged_or_persisted prefers cache over database" do
+    Processors::Base.send(:staged_records_cache=, {})
+    Processors::Base.index_staged_records_by(Operator, :icao_code)
+
+    # Create persisted operator
+    Operator.create!(icao_code: "TB1", name: "Database Version")
+
+    # Cache a different record with same key
+    cached_operator = Operator.new(icao_code: "TB1", name: "Cached Version")
+    Processors::Base.cache_staged_record(cached_operator)
+
+    result = Processors::Base.find_staged_or_persisted(Operator, icao_code: "TB1")
+    assert_equal "Cached Version", result.name
+  ensure
+    Operator.where(icao_code: "TB1").delete_all
+  end
+
+  test "find_staged_or_persisted returns nil when not found anywhere" do
+    Processors::Base.send(:staged_records_cache=, {})
+    Processors::Base.index_staged_records_by(Operator, :icao_code)
+
+    result = Processors::Base.find_staged_or_persisted(Operator, icao_code: "ZZZ")
+    assert_nil result
+  end
+
+  test "find_staged_or_persisted handles array criteria for database" do
+    Processors::Base.send(:staged_records_cache=, {})
+    Processors::Base.index_staged_records_by(Operator, :icao_code)
+
+    db_operator = Operator.create!(icao_code: "TA1", name: "Array Test")
+
+    result = Processors::Base.find_staged_or_persisted(Operator, icao_code: ["ZZ1", "TA1"])
+    assert_equal db_operator, result
+  ensure
+    Operator.where(icao_code: "TA1").delete_all
+  end
 end
