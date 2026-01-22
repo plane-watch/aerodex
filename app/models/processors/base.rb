@@ -184,6 +184,21 @@ module Processors
       Thread.current[:processor_current_batch] = batch
     end
 
+    # Thread-local storage for staged records cache during processing.
+    # Structure: { ModelClass => { field_name => { downcased_value => record } } }
+    #
+    # @return [Hash, nil] The cache or nil if not in a batch
+    def self.staged_records_cache
+      Thread.current[:processor_staged_records_cache]
+    end
+
+    # Sets the staged records cache in thread-local storage.
+    #
+    # @param cache [Hash, nil] The cache to set
+    def self.staged_records_cache=(cache)
+      Thread.current[:processor_staged_records_cache] = cache
+    end
+
     # Wraps a processor run with staged batch tracking.
     #
     # Creates a StagedBatch at the start, yields to the processing block,
