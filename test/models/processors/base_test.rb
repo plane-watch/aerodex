@@ -40,4 +40,46 @@ class Processors::BaseTest < ActiveSupport::TestCase
     assert_nil thread_value, "Expected cache to be nil in other thread"
     assert_equal({ main: true }, Processors::Base.staged_records_cache)
   end
+
+  # ---------------------------------------------------------------------------
+  # index_staged_records_by tests
+  # ---------------------------------------------------------------------------
+
+  test "index_staged_records_by initialises cache structure for model and fields" do
+    Processors::Base.send(:staged_records_cache=, {})
+
+    Processors::Base.index_staged_records_by(Operator, :icao_code, :name)
+
+    expected = {
+      Operator => {
+        icao_code: {},
+        name: {}
+      }
+    }
+    assert_equal expected, Processors::Base.staged_records_cache
+  end
+
+  test "index_staged_records_by preserves existing cache entries" do
+    existing_operator = Operator.new(icao_code: "QFA", name: "Qantas")
+    Processors::Base.send(:staged_records_cache=, {
+      Operator => {
+        icao_code: { "qfa" => existing_operator }
+      }
+    })
+
+    Processors::Base.index_staged_records_by(Operator, :icao_code, :name)
+
+    assert_equal existing_operator, Processors::Base.staged_records_cache[Operator][:icao_code]["qfa"]
+    assert_equal({}, Processors::Base.staged_records_cache[Operator][:name])
+  end
+
+  test "index_staged_records_by can register multiple model classes" do
+    Processors::Base.send(:staged_records_cache=, {})
+
+    Processors::Base.index_staged_records_by(Operator, :icao_code)
+    Processors::Base.index_staged_records_by(Manufacturer, :icao_code)
+
+    assert Processors::Base.staged_records_cache.key?(Operator)
+    assert Processors::Base.staged_records_cache.key?(Manufacturer)
+  end
 end

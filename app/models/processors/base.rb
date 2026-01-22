@@ -199,6 +199,24 @@ module Processors
       Thread.current[:processor_staged_records_cache] = cache
     end
 
+    # Declares which fields to index for staged record lookups.
+    #
+    # Call at the start of processing to specify which fields should be
+    # indexed for fast lookups. Only indexed fields can be used with
+    # find_staged_or_persisted.
+    #
+    # @param model_class [Class] The ActiveRecord model class
+    # @param fields [Array<Symbol>] The field names to index
+    #
+    # @example
+    #   index_staged_records_by(Operator, :icao_code, :name)
+    def self.index_staged_records_by(model_class, *fields)
+      staged_records_cache[model_class] ||= {}
+      fields.each do |field|
+        staged_records_cache[model_class][field] ||= {}
+      end
+    end
+
     # Wraps a processor run with staged batch tracking.
     #
     # Creates a StagedBatch at the start, yields to the processing block,
