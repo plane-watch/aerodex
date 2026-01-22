@@ -310,6 +310,7 @@ module Processors
         started_at: Time.current,
         summary: { "created" => 0, "updated" => 0, "unchanged" => 0 }
       )
+      self.staged_records_cache = {}
 
       yield
 
@@ -331,6 +332,7 @@ module Processors
       raise
     ensure
       self.current_batch = nil
+      self.staged_records_cache = nil
     end
 
     # Stages a change for a record.

@@ -285,4 +285,49 @@ class Processors::BaseTest < ActiveSupport::TestCase
   ensure
     Operator.where(icao_code: "TA1").delete_all
   end
+
+  # ---------------------------------------------------------------------------
+  # with_staged_batch cache lifecycle tests
+  # ---------------------------------------------------------------------------
+
+  test "with_staged_batch initialises empty cache" do
+    # Use a test processor class
+    test_processor = Class.new(Processors::Base)
+    test_processor.define_singleton_method(:name) { "TestProcessor" }
+
+    cache_during_block = nil
+
+    test_processor.with_staged_batch(entity_type: "Test") do
+      cache_during_block = Processors::Base.staged_records_cache
+    end
+
+    assert_equal({}, cache_during_block)
+  end
+
+  test "with_staged_batch clears cache after completion" do
+    test_processor = Class.new(Processors::Base)
+    test_processor.define_singleton_method(:name) { "TestProcessor" }
+
+    test_processor.with_staged_batch(entity_type: "Test") do
+      Processors::Base.index_staged_records_by(Operator, :icao_code)
+      operator = Operator.new(icao_code: "TEST")
+      Processors::Base.cache_staged_record(operator)
+    end
+
+    assert_nil Processors::Base.staged_records_cache
+  end
+
+  test "with_staged_batch clears cache on error" do
+    test_processor = Class.new(Processors::Base)
+    test_processor.define_singleton_method(:name) { "TestProcessor" }
+
+    assert_raises(RuntimeError) do
+      test_processor.with_staged_batch(entity_type: "Test") do
+        Processors::Base.index_staged_records_by(Operator, :icao_code)
+        raise "Test error"
+      end
+    end
+
+    assert_nil Processors::Base.staged_records_cache
+  end
 end
