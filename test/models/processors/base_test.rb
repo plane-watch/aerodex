@@ -82,4 +82,64 @@ class Processors::BaseTest < ActiveSupport::TestCase
     assert Processors::Base.staged_records_cache.key?(Operator)
     assert Processors::Base.staged_records_cache.key?(Manufacturer)
   end
+
+  # ---------------------------------------------------------------------------
+  # cache_staged_record tests
+  # ---------------------------------------------------------------------------
+
+  test "cache_staged_record indexes record by declared fields" do
+    Processors::Base.send(:staged_records_cache=, {})
+    Processors::Base.index_staged_records_by(Operator, :icao_code, :name)
+
+    operator = Operator.new(icao_code: "QFA", name: "Qantas Airways")
+    Processors::Base.cache_staged_record(operator)
+
+    assert_equal operator, Processors::Base.staged_records_cache[Operator][:icao_code]["qfa"]
+    assert_equal operator, Processors::Base.staged_records_cache[Operator][:name]["qantas airways"]
+  end
+
+  test "cache_staged_record uses case-insensitive keys" do
+    Processors::Base.send(:staged_records_cache=, {})
+    Processors::Base.index_staged_records_by(Operator, :icao_code)
+
+    operator = Operator.new(icao_code: "QFA")
+    Processors::Base.cache_staged_record(operator)
+
+    assert_equal operator, Processors::Base.staged_records_cache[Operator][:icao_code]["qfa"]
+  end
+
+  test "cache_staged_record skips blank field values" do
+    Processors::Base.send(:staged_records_cache=, {})
+    Processors::Base.index_staged_records_by(Operator, :icao_code, :iata_code)
+
+    operator = Operator.new(icao_code: "QFA", iata_code: nil)
+    Processors::Base.cache_staged_record(operator)
+
+    assert_equal operator, Processors::Base.staged_records_cache[Operator][:icao_code]["qfa"]
+    assert_empty Processors::Base.staged_records_cache[Operator][:iata_code]
+  end
+
+  test "cache_staged_record does nothing if model not indexed" do
+    Processors::Base.send(:staged_records_cache=, {})
+    Processors::Base.index_staged_records_by(Manufacturer, :icao_code)
+
+    operator = Operator.new(icao_code: "QFA")
+    Processors::Base.cache_staged_record(operator)
+
+    assert_not Processors::Base.staged_records_cache.key?(Operator)
+  end
+
+  test "cache_staged_record overwrites existing entry for same key" do
+    Processors::Base.send(:staged_records_cache=, {})
+    Processors::Base.index_staged_records_by(Operator, :icao_code)
+
+    operator1 = Operator.new(icao_code: "QFA", name: "Old Name")
+    operator2 = Operator.new(icao_code: "QFA", name: "New Name")
+
+    Processors::Base.cache_staged_record(operator1)
+    Processors::Base.cache_staged_record(operator2)
+
+    cached = Processors::Base.staged_records_cache[Operator][:icao_code]["qfa"]
+    assert_equal "New Name", cached.name
+  end
 end

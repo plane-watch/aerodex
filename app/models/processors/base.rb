@@ -217,6 +217,25 @@ module Processors
       end
     end
 
+    # Caches a staged record for subsequent lookups within the batch.
+    #
+    # Indexes the record by all declared fields (via index_staged_records_by).
+    # Uses case-insensitive keys for string values.
+    #
+    # @param record [ApplicationRecord] The record to cache
+    def self.cache_staged_record(record)
+      model_cache = staged_records_cache[record.class]
+      return unless model_cache
+
+      model_cache.each_key do |field|
+        value = record.public_send(field)
+        next if value.blank?
+
+        key = value.to_s.downcase
+        model_cache[field][key] = record
+      end
+    end
+
     # Wraps a processor run with staged batch tracking.
     #
     # Creates a StagedBatch at the start, yields to the processing block,
