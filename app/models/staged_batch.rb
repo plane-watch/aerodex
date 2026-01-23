@@ -2,24 +2,26 @@
 #
 # Table name: staged_batches
 #
-#  id             :uuid             not null, primary key
-#  processor_type :string           not null
-#  entity_type    :string           not null
-#  status         :integer          default(0), not null
-#  summary        :jsonb            default("{}"), not null
-#  created_by_id  :integer
-#  reviewed_by_id :integer
-#  job_id         :string
-#  started_at     :datetime
-#  completed_at   :datetime
-#  applied_at     :datetime
-#  reviewed_at    :datetime
-#  notes          :text
-#  error_message  :text
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
-#  apply_progress :integer          default(0)
-#  apply_total    :integer
+#  id                  :uuid             not null, primary key
+#  processor_type      :string           not null
+#  entity_type         :string           not null
+#  status              :integer          default(0), not null
+#  summary             :jsonb            default("{}"), not null
+#  created_by_id       :integer
+#  reviewed_by_id      :integer
+#  job_id              :string
+#  started_at          :datetime
+#  completed_at        :datetime
+#  applied_at          :datetime
+#  reviewed_at         :datetime
+#  notes               :text
+#  error_message       :text
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  apply_progress      :integer          default(0)
+#  apply_total         :integer
+#  processing_progress :integer          default(0)
+#  processing_total    :integer
 #
 # Indexes
 #
@@ -132,6 +134,36 @@ class StagedBatch < ApplicationRecord
     )
   end
 
+  # Broadcasts processing progress to subscribed clients.
+  # Failures are logged but don't interrupt the processing operation.
+  #
+  # @param progress [Integer] Progress percentage (0-100)
+  def broadcast_processing_progress(progress)
+    update_column(:processing_progress, progress)
+    StagedBatchChannel.broadcast_to(self, {
+      event: "processing_progress",
+      progress: progress,
+      status: status
+    })
+  rescue StandardError => e
+    Rails.logger.warn "Failed to broadcast processing progress for batch #{id}: #{e.message}"
+  end
+
+  # Broadcasts processing progress if the percentage has changed.
+  # Throttles broadcasts to avoid flooding clients.
+  #
+  # @param current [Integer] Current item index (0-based)
+  # @param total [Integer] Total number of items
+  def broadcast_processing_progress_if_needed(current, total)
+    return if total.zero?
+
+    new_progress = ((current.to_f / total) * 100).round
+    return if new_progress == processing_progress
+    return if (new_progress % PROGRESS_BROADCAST_INTERVAL != 0) && new_progress != 100
+
+    broadcast_processing_progress(new_progress)
+  end
+
   private
 
   # Checks if any target records have been modified since the batch was created.
@@ -163,6 +195,7 @@ class StagedBatch < ApplicationRecord
   # Applies a single staged change using save!/update!
   #
   # @param change [StagedChange] The change to apply
+  # @raise [ActiveRecord::RecordInvalid] Re-raised with enriched context about the failing record
   def apply_single_change(change)
     model_class = change.record_type.constantize
 
@@ -173,6 +206,52 @@ class StagedBatch < ApplicationRecord
       record = model_class.find(change.record_id)
       record.update!(change.new_values)
     end
+  rescue ActiveRecord::RecordInvalid => e
+    # Enrich the error with context about which record failed
+    context = build_change_context(change)
+    raise ActiveRecord::RecordInvalid.new(e.record), "#{context}: #{e.message}", e.backtrace
+  end
+
+  # Builds a human-readable context string for a staged change.
+  #
+  # @param change [StagedChange] The change to describe
+  # @return [String] A description like "Create Operator (icao_code: AYD, name: Example)"
+  def build_change_context(change)
+    operation = change.operation.capitalize
+    record_type = change.record_type.demodulize
+
+    # Pick the most identifying attributes from the new values
+    identifiers = extract_identifiers(change.new_values)
+
+    if identifiers.present?
+      "#{operation} #{record_type} (#{identifiers})"
+    else
+      "#{operation} #{record_type}"
+    end
+  end
+
+  # Extracts the most identifying attributes from a hash of values.
+  # Prioritises common identifier fields, then falls back to the first few values.
+  #
+  # @param values [Hash] The attribute values
+  # @return [String] Formatted key-value pairs like "icao_code: AYD, name: Example"
+  def extract_identifiers(values)
+    return "" if values.blank?
+
+    # Common identifier fields, in priority order
+    identifier_keys = %w[icao_code iata_code code name identifier id slug]
+
+    # Find matching keys from the values
+    found_keys = identifier_keys.select { |key| values.key?(key) || values.key?(key.to_sym) }
+
+    # If no common identifiers found, take the first 2 keys
+    found_keys = values.keys.first(2).map(&:to_s) if found_keys.empty?
+
+    # Limit to 3 identifiers to keep the message readable
+    found_keys.first(3).map { |key|
+      value = values[key] || values[key.to_sym]
+      "#{key}: #{value}"
+    }.join(", ")
   end
 
   # Minimum percentage change before broadcasting (prevents flooding)
@@ -194,6 +273,7 @@ class StagedBatch < ApplicationRecord
   end
 
   # Broadcasts current progress to subscribed clients.
+  # Failures are logged but don't interrupt the apply operation.
   #
   # @param progress [Integer] Progress percentage (0-100)
   def broadcast_progress(progress)
@@ -202,15 +282,20 @@ class StagedBatch < ApplicationRecord
       progress: progress,
       status: status
     })
+  rescue StandardError => e
+    Rails.logger.warn "Failed to broadcast progress for batch #{id}: #{e.message}"
   end
 
   # Broadcasts completion (success or failure) to subscribed clients.
+  # Failures are logged but don't interrupt the apply operation.
   def broadcast_completion
     StagedBatchChannel.broadcast_to(self, {
       event: "complete",
       status: status,
       error_message: error_message
     })
+  rescue StandardError => e
+    Rails.logger.warn "Failed to broadcast completion for batch #{id}: #{e.message}"
   end
 
   # Runs post-apply hooks like reindexing.

@@ -542,3 +542,54 @@ class StagedBatchTest < ActiveSupport::TestCase
     assert broadcasts.any? { |b| b[:event] == "complete" && b[:status] == "applied" }
   end
 end
+
+# Tests for processing progress broadcast methods
+class StagedBatchProcessingProgressTest < ActiveSupport::TestCase
+  setup do
+    @batch = staged_batches(:processing_batch)
+  end
+
+  test "broadcast_processing_progress updates column and broadcasts" do
+    broadcasts = []
+    original_method = StagedBatchChannel.method(:broadcast_to)
+    StagedBatchChannel.define_singleton_method(:broadcast_to) do |target, message|
+      broadcasts << { target: target, message: message }
+    end
+
+    begin
+      @batch.broadcast_processing_progress(50)
+    ensure
+      StagedBatchChannel.define_singleton_method(:broadcast_to, original_method)
+    end
+
+    assert_equal 50, @batch.reload.processing_progress
+    assert_equal 1, broadcasts.length
+    assert_equal @batch, broadcasts.first[:target]
+    assert_equal "processing_progress", broadcasts.first[:message][:event]
+    assert_equal 50, broadcasts.first[:message][:progress]
+    assert_equal "processing", broadcasts.first[:message][:status]
+  end
+
+  test "broadcast_processing_progress_if_needed only broadcasts on percentage change" do
+    @batch.update_column(:processing_progress, 10)
+    @batch.update_column(:processing_total, 100)
+
+    broadcast_count = 0
+    original_method = StagedBatchChannel.method(:broadcast_to)
+    StagedBatchChannel.define_singleton_method(:broadcast_to) do |_target, _message|
+      broadcast_count += 1
+    end
+
+    begin
+      # Same percentage - should not broadcast
+      @batch.broadcast_processing_progress_if_needed(10, 100)
+      assert_equal 0, broadcast_count
+
+      # Different percentage - should broadcast
+      @batch.broadcast_processing_progress_if_needed(20, 100)
+      assert_equal 1, broadcast_count
+    ensure
+      StagedBatchChannel.define_singleton_method(:broadcast_to, original_method)
+    end
+  end
+end
