@@ -2,10 +2,13 @@ import { Controller } from "@hotwired/stimulus"
 import { createConsumer } from "@rails/actioncable"
 
 /**
- * Handles real-time progress updates for batch apply operations.
+ * Handles real-time progress updates for batch processing and apply operations.
  *
  * Connects to StagedBatchChannel via ActionCable and updates
- * the progress bar as the batch is applied.
+ * the progress bar as the batch is processed or applied.
+ *
+ * Includes fallback polling that kicks in when progress reaches 100%,
+ * in case the ActionCable completion event is missed.
  *
  * @example View usage
  *   <div data-controller="batch-apply"
@@ -23,13 +26,14 @@ export default class extends Controller {
   static values = { batchId: String, status: String }
 
   connect() {
-    if (this.statusValue === "applying") {
+    if (this.statusValue === "applying" || this.statusValue === "processing") {
       this.showProgress()
       this.subscribe()
     }
   }
 
   disconnect() {
+    this.stopPolling()
     this.unsubscribe()
   }
 
@@ -75,12 +79,12 @@ export default class extends Controller {
    * Handles incoming messages from the ActionCable channel.
    *
    * @param {Object} data - The message data
-   * @param {string} data.event - The event type ('progress' or 'complete')
+   * @param {string} data.event - The event type ('progress', 'processing_progress', or 'complete')
    * @param {number} [data.progress] - The progress percentage (0-100)
    */
   handleMessage(data) {
-    if (data.event === "progress") {
-      this.updateProgress(data.progress)
+    if (data.event === "progress" || data.event === "processing_progress") {
+      this.updateProgress(data.progress, data.event)
     } else if (data.event === "complete") {
       this.handleComplete(data)
     }
@@ -88,15 +92,59 @@ export default class extends Controller {
 
   /**
    * Updates the progress bar and text with the current percentage.
+   * Starts fallback polling when progress reaches 100%.
    *
    * @param {number} progress - The progress percentage (0-100)
+   * @param {string} event - The event type ('progress' or 'processing_progress')
    */
-  updateProgress(progress) {
+  updateProgress(progress, event = "progress") {
     if (this.hasProgressBarTarget) {
       this.progressBarTarget.style.width = `${progress}%`
     }
     if (this.hasProgressTextTarget) {
-      this.progressTextTarget.textContent = `Applying... ${progress}%`
+      const label = event === "processing_progress" ? "Processing" : "Applying"
+      this.progressTextTarget.textContent = `${label}... ${progress}%`
+    }
+
+    // Start fallback polling when we hit 100%
+    if (progress >= 100 && !this.pollingStarted) {
+      this.startFallbackPolling()
+    }
+  }
+
+  /**
+   * Starts polling the batch status as a fallback in case
+   * the ActionCable completion event is missed.
+   */
+  startFallbackPolling() {
+    this.pollingStarted = true
+    this.pollInterval = setInterval(() => this.checkBatchStatus(), 2000)
+  }
+
+  /**
+   * Fetches the current batch status and reloads if complete.
+   */
+  async checkBatchStatus() {
+    try {
+      const response = await fetch(`/admin/staged_batches/${this.batchIdValue}/status.json`)
+      const data = await response.json()
+
+      if (data.status !== "applying" && data.status !== "processing") {
+        this.stopPolling()
+        window.location.reload()
+      }
+    } catch (error) {
+      console.error("Failed to check batch status:", error)
+    }
+  }
+
+  /**
+   * Stops the fallback polling interval.
+   */
+  stopPolling() {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval)
+      this.pollInterval = null
     }
   }
 
@@ -107,6 +155,7 @@ export default class extends Controller {
    * @param {Object} data - The completion event data
    */
   handleComplete(data) {
+    this.stopPolling()
     window.location.reload()
   }
 }
