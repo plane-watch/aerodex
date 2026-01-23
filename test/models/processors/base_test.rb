@@ -368,4 +368,122 @@ class Processors::BaseTest < ActiveSupport::TestCase
   ensure
     Operator.where(icao_code: "UT1").delete_all
   end
+
+  test "stage_change merges update into existing create for same identifier" do
+    test_processor = Class.new(Processors::Base)
+    test_processor.define_singleton_method(:name) { "TestProcessor" }
+
+    test_processor.with_staged_batch(entity_type: "Operator") do
+      Processors::Base.index_staged_records_by(Operator, :icao_code, :name)
+
+      # Phase 1: Create a new operator and stage it
+      operator = Operator.new(icao_code: "ZMG", name: "Original Name")
+      Processors::Base.stage_change(operator, operation: :create, identifier: "ZMG")
+
+      # Verify the CREATE was staged
+      batch = Processors::Base.current_batch
+      assert_equal 1, batch.staged_changes.count
+      assert_equal "create", batch.staged_changes.first.operation
+
+      # Phase 2: Find the cached operator and update it
+      cached = Processors::Base.find_in_staged_cache(Operator, icao_code: "ZMG")
+      assert_not_nil cached
+
+      cached.name = "Updated Name"
+      Processors::Base.stage_change(cached, operation: :update, identifier: "ZMG")
+
+      # Should still be just one staged change (the CREATE), not CREATE + UPDATE
+      assert_equal 1, batch.staged_changes.count
+      change = batch.staged_changes.first
+      assert_equal "create", change.operation
+
+      # The CREATE's diff should have the updated name
+      assert_equal [nil, "Updated Name"], change.diff["name"]
+
+      # Summary should show 1 created, 0 updated
+      assert_equal 1, batch.summary["created"]
+      assert_equal 0, batch.summary["updated"]
+    end
+  end
+
+  test "stage_change does not merge if no existing create" do
+    test_processor = Class.new(Processors::Base)
+    test_processor.define_singleton_method(:name) { "TestProcessor" }
+
+    existing = Operator.create!(icao_code: "ZNM", name: "Old Name")
+
+    test_processor.with_staged_batch(entity_type: "Operator") do
+      Processors::Base.index_staged_records_by(Operator, :icao_code)
+
+      # Update a persisted record (no staged CREATE exists)
+      existing.name = "New Name"
+      Processors::Base.stage_change(existing, operation: :update, identifier: "ZNM")
+
+      # Should create a normal UPDATE staged change
+      batch = Processors::Base.current_batch
+      assert_equal 1, batch.staged_changes.count
+      assert_equal "update", batch.staged_changes.first.operation
+      assert_equal existing.id, batch.staged_changes.first.record_id
+    end
+  ensure
+    Operator.where(icao_code: "ZNM").delete_all
+  end
+
+  # ---------------------------------------------------------------------------
+  # Progress broadcasting tests
+  # ---------------------------------------------------------------------------
+
+  test "progress bar broadcasts to staged batch when in batch context" do
+    batch = StagedBatch.create!(
+      processor_type: "TestProcessor",
+      entity_type: "Test",
+      status: :processing,
+      summary: { "created" => 0, "updated" => 0, "unchanged" => 0 }
+    )
+
+    Processors::Base.current_batch = batch
+
+    progress_bar = Processors::Base.create_progress_bar(100)
+
+    # Verify that create_progress_bar sets processing_total on the batch
+    batch.reload
+    assert_equal 100, batch.processing_total
+
+    # Increment enough times to trigger a broadcast (1% = 1 item out of 100)
+    progress_bar.increment!
+    batch.reload
+
+    # broadcast_processing_progress_if_needed should have updated processing_progress
+    assert_equal 1, batch.processing_progress
+  ensure
+    Processors::Base.current_batch = nil
+    batch&.destroy
+  end
+
+  test "create_progress_bar returns NullProgressBar when no batch context" do
+    Processors::Base.current_batch = nil
+
+    progress_bar = Processors::Base.create_progress_bar(100)
+
+    assert_instance_of Processors::Base::NullProgressBar, progress_bar
+  end
+
+  test "create_progress_bar sets processing_total on batch" do
+    batch = StagedBatch.create!(
+      processor_type: "TestProcessor",
+      entity_type: "Test",
+      status: :processing,
+      summary: { "created" => 0, "updated" => 0, "unchanged" => 0 }
+    )
+
+    Processors::Base.current_batch = batch
+
+    Processors::Base.create_progress_bar(250)
+
+    batch.reload
+    assert_equal 250, batch.processing_total
+  ensure
+    Processors::Base.current_batch = nil
+    batch&.destroy
+  end
 end

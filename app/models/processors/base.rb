@@ -11,6 +11,35 @@ module Processors
       def finish; end
     end
 
+    # A progress bar wrapper that broadcasts progress to ActionCable.
+    # Wraps the real ProgressBar and broadcasts updates to the current batch.
+    class BroadcastingProgressBar
+      def initialize(total, batch)
+        @total = total
+        @batch = batch
+        @current = 0
+        @inner = if Processors::Base.interactive_console?
+                   ProgressBar.new(total)
+                 else
+                   NullProgressBar.new(total)
+                 end
+      end
+
+      def increment!
+        @current += 1
+        @inner.increment!
+        @batch&.broadcast_processing_progress_if_needed(@current, @total)
+      end
+
+      def puts(*args)
+        @inner.puts(*args)
+      end
+
+      def finish
+        @inner.finish
+      end
+    end
+
     def self.transform_field(key, value)
       return nil if @transform_data[key].nil?
 
@@ -40,13 +69,18 @@ module Processors
       )
     end
 
-    # Creates a progress bar if running in an interactive console, otherwise returns a null object.
-    # This prevents progress bar output during tests and background jobs.
+    # Creates a progress bar that optionally broadcasts to ActionCable.
+    #
+    # When called within a with_staged_batch block, progress updates are
+    # broadcast to subscribed clients. Also stores the total in the batch.
     #
     # @param count [Integer] The total number of items to process
-    # @return [ProgressBar, NullProgressBar]
+    # @return [BroadcastingProgressBar, ProgressBar, NullProgressBar]
     def self.create_progress_bar(count)
-      if interactive_console?
+      if current_batch
+        current_batch.update_column(:processing_total, count)
+        BroadcastingProgressBar.new(count, current_batch)
+      elsif interactive_console?
         ProgressBar.new(count)
       else
         NullProgressBar.new(count)
@@ -347,6 +381,34 @@ module Processors
     # @raise [ArgumentError] If an unknown operation is specified
     def self.stage_change(record, operation:, identifier:)
       raise "No current batch - call within with_staged_batch block" unless current_batch
+
+      # If we're staging an UPDATE but there's already a staged CREATE for this record,
+      # merge the updates into the existing CREATE rather than staging a separate UPDATE.
+      # This happens when a record is created and cached, then found again and modified
+      # before the batch is applied. The UPDATE would fail (no record_id yet).
+      if operation == :update
+        existing_create = current_batch.staged_changes.find_by(
+          record_type: record.class.name,
+          record_identifier: identifier,
+          operation: :create
+        )
+
+        if existing_create
+          # Merge updates into the existing CREATE's diff.
+          # Existing diff format: { field => [nil, old_value] }
+          # We want: { field => [nil, new_value] }
+          record.changes.each do |field, (_old_val, new_val)|
+            existing_create.diff[field] = [nil, new_val]
+          end
+          existing_create.save!
+
+          # Update the cache with the modified record
+          cache_staged_record(record)
+
+          # Don't increment counts - still the same CREATE operation
+          return
+        end
+      end
 
       diff = case operation
              when :create
