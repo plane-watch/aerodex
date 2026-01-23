@@ -2,9 +2,9 @@
 
 module Admin
   # Controller for managing staged batches.
-  # Provides index, show, apply, reject, and rollback actions.
+  # Provides index, show, apply, reject, rollback, and status actions.
   class StagedBatchesController < BaseController
-    before_action :set_staged_batch, only: [:show, :apply, :reject, :rollback]
+    before_action :set_staged_batch, only: [:show, :apply, :reject, :rollback, :status]
 
     def index
       @batches = StagedBatch.recent
@@ -56,6 +56,16 @@ module Admin
     def rollback
       # TODO: Implement rollback in Phase 7
       redirect_to admin_staged_batch_path(@batch), alert: "Rollback not yet implemented."
+    end
+
+    # GET /admin/staged_batches/:id/status
+    # Returns JSON status for fallback polling when ActionCable events are missed.
+    def status
+      render json: {
+        status: @batch.status,
+        processing_progress: @batch.processing_progress,
+        apply_progress: @batch.apply_progress
+      }
     end
 
     private

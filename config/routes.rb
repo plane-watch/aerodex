@@ -11,6 +11,7 @@ Rails.application.routes.draw do
         post :apply
         post :reject
         post :rollback
+        get :status
       end
     end
     resources :processors, only: [:index, :create]
