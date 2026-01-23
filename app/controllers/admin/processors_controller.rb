@@ -18,12 +18,14 @@ module Admin
       @processors = PROCESSOR_ENTITY_TYPES.map do |entity_type|
         processor_class = "Processors::#{entity_type}::#{entity_type}"
         last_batch = StagedBatch.where(entity_type: entity_type).recent.first
+        processing_batch = StagedBatch.processing.find_by(entity_type: entity_type)
 
         {
           entity_type: entity_type,
           processor_class: processor_class,
           last_batch: last_batch,
-          processing: last_batch&.processing?
+          processing: processing_batch.present?,
+          processing_batch: processing_batch
         }
       end
     end

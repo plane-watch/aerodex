@@ -47,7 +47,21 @@
               </td>
               <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
                 <% if processor[:processing] %>
-                  <span class="text-gray-400">Running...</span>
+                  <div class="flex items-center justify-end gap-2"
+                       data-controller="batch-apply"
+                       data-batch-apply-batch-id-value="<%= processor[:processing_batch]&.id %>"
+                       data-batch-apply-status-value="processing">
+                    <svg class="animate-spin h-4 w-4 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="text-indigo-600" data-batch-apply-target="progressText">
+                      <%= processor[:processing_batch]&.processing_progress || 0 %>%
+                    </span>
+                    <% if processor[:processing_batch] %>
+                      <%= link_to "View", admin_staged_batch_path(processor[:processing_batch]), class: "text-indigo-600 hover:text-indigo-900 ml-2" %>
+                    <% end %>
+                  </div>
                 <% else %>
                   <%= button_to "Run",
                                 admin_processors_path(entity_type: processor[:entity_type]),
