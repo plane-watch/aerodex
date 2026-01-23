@@ -2,24 +2,26 @@
 #
 # Table name: staged_batches
 #
-#  id             :uuid             not null, primary key
-#  processor_type :string           not null
-#  entity_type    :string           not null
-#  status         :integer          default(0), not null
-#  summary        :jsonb            default("{}"), not null
-#  created_by_id  :integer
-#  reviewed_by_id :integer
-#  job_id         :string
-#  started_at     :datetime
-#  completed_at   :datetime
-#  applied_at     :datetime
-#  reviewed_at    :datetime
-#  notes          :text
-#  error_message  :text
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
-#  apply_progress :integer          default(0)
-#  apply_total    :integer
+#  id                  :uuid             not null, primary key
+#  processor_type      :string           not null
+#  entity_type         :string           not null
+#  status              :integer          default(0), not null
+#  summary             :jsonb            default("{}"), not null
+#  created_by_id       :integer
+#  reviewed_by_id      :integer
+#  job_id              :string
+#  started_at          :datetime
+#  completed_at        :datetime
+#  applied_at          :datetime
+#  reviewed_at         :datetime
+#  notes               :text
+#  error_message       :text
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#  apply_progress      :integer          default(0)
+#  apply_total         :integer
+#  processing_progress :integer          default(0)
+#  processing_total    :integer
 #
 # Indexes
 #

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_21_052551) do
+ActiveRecord::Schema[8.1].define(version: 2026_01_23_062050) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -374,6 +374,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_21_052551) do
     t.text "error_message"
     t.string "job_id"
     t.text "notes"
+    t.integer "processing_progress", default: 0
+    t.integer "processing_total"
     t.string "processor_type", null: false
     t.datetime "reviewed_at"
     t.bigint "reviewed_by_id"
