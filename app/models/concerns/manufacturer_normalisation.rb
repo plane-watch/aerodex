@@ -53,6 +53,14 @@ module ManufacturerNormalisation
   extend ActiveSupport::Concern
   include BusinessNameNormalisation
 
+  # When this module is extended (for class methods), also extend the dependency.
+  # The `include BusinessNameNormalisation` above only works when this module is
+  # included (for instance methods). For extend, we need to explicitly extend the
+  # dependency so its methods become class methods on the extending class.
+  def self.extended(base)
+    base.extend(BusinessNameNormalisation)
+  end
+
   # Patterns for normalising manufacturer names to canonical forms.
   # Each entry is [pattern, replacement].
   # Order matters - first match wins.

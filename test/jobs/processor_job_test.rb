@@ -17,6 +17,8 @@ class ProcessorJobTest < ActiveJob::TestCase
   end
 
   def setup
+    # Ensure clean slate for each test (destroy_all cascades to staged_changes)
+    StagedBatch.destroy_all
     @stubbed_constants = []
   end
 

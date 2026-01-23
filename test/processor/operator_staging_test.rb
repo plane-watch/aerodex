@@ -4,10 +4,14 @@ require "test_helper"
 
 class OperatorStagingTest < ActiveSupport::TestCase
   setup do
-    # Clear any existing staged batches
+    # Clear any existing staged batches (cascades to staged_changes)
     StagedBatch.destroy_all
 
-    # Clear existing operators and operator sources
+    # Clear existing operators and their dependents.
+    # Must delete in FK-safe order: dependents first, then operators.
+    # Rails transactional tests will restore fixtures after each test.
+    Aircraft.delete_all
+    Route.delete_all
     Operator.delete_all
     Source::Operator::VRSDataOperatorSource.delete_all
     Source::Operator::OpenTravelOperatorSource.delete_all
@@ -17,7 +21,7 @@ class OperatorStagingTest < ActiveSupport::TestCase
       name: "Test Airline",
       icao_code: "TST",
       iata_code: "TS",
-      data: {},
+      data: { "source" => "test" },
       import_date: Time.current
     )
   end
@@ -77,7 +81,7 @@ class OperatorStagingTest < ActiveSupport::TestCase
       name: "TEST AIRLINE",
       icao_code: "TST",
       iata_code: "TS",
-      data: {},
+      data: { "source" => "test" },
       import_date: Time.current
     )
 
@@ -94,7 +98,7 @@ class OperatorStagingTest < ActiveSupport::TestCase
       name: "Another Airline",
       icao_code: "ANO",
       iata_code: "AN",
-      data: {},
+      data: { "source" => "test" },
       import_date: Time.current
     )
 
