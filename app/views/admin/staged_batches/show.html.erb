@@ -59,7 +59,7 @@
 
         <%# Action buttons (shown when pending) %>
         <div data-batch-apply-target="actions"
-             class="flex gap-2 <%= 'hidden' if @batch.applying? %>">
+             class="flex gap-2 <%= 'hidden' if @batch.applying? || @batch.processing? %>">
           <% if @batch.pending? %>
             <%= button_to "Apply",
                           apply_admin_staged_batch_path(@batch),
@@ -81,20 +81,24 @@
           <% end %>
         </div>
 
-        <%# Progress indicator (shown when applying) %>
+        <%# Progress indicator (shown when processing or applying) %>
         <div data-batch-apply-target="progress"
-             class="w-64 <%= 'hidden' unless @batch.applying? %>">
+             class="w-64 <%= 'hidden' unless @batch.applying? || @batch.processing? %>">
           <div class="text-sm font-medium text-gray-700 mb-2"
                data-batch-apply-target="progressText">
-            Applying... <%= @batch.apply_progress %>%
+            <%= @batch.processing? ? "Processing" : "Applying" %>... <%= @batch.processing? ? @batch.processing_progress : @batch.apply_progress %>%
           </div>
           <div class="w-full bg-gray-200 rounded-full h-2.5">
             <div data-batch-apply-target="progressBar"
                  class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300 ease-out"
-                 style="width: <%= @batch.apply_progress %>%"></div>
+                 style="width: <%= @batch.processing? ? @batch.processing_progress : @batch.apply_progress %>%"></div>
           </div>
           <div class="text-xs text-gray-500 mt-1">
-            Processing <%= @batch.apply_total || @batch.staged_changes.count %> changes
+            <% if @batch.processing? %>
+              Processing <%= @batch.processing_total || "..." %> records
+            <% else %>
+              Processing <%= @batch.apply_total || @batch.staged_changes.count %> changes
+            <% end %>
           </div>
         </div>
       </div>
