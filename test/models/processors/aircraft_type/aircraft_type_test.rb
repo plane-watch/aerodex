@@ -490,6 +490,40 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
                "Expected no aircraft type with blank name"
   end
 
+  test "combine_sources skips sources without manufacturer" do
+    # Create a source with no manufacturer code - this should be skipped
+    Source::AircraftType::OpenFlightsAircraftTypeSource.create!(
+      type_code: "ZZZZ",
+      name: "No Manufacturer Aircraft",
+      manufacturer: nil,
+      import_date: Time.current
+    )
+
+    # Create a valid source with a manufacturer for comparison
+    Manufacturer.create!(icao_code: "ZZMANUF", name: "Valid Manufacturer")
+    Source::AircraftType::OpenFlightsAircraftTypeSource.create!(
+      type_code: "YYYY",
+      name: "Valid Aircraft",
+      manufacturer: "ZZMANUF",
+      import_date: Time.current
+    )
+
+    batch = Processors::AircraftType::AircraftType.combine_sources
+
+    # The record without a manufacturer should be skipped, not staged
+    assert_equal 1, batch.staged_changes.creates.count,
+                 "Expected only the valid aircraft type to be staged"
+    assert_equal 1, batch.summary["skipped"],
+                 "Expected skipped count to be 1 for the record without manufacturer"
+
+    batch.apply!(by: nil)
+
+    assert_not AircraftType.exists?(type_code: "ZZZZ", name: "No Manufacturer Aircraft"),
+               "Expected aircraft type without manufacturer to be skipped"
+    assert AircraftType.exists?(type_code: "YYYY", name: "Valid Aircraft"),
+           "Expected valid aircraft type to be created"
+  end
+
   # ---------------------------------------------------------------------------
   # combine_one tests (direct save, not staged)
   # ---------------------------------------------------------------------------

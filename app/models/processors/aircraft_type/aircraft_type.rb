@@ -347,6 +347,15 @@ module Processors
           manufacturer_merger = FieldMerger.new(sources: sources, field: :manufacturer, entity_type: ENTITY_TYPE)
           manufacturer_code = manufacturer_merger.best_value
           manufacturer = find_or_create_manufacturer(manufacturer_code)
+
+          # Skip records without a manufacturer - required for data integrity
+          if manufacturer.nil?
+            current_batch.summary["skipped"] ||= 0
+            current_batch.summary["skipped"] += 1
+            Rails.logger.info "Skipping AircraftType '#{type_code} - #{name}': no manufacturer code in source data"
+            return { skipped: true, reason: "no manufacturer" }
+          end
+
           record.manufacturer = manufacturer
 
           if manufacturer_merger.has_conflict?
@@ -436,6 +445,13 @@ module Processors
           manufacturer_merger = FieldMerger.new(sources: sources, field: :manufacturer, entity_type: ENTITY_TYPE)
           manufacturer_code = manufacturer_merger.best_value
           manufacturer = find_or_create_manufacturer(manufacturer_code)
+
+          # Skip records without a manufacturer - required for data integrity
+          if manufacturer.nil?
+            Rails.logger.info "Skipping AircraftType '#{type_code} - #{name}': no manufacturer code in source data"
+            return { skipped: true, reason: 'no manufacturer' }
+          end
+
           record.manufacturer = manufacturer
 
           if manufacturer_merger.has_conflict?
