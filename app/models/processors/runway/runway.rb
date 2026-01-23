@@ -75,49 +75,36 @@ module Processors
           clear_caches
         end
 
-        # Combines runway data from all sources into canonical AirportRunway records.
+        # Combines runway data from all sources into staged changes.
         #
-        # @return [Array<Hash>, true] Returns array of errors if any, otherwise true
-        def combine_sources
-          preload_reference_data
+        # @param triggered_by [User, nil] The user who triggered the run
+        # @return [StagedBatch] The batch containing staged changes
+        def combine_sources(triggered_by: nil)
+          with_staged_batch(entity_type: "Runway", triggered_by: triggered_by) do
+            preload_reference_data
 
-          errors = []
-          records_processed = 0
+            # Group runway sources by airport (only includable/non-excluded sources)
+            runway_sources = Source::Runway::OurAirportsRunwaySource.includable.group_by(&:airport_ident)
 
-          # Group runway sources by airport (only includable/non-excluded sources)
-          runway_sources = Source::Runway::OurAirportsRunwaySource.includable.group_by(&:airport_ident)
+            progress_bar = create_progress_bar(runway_sources.count)
 
-          progress_bar = create_progress_bar(runway_sources.count)
+            runway_sources.each do |airport_ident, runways|
+              # Find the canonical airport from preloaded cache
+              airport = @airports_by_icao[airport_ident]
 
-          with_bulk_import do
-            AirportRunway.transaction do
-              runway_sources.each do |airport_ident, runways|
-                # Find the canonical airport from preloaded cache
-                airport = @airports_by_icao[airport_ident]
-
-                unless airport
-                  # Skip runways for airports we don't have
-                  progress_bar.increment!
-                  next
-                end
-
-                runways.each do |source|
-                  result = merge_runway(airport, source)
-                  errors << result[:error] if result[:error]
-                  records_processed += 1
-                end
-
+              unless airport
+                # Skip runways for airports we don't have
                 progress_bar.increment!
+                next
               end
+
+              runways.each do |source|
+                merge_runway_staged(airport, source)
+              end
+
+              progress_bar.increment!
             end
           end
-
-          # Reindex after bulk import (meilisearch_import includes airport)
-          AirportRunway.reindex!
-
-          new_import_report(errors, records_processed)
-
-          errors.any? ? errors : true
         ensure
           clear_caches
         end
@@ -145,7 +132,65 @@ module Processors
 
         private
 
+        # Merges a runway source into a staged change.
+        #
+        # @param airport [Airport] The canonical airport
+        # @param source [RunwaySource] The source runway record
+        def merge_runway_staged(airport, source)
+          # Find or create runway using preloaded cache
+          cache_key = "#{airport.id}:#{source.le_ident}"
+          record = @runways_cache[cache_key]
+
+          if record.nil?
+            record = AirportRunway.new(airport_id: airport.id, le_ident: source.le_ident)
+            @runways_cache[cache_key] = record
+          end
+
+          is_new_record = record.new_record?
+
+          # Set basic attributes (normalise surface to canonical type)
+          record.assign_attributes(
+            he_ident: source.he_ident,
+            runway_name: source.display_name,
+            heading: source.le_heading_deg,
+            length: source.length_metres,
+            width: source.width_metres,
+            surface: RunwaySurfaceNormaliser.normalise(source.surface).to_s,
+            lighted: source.lighted,
+            closed: source.closed
+          )
+
+          # Check for meaningful changes (content fields, not just metadata like provenance)
+          meaningful_changes = record.changes.keys - %w[field_provenance last_combined_at]
+
+          # Human-readable identifier for the diff UI
+          human_identifier = "#{airport.icao_code}/#{source.le_ident}"
+
+          if is_new_record
+            # Set provenance for new records
+            MERGE_FIELDS.each do |field|
+              if source.public_send(source_field_for(field)).present?
+                record.set_provenance(field, source: source, confidence: 85)
+              end
+            end
+            record.last_combined_at = Time.current
+            stage_change(record, operation: :create, identifier: human_identifier)
+          elsif meaningful_changes.any?
+            # Set provenance for updated records
+            MERGE_FIELDS.each do |field|
+              if source.public_send(source_field_for(field)).present?
+                record.set_provenance(field, source: source, confidence: 85)
+              end
+            end
+            record.last_combined_at = Time.current
+            stage_change(record, operation: :update, identifier: human_identifier)
+          else
+            current_batch.summary["unchanged"] += 1
+          end
+        end
+
         # Merges a runway source into a canonical AirportRunway record.
+        # Used by combine_one for direct saves.
         #
         # @param airport [Airport] The canonical airport
         # @param source [RunwaySource] The source runway record

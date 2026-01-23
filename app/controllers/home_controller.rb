@@ -10,5 +10,9 @@ class HomeController < ApplicationController
     @countries_count = Country.count
     @routes_count = Route.count
     @operators_count = Operator.count
+
+    # Pending approvals widget
+    @pending_batches = StagedBatch.pending.order(created_at: :desc).limit(5).includes(:created_by)
+    @pending_count = StagedBatch.pending.count
   end
 end

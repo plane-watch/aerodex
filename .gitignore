@@ -39,3 +39,6 @@ yarn-error.log
 
 /search/
 db/sources/
+
+# Git worktrees for isolated development
+/.worktrees

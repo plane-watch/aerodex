@@ -263,89 +263,62 @@
   </div>
 
   <!-- Pending Approvals Panel -->
-  <div class="bg-white shadow rounded-lg relative">
-    <div class="absolute top-2 right-2 z-10">
-      <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-300">
-        <i class="fa-solid fa-flask text-xs mr-1"></i>
-        Prototype
-      </span>
-    </div>
+  <div class="bg-white shadow rounded-lg">
     <div class="px-4 py-5 sm:p-6">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg leading-6 font-medium text-gray-900">Pending Approvals</h3>
         <div class="flex items-center">
-          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-            3 pending
-          </span>
+          <% if @pending_count > 0 %>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+              <%= @pending_count %> pending
+            </span>
+          <% end %>
         </div>
       </div>
       <div class="space-y-3">
-        <!-- Mock Pending Approval 1 -->
-        <div class="flex items-start justify-between py-2 border-b border-gray-100">
-          <div class="flex items-start space-x-3">
-            <div class="size-2 bg-orange-400 rounded-full mt-2"></div>
-            <div>
-              <p class="text-sm font-medium text-gray-900">Aircraft Registration Update</p>
-              <p class="text-sm text-gray-500">G-ABCD → G-EFGH</p>
-              <p class="text-xs text-gray-400">Submitted by user@example.com</p>
+        <% if @pending_batches.any? %>
+          <% @pending_batches.each do |batch| %>
+            <div class="flex items-start justify-between py-2 border-b border-gray-100 last:border-b-0">
+              <div class="flex items-start space-x-3">
+                <div class="size-2 bg-orange-400 rounded-full mt-2"></div>
+                <div>
+                  <p class="text-sm font-medium text-gray-900"><%= batch.entity_type %></p>
+                  <p class="text-sm text-gray-500">
+                    <%= batch.summary["created"].to_i %> created,
+                    <%= batch.summary["updated"].to_i %> updated,
+                    <%= batch.summary["unchanged"].to_i %> unchanged
+                  </p>
+                  <p class="text-xs text-gray-400">
+                    by <%= batch.created_by&.name || "System" %> · <%= time_ago_in_words(batch.created_at) %> ago
+                  </p>
+                </div>
+              </div>
+              <div>
+                <%= link_to "Review",
+                            admin_staged_batch_path(batch),
+                            class: "inline-flex items-center px-2 py-1 border border-transparent rounded text-xs font-medium text-purple-700 bg-purple-100 hover:bg-purple-200" %>
+              </div>
             </div>
-          </div>
-          <div class="flex space-x-1">
-            <button class="inline-flex items-center p-1 border border-transparent rounded text-xs font-medium text-green-700 bg-green-100 hover:bg-green-200">
-              <i class="fa-solid fa-check text-xs"></i>
-            </button>
-            <button class="inline-flex items-center p-1 border border-transparent rounded text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200">
-              <i class="fa-solid fa-times text-xs"></i>
-            </button>
-          </div>
-        </div>
-
-        <!-- Mock Pending Approval 2 -->
-        <div class="flex items-start justify-between py-2 border-b border-gray-100">
-          <div class="flex items-start space-x-3">
-            <div class="size-2 bg-orange-400 rounded-full mt-2"></div>
-            <div>
-              <p class="text-sm font-medium text-gray-900">New Operator Addition</p>
-              <p class="text-sm text-gray-500">AeroTest Airlines (TST)</p>
-              <p class="text-xs text-gray-400">Submitted by contributor@aerodex.org</p>
-            </div>
-          </div>
-          <div class="flex space-x-1">
-            <button class="inline-flex items-center p-1 border border-transparent rounded text-xs font-medium text-green-700 bg-green-100 hover:bg-green-200">
-              <i class="fa-solid fa-check text-xs"></i>
-            </button>
-            <button class="inline-flex items-center p-1 border border-transparent rounded text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200">
-              <i class="fa-solid fa-times text-xs"></i>
-            </button>
-          </div>
-        </div>
-
-        <!-- Mock Pending Approval 3 -->
-        <div class="flex items-start justify-between py-2">
-          <div class="flex items-start space-x-3">
-            <div class="size-2 bg-orange-400 rounded-full mt-2"></div>
-            <div>
-              <p class="text-sm font-medium text-gray-900">Aircraft Type Correction</p>
-              <p class="text-sm text-gray-500">Boeing 737-800 → Boeing 737-8 MAX</p>
-              <p class="text-xs text-gray-400">Submitted by expert@aviation.com</p>
-            </div>
-          </div>
-          <div class="flex space-x-1">
-            <button class="inline-flex items-center p-1 border border-transparent rounded text-xs font-medium text-green-700 bg-green-100 hover:bg-green-200">
-              <i class="fa-solid fa-check text-xs"></i>
-            </button>
-            <button class="inline-flex items-center p-1 border border-transparent rounded text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200">
-              <i class="fa-solid fa-times text-xs"></i>
-            </button>
-          </div>
-        </div>
+          <% end %>
+        <% else %>
+          <p class="text-sm text-gray-500 text-center py-4">No pending approvals</p>
+        <% end %>
       </div>
-      <div class="mt-4">
-        <a href="#" class="text-sm text-purple-600 hover:text-purple-800 font-medium">
-          View all pending approvals
-          <span aria-hidden="true"> &rarr;</span>
-        </a>
-      </div>
+      <% if @pending_count > 5 %>
+        <div class="mt-4">
+          <%= link_to admin_staged_batches_path(status: "pending"), class: "text-sm text-purple-600 hover:text-purple-800 font-medium" do %>
+            View all <%= @pending_count %> pending approvals
+            <span aria-hidden="true"> &rarr;</span>
+          <% end %>
+        </div>
+      <% elsif @pending_count > 0 %>
+        <div class="mt-4">
+          <%= link_to admin_staged_batches_path(status: "pending"), class: "text-sm text-purple-600 hover:text-purple-800 font-medium" do %>
+            View all pending approvals
+            <span aria-hidden="true"> &rarr;</span>
+          <% end %>
+        </div>
+      <% end %>
     </div>
   </div>
 </div>

@@ -95,76 +95,33 @@ module Processors
           sources
         end
 
-        # Combines airport data from all available sources into canonical Airport records.
+        # Combines airport data from all available sources into staged changes.
         #
-        # @return [Array<Hash>, true] Returns array of errors if any, otherwise true
-        def combine_sources
-          # Preload reference data for O(1) lookups
-          preload_reference_data
+        # @param triggered_by [User, nil] The user who triggered the run
+        # @return [StagedBatch] The batch containing staged changes
+        def combine_sources(triggered_by: nil)
+          with_staged_batch(entity_type: "Airport", triggered_by: triggered_by) do
+            preload_reference_data
 
-          sources_by_identifier = group_sources_by_identifier
-          errors = []
-          conflicts = []
-          pending_inserts = []
-          pending_updates = []
+            sources_by_identifier = group_sources_by_identifier
+            conflicts = []
 
-          with_bulk_import do
-            # Process in parallel using all available CPU cores.
-            # WhereTZ lookups are CPU-bound so we use processes to bypass GIL.
-            results = Parallel.map(
-              sources_by_identifier.to_a,
-              in_processes: Parallel.processor_count,
-              progress: { title: 'Processing airports', output: $stdout }
-            ) do |(identifier, sources)|
-              # Thread-local conflict collection
-              local_conflicts = []
-              result = merge_sources_for_airport(identifier, sources, local_conflicts)
-              result[:conflicts] = local_conflicts
-              result
+            progress_bar = create_progress_bar(sources_by_identifier.count)
+
+            sources_by_identifier.each do |identifier, sources|
+              merge_sources_for_airport_staged(identifier, sources, conflicts)
+              progress_bar.increment!
             end
 
-            # Collect results from all threads
-            results.each do |result|
-              conflicts.concat(result[:conflicts] || [])
+            # Log any conflicts for review
+            log_conflicts(conflicts) if conflicts.any?
 
-              if result[:error]
-                errors << result[:error]
-              elsif result[:attributes]
-                if result[:new_record]
-                  pending_inserts << result[:attributes]
-                else
-                  pending_updates << result[:attributes]
-                end
-              end
-
-              # Flush batches periodically
-              if pending_inserts.size >= Processors::Base::BATCH_SIZE
-                flush_inserts(pending_inserts)
-                pending_inserts.clear
-              end
-              if pending_updates.size >= Processors::Base::BATCH_SIZE
-                flush_updates(pending_updates)
-                pending_updates.clear
-              end
+            # Store conflict count in batch notes if any
+            if conflicts.any?
+              current_batch.notes ||= ""
+              current_batch.notes += "Processing completed with #{conflicts.count} field conflicts\n"
             end
-
-            # Flush remaining records
-            flush_inserts(pending_inserts) if pending_inserts.any?
-            flush_updates(pending_updates) if pending_updates.any?
           end
-
-          log_conflicts(conflicts) if conflicts.any?
-
-          # Reindex and reset counter caches
-          finalize_combine(
-            ::Airport,
-            counter_caches: { ::Country => :airports_count },
-            includes: :country
-          )
-
-          new_import_report(errors, sources_by_identifier.count)
-
-          errors.any? ? errors : true
         ensure
           clear_caches
         end
@@ -231,7 +188,80 @@ module Processors
           end
         end
 
+        # Merges sources for a single airport and stages the change.
+        #
+        # @param identifier [Hash] The identifier key (:type and :code)
+        # @param sources [Array] The source records to merge
+        # @param conflicts [Array] Array to collect conflict information
+        # @return [Hash] Result with :record, or :error key
+        def merge_sources_for_airport_staged(identifier, sources, conflicts)
+          # Link to country first - skip if no valid country (required field)
+          country = find_country_for_sources(sources)
+          unless country
+            current_batch.notes ||= ""
+            current_batch.notes += "Error: No valid country found for airport #{identifier[:code]}\n"
+            return { error: "No valid country found for airport #{identifier[:code]}" }
+          end
+
+          record = find_or_initialize_airport(identifier, sources)
+          is_new_record = record.new_record?
+
+          record.country_id = country.id
+
+          # Set ICAO and IATA codes from sources
+          set_airport_codes(record, sources)
+
+          # Build merged values and track provenance info
+          provenance_updates = []
+          MERGE_FIELDS.each do |field|
+            source_field = source_field_for(field)
+            merger = FieldMerger.new(sources: sources, field: source_field, entity_type: ENTITY_TYPE)
+
+            record.public_send("#{field}=", merger.best_value)
+
+            if merger.best_source && merger.best_value.present?
+              provenance_updates << { field: field, source: merger.best_source, confidence: merger.best_confidence }
+            end
+
+            if merger.has_conflict?
+              conflict = merger.conflict_details
+              conflict[:identifier] = identifier[:code] if conflict
+              conflicts << conflict
+            end
+          end
+
+          # Calculate timezone from coordinates using WhereTZ for accuracy.
+          set_timezone_from_coordinates(record)
+
+          # Check for meaningful changes (content fields, not just metadata like provenance)
+          meaningful_changes = record.changes.keys - %w[field_provenance last_combined_at]
+
+          human_identifier = record.icao_code || record.iata_code
+
+          if is_new_record
+            # Set provenance for new records
+            provenance_updates.each do |update|
+              record.set_provenance(update[:field], source: update[:source], confidence: update[:confidence])
+            end
+            record.last_combined_at = Time.current
+            stage_change(record, operation: :create, identifier: human_identifier)
+            { record: record, created: true }
+          elsif meaningful_changes.any?
+            # Set provenance for updated records
+            provenance_updates.each do |update|
+              record.set_provenance(update[:field], source: update[:source], confidence: update[:confidence])
+            end
+            record.last_combined_at = Time.current
+            stage_change(record, operation: :update, identifier: human_identifier)
+            { record: record, updated: true }
+          else
+            current_batch.summary["unchanged"] += 1
+            { record: record, unchanged: true }
+          end
+        end
+
         # Merges sources for a single airport and returns attributes for batch processing.
+        # Used by combine_one for direct saves.
         #
         # @param identifier [Hash] The identifier key (:type and :code)
         # @param sources [Array] The source records to merge

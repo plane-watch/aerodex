@@ -11,6 +11,35 @@ module Processors
       def finish; end
     end
 
+    # A progress bar wrapper that broadcasts progress to ActionCable.
+    # Wraps the real ProgressBar and broadcasts updates to the current batch.
+    class BroadcastingProgressBar
+      def initialize(total, batch)
+        @total = total
+        @batch = batch
+        @current = 0
+        @inner = if Processors::Base.interactive_console?
+                   ProgressBar.new(total)
+                 else
+                   NullProgressBar.new(total)
+                 end
+      end
+
+      def increment!
+        @current += 1
+        @inner.increment!
+        @batch&.broadcast_processing_progress_if_needed(@current, @total)
+      end
+
+      def puts(*args)
+        @inner.puts(*args)
+      end
+
+      def finish
+        @inner.finish
+      end
+    end
+
     def self.transform_field(key, value)
       return nil if @transform_data[key].nil?
 
@@ -40,13 +69,18 @@ module Processors
       )
     end
 
-    # Creates a progress bar if running in an interactive console, otherwise returns a null object.
-    # This prevents progress bar output during tests and background jobs.
+    # Creates a progress bar that optionally broadcasts to ActionCable.
+    #
+    # When called within a with_staged_batch block, progress updates are
+    # broadcast to subscribed clients. Also stores the total in the batch.
     #
     # @param count [Integer] The total number of items to process
-    # @return [ProgressBar, NullProgressBar]
+    # @return [BroadcastingProgressBar, ProgressBar, NullProgressBar]
     def self.create_progress_bar(count)
-      if interactive_console?
+      if current_batch
+        current_batch.update_column(:processing_total, count)
+        BroadcastingProgressBar.new(count, current_batch)
+      elsif interactive_console?
         ProgressBar.new(count)
       else
         NullProgressBar.new(count)
@@ -164,6 +198,259 @@ module Processors
       end
 
       Rails.logger.info 'Counter caches reset.'
+    end
+
+    # =========================================================================
+    # Staged Batch Methods
+    # =========================================================================
+
+    # Thread-local storage for the current batch during processing.
+    #
+    # @return [StagedBatch, nil] The current batch or nil if not in a batch
+    def self.current_batch
+      Thread.current[:processor_current_batch]
+    end
+
+    # Sets the current batch in thread-local storage.
+    #
+    # @param batch [StagedBatch, nil] The batch to set
+    def self.current_batch=(batch)
+      Thread.current[:processor_current_batch] = batch
+    end
+
+    # Thread-local storage for staged records cache during processing.
+    # Structure: { ModelClass => { field_name => { downcased_value => record } } }
+    #
+    # @return [Hash, nil] The cache or nil if not in a batch
+    def self.staged_records_cache
+      Thread.current[:processor_staged_records_cache]
+    end
+
+    # Sets the staged records cache in thread-local storage.
+    #
+    # @param cache [Hash, nil] The cache to set
+    def self.staged_records_cache=(cache)
+      Thread.current[:processor_staged_records_cache] = cache
+    end
+
+    # Declares which fields to index for staged record lookups.
+    #
+    # Call at the start of processing to specify which fields should be
+    # indexed for fast lookups. Only indexed fields can be used with
+    # find_staged_or_persisted.
+    #
+    # @param model_class [Class] The ActiveRecord model class
+    # @param fields [Array<Symbol>] The field names to index
+    #
+    # @example
+    #   index_staged_records_by(Operator, :icao_code, :name)
+    def self.index_staged_records_by(model_class, *fields)
+      staged_records_cache[model_class] ||= {}
+      fields.each do |field|
+        staged_records_cache[model_class][field] ||= {}
+      end
+    end
+
+    # Caches a staged record for subsequent lookups within the batch.
+    #
+    # Indexes the record by all declared fields (via index_staged_records_by).
+    # Uses case-insensitive keys for string values.
+    #
+    # @param record [ApplicationRecord] The record to cache
+    def self.cache_staged_record(record)
+      model_cache = staged_records_cache[record.class]
+      return unless model_cache
+
+      model_cache.each_key do |field|
+        value = record.public_send(field)
+        next if value.blank?
+
+        key = value.to_s.downcase
+        model_cache[field][key] = record
+      end
+    end
+
+    # Looks up a record in the staged cache only.
+    #
+    # Searches by the provided criteria fields. Returns the first match found.
+    # Uses case-insensitive matching for string values.
+    #
+    # @param model_class [Class] The ActiveRecord model class
+    # @param criteria [Hash] Field/value pairs to search by
+    # @return [ApplicationRecord, nil] The cached record or nil
+    #
+    # @example Single value lookup
+    #   find_in_staged_cache(Operator, icao_code: "QFA")
+    #
+    # @example Array of values (returns first match)
+    #   find_in_staged_cache(Operator, icao_code: ["QFA", "JST"])
+    def self.find_in_staged_cache(model_class, **criteria)
+      model_cache = staged_records_cache[model_class]
+      return nil unless model_cache
+
+      criteria.each do |field, value|
+        next unless model_cache[field]
+
+        values = Array(value)
+        values.each do |v|
+          key = v.to_s.downcase
+          record = model_cache[field][key]
+          return record if record
+        end
+      end
+
+      nil
+    end
+
+    # Looks up a record in the staged cache first, then falls back to the database.
+    #
+    # This is the primary lookup method for processors during batch processing.
+    # It ensures that recently staged records can be found even though they
+    # haven't been persisted yet.
+    #
+    # @param model_class [Class] The ActiveRecord model class
+    # @param criteria [Hash] Field/value pairs to search by
+    # @return [ApplicationRecord, nil] The record or nil
+    #
+    # @example
+    #   find_staged_or_persisted(Operator, icao_code: "QFA")
+    #   find_staged_or_persisted(Operator, icao_code: ["QFA", "JST"])
+    def self.find_staged_or_persisted(model_class, **criteria)
+      # Check staged cache first
+      record = find_in_staged_cache(model_class, **criteria)
+      return record if record
+
+      # Fall back to database
+      model_class.find_by(**criteria)
+    end
+
+    # Wraps a processor run with staged batch tracking.
+    #
+    # Creates a StagedBatch at the start, yields to the processing block,
+    # and finalises the batch status and summary on completion.
+    #
+    # @param entity_type [String] The entity type being processed (e.g., "Aircraft")
+    # @param triggered_by [User, nil] The user who triggered the run
+    # @yield The processing block
+    # @return [StagedBatch] The completed batch
+    def self.with_staged_batch(entity_type:, triggered_by: nil)
+      check_pending_batch!(entity_type)
+
+      self.current_batch = StagedBatch.create!(
+        processor_type: name,
+        entity_type: entity_type,
+        status: :processing,
+        created_by: triggered_by,
+        started_at: Time.current,
+        summary: { "created" => 0, "updated" => 0, "unchanged" => 0 }
+      )
+      self.staged_records_cache = {}
+
+      yield
+
+      current_batch.update!(
+        status: :pending,
+        completed_at: Time.current,
+        summary: current_batch.summary
+      )
+
+      current_batch
+    rescue StandardError => e
+      if current_batch&.persisted?
+        current_batch.update!(
+          status: :failed,
+          completed_at: Time.current,
+          error_message: "#{e.class}: #{e.message}"
+        )
+      end
+      raise
+    ensure
+      self.current_batch = nil
+      self.staged_records_cache = nil
+    end
+
+    # Stages a change for a record.
+    #
+    # Captures the diff of the record's changes and stores it in the current
+    # batch for later review and approval.
+    #
+    # @param record [ApplicationRecord] The record being changed
+    # @param operation [Symbol] :create or :update
+    # @param identifier [String] Human-readable identifier for the record
+    # @raise [RuntimeError] If called outside of a with_staged_batch block
+    # @raise [ArgumentError] If an unknown operation is specified
+    def self.stage_change(record, operation:, identifier:)
+      raise "No current batch - call within with_staged_batch block" unless current_batch
+
+      # If we're staging an UPDATE but there's already a staged CREATE for this record,
+      # merge the updates into the existing CREATE rather than staging a separate UPDATE.
+      # This happens when a record is created and cached, then found again and modified
+      # before the batch is applied. The UPDATE would fail (no record_id yet).
+      if operation == :update
+        existing_create = current_batch.staged_changes.find_by(
+          record_type: record.class.name,
+          record_identifier: identifier,
+          operation: :create
+        )
+
+        if existing_create
+          # Merge updates into the existing CREATE's diff.
+          # Existing diff format: { field => [nil, old_value] }
+          # We want: { field => [nil, new_value] }
+          record.changes.each do |field, (_old_val, new_val)|
+            existing_create.diff[field] = [nil, new_val]
+          end
+          existing_create.save!
+
+          # Update the cache with the modified record
+          cache_staged_record(record)
+
+          # Don't increment counts - still the same CREATE operation
+          return
+        end
+      end
+
+      diff = case operation
+             when :create
+               # For creates, all non-nil attributes are "new"
+               record.attributes.compact.transform_values { |v| [nil, v] }
+             when :update
+               # For updates, use ActiveRecord's changes hash
+               record.changes.transform_values { |old_new| old_new }
+             else
+               raise ArgumentError, "Unknown operation: #{operation}"
+             end
+
+      current_batch.staged_changes.create!(
+        record_type: record.class.name,
+        record_id: record.id,
+        record_identifier: identifier,
+        operation: operation,
+        diff: diff
+      )
+
+      # Cache the record for subsequent lookups within this batch
+      cache_staged_record(record)
+
+      # Update summary counts
+      key = operation == :create ? "created" : "updated"
+      current_batch.summary[key] += 1
+    end
+
+    # Checks for pending batches and handles according to configuration.
+    #
+    # Currently blocks processing if a pending batch exists for the same
+    # entity type to prevent conflicting changes.
+    #
+    # @param entity_type [String] The entity type to check
+    # @raise [RuntimeError] If a pending batch exists
+    def self.check_pending_batch!(entity_type)
+      pending = StagedBatch.pending.where(entity_type: entity_type).first
+      return unless pending
+
+      # For now, we block. TODO: Make this configurable (block vs supersede)
+      raise "Pending batch exists for #{entity_type} (ID: #{pending.id}). " \
+            "Approve or reject it before running again."
     end
   end
 end

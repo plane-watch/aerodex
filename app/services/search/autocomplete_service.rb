@@ -60,11 +60,11 @@ module Search
         response['facetHits']
           .take(limit)
           .map do |hit|
-          {
-            value: hit['value'],
-            hits: hit['count']
-          }
-        end
+            {
+              value: hit['value'],
+              hits: hit['count']
+            }
+          end
       rescue StandardError => e
         # Log the error but return empty results rather than failing
         Rails.logger.error("AutocompleteService error for #{model_name}.#{field_name}: #{e.message}")
