@@ -28,7 +28,7 @@ RUN apk add --no-cache \
       python3 \
       tzdata \
       yaml-dev && \
-    npm install -g yarn
+    npm install -g yarn@1.22.22
 
 # Install Ruby gems
 COPY Gemfile Gemfile.lock ./

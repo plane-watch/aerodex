@@ -30,7 +30,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: aerodex
-      POSTGRES_PASSWORD: "${AERODEX_DATABASE_PASSWORD}"
+      POSTGRES_PASSWORD: "${AERODEX_DATABASE_PASSWORD:?set AERODEX_DATABASE_PASSWORD}"
       POSTGRES_DB: aerodex_production
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U aerodex"]
@@ -51,12 +51,12 @@ services:
     restart: unless-stopped
 
   meilisearch:
-    image: getmeili/meilisearch:latest
+    image: getmeili/meilisearch:v1.12
     volumes:
       - meilisearch_data:/meili_data
     environment:
       MEILI_ENV: production
-      MEILI_MASTER_KEY: "${MEILI_MASTER_KEY}"
+      MEILI_MASTER_KEY: "${MEILI_MASTER_KEY:?set MEILI_MASTER_KEY}"
     restart: unless-stopped
 
 volumes:

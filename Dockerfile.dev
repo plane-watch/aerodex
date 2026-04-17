@@ -18,7 +18,7 @@ RUN apk add --no-cache \
       python3 \
       tzdata \
       yaml-dev && \
-    npm install -g yarn
+    npm install -g yarn@1.22.22
 
 # Install foreman for Procfile-based process management
 RUN gem install foreman
@@ -31,7 +31,7 @@ RUN bundle install
 
 # Install Node.js packages
 COPY package.json yarn.lock ./
-RUN yarn install
+RUN yarn install --frozen-lockfile
 
 # Copy the rest of the application
 COPY . .

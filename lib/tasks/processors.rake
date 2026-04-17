@@ -51,7 +51,7 @@ namespace :processors do
 
       processor_file = File.join(dir, "#{entity}.rb")
       entity.camelize if File.exist?(processor_file)
-    end
+    end.sort
 
     if processors.empty?
       puts 'No processors found.'
