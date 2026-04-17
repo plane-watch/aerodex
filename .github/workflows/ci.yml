@@ -32,7 +32,11 @@ jobs:
       - name: Get changed Ruby files
         id: changed
         run: |
-          BASE_SHA="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -n "${{ github.event.pull_request.base.ref }}" ]; then
+            BASE_SHA=$(git merge-base "origin/${{ github.event.pull_request.base.ref }}" HEAD)
+          else
+            BASE_SHA="${{ github.event.before }}"
+          fi
           FILES=$(git diff --name-only --diff-filter=d "$BASE_SHA" HEAD -- '*.rb' '*.rake' | tr '\n' ' ')
           echo "files=$FILES" >> "$GITHUB_OUTPUT"
 
