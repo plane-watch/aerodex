@@ -30,7 +30,8 @@ class SearchQueryTranslatorTest < ActiveSupport::TestCase
 
   test 'generates negated filter' do
     tokens = [
-      Search::SearchToken.new(type: :field_value, field: 'aircraft_manufacturer', value: 'Boeing', exact: true, negated: true)
+      Search::SearchToken.new(type: :field_value, field: 'aircraft_manufacturer', value: 'Boeing', exact: true,
+                              negated: true)
     ]
 
     translator = Search::QueryTranslator.new(tokens, 'Aircraft')

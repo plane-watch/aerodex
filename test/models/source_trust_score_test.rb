@@ -78,7 +78,8 @@ class SourceTrustScoreTest < ActiveSupport::TestCase
     SourceTrustScore.create!(entity_type: 'Operator', source_type: 'TestSource', field_name: 'name', base_trust: 90)
 
     assert_equal 90, SourceTrustScore.trust_for(entity_type: 'Operator', source_type: 'TestSource', field_name: 'name')
-    assert_equal 70, SourceTrustScore.trust_for(entity_type: 'Operator', source_type: 'TestSource', field_name: 'icao_code')
+    assert_equal 70,
+                 SourceTrustScore.trust_for(entity_type: 'Operator', source_type: 'TestSource', field_name: 'icao_code')
   end
 
   test 'trust_for returns default when no override exists' do

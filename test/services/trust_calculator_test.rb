@@ -3,17 +3,18 @@
 require 'test_helper'
 
 class TrustCalculatorTest < ActiveSupport::TestCase
+  FakeClass = Struct.new(:name)
+  FakeSource = Struct.new(:id, :klass) do
+    alias_method :class, :klass
+  end
+
   setup do
     SourceTrustScore.delete_all
     SourceTrustScore.clear_cache!
   end
 
   test 'calculates trust from SourceConfig when no database override' do
-    # Create a mock source record
-    source = OpenStruct.new(
-      id: 1,
-      class: OpenStruct.new(name: 'Source::Operator::VRSDataOperatorSource')
-    )
+    source = FakeSource.new(1, FakeClass.new('Source::Operator::VRSDataOperatorSource'))
 
     calculator = TrustCalculator.new(source, field: :name, entity_type: 'Operator')
 
@@ -29,10 +30,7 @@ class TrustCalculatorTest < ActiveSupport::TestCase
       base_trust: 95
     )
 
-    source = OpenStruct.new(
-      id: 1,
-      class: OpenStruct.new(name: 'Source::Operator::VRSDataOperatorSource')
-    )
+    source = FakeSource.new(1, FakeClass.new('Source::Operator::VRSDataOperatorSource'))
 
     calculator = TrustCalculator.new(source, field: :name, entity_type: 'Operator')
 
@@ -40,10 +38,7 @@ class TrustCalculatorTest < ActiveSupport::TestCase
   end
 
   test 'uses SourceConfig field override when present' do
-    source = OpenStruct.new(
-      id: 1,
-      class: OpenStruct.new(name: 'Source::Operator::OpenTravelOperatorSource')
-    )
+    source = FakeSource.new(1, FakeClass.new('Source::Operator::OpenTravelOperatorSource'))
 
     calculator = TrustCalculator.new(source, field: :name, entity_type: 'Operator')
 
@@ -52,10 +47,7 @@ class TrustCalculatorTest < ActiveSupport::TestCase
   end
 
   test 'returns source_type as demodulized class name' do
-    source = OpenStruct.new(
-      id: 1,
-      class: OpenStruct.new(name: 'Source::Operator::VRSDataOperatorSource')
-    )
+    source = FakeSource.new(1, FakeClass.new('Source::Operator::VRSDataOperatorSource'))
 
     calculator = TrustCalculator.new(source, field: :name, entity_type: 'Operator')
 

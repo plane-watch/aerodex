@@ -54,7 +54,7 @@ class SearchFieldRegistryTest < ActiveSupport::TestCase
     prefix = field.to_s[0..2]
     suggestions = Search::FieldRegistry.suggest_fields('Aircraft', prefix)
 
-    assert suggestions.any? { |s| s[:value] == field.to_s }
+    assert(suggestions.any? { |s| s[:value] == field.to_s })
   end
 
   test 'suggest_fields returns empty for no matches' do
