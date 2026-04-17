@@ -84,11 +84,11 @@ module Search
         fields_for(model_name)
           .select { |name| name.to_s.start_with?(prefix) }
           .map do |name|
-          {
-            value: name.to_s,
-            display: humanize_field_name(name)
-          }
-        end
+            {
+              value: name.to_s,
+              display: humanize_field_name(name)
+            }
+          end
           .sort_by { |suggestion| suggestion[:value] }
       end
 

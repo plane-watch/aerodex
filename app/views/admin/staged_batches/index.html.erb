@@ -1,0 +1,64 @@
+<% content_for :page_title, "Staged Batches" %>
+<% content_for :page_description, "Review and approve data changes from processor runs." %>
+
+<%# Filters %>
+<div class="mb-6 flex flex-wrap gap-4">
+  <%= form_with url: admin_staged_batches_path, method: :get, class: "flex flex-wrap gap-4", data: { turbo_frame: "_top" } do |f| %>
+    <div>
+      <%= f.select :status,
+                   options_for_select([["All Statuses", ""]] + @statuses.map { |s| [s.titleize, s] }, params[:status]),
+                   {},
+                   class: "block rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6" %>
+    </div>
+    <div>
+      <%= f.select :entity_type,
+                   options_for_select([["All Entity Types", ""]] + @entity_types.map { |e| [e, e] }, params[:entity_type]),
+                   {},
+                   class: "block rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6" %>
+    </div>
+    <%= f.submit "Filter", class: "rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 cursor-pointer" %>
+    <% if params[:status].present? || params[:entity_type].present? %>
+      <%= link_to "Clear", admin_staged_batches_path, class: "rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50" %>
+    <% end %>
+  <% end %>
+</div>
+
+<%# Table %>
+<div class="mt-8 flow-root">
+  <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+    <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+      <table class="min-w-full divide-y divide-gray-300">
+        <thead>
+          <tr>
+            <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Entity Type</th>
+            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
+            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Summary</th>
+            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Created</th>
+            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Reviewed By</th>
+            <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-0">
+              <span class="sr-only">View</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 bg-white">
+          <% if @batches.any? %>
+            <%= render partial: "batch", collection: @batches %>
+          <% else %>
+            <tr>
+              <td colspan="6" class="py-8 text-center text-sm text-gray-500">
+                No staged batches found.
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<%# Pagination %>
+<% if @pagy.pages > 1 %>
+  <div class="mt-6">
+    <%== pagy_nav(@pagy) %>
+  </div>
+<% end %>

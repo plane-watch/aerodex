@@ -1,0 +1,172 @@
+<% content_for :page_title, "Batch: #{@batch.entity_type}" %>
+<% content_for :page_description, "Review staged changes from #{@batch.processor_type}" %>
+
+<%# Header with metadata and actions %>
+<div class="mb-8 bg-white shadow sm:rounded-lg">
+  <div class="px-4 py-5 sm:p-6">
+    <div class="sm:flex sm:items-start sm:justify-between">
+      <div>
+        <h3 class="text-base font-semibold leading-6 text-gray-900">
+          Batch Details
+        </h3>
+        <div class="mt-2 max-w-xl text-sm text-gray-500">
+          <dl class="grid grid-cols-2 gap-x-4 gap-y-2">
+            <dt class="font-medium">Processor:</dt>
+            <dd><%= @batch.processor_type %></dd>
+
+            <dt class="font-medium">Entity Type:</dt>
+            <dd><%= @batch.entity_type %></dd>
+
+            <dt class="font-medium">Status:</dt>
+            <dd><span class="<%= status_badge_classes(@batch.status) %>"><%= @batch.status.titleize %></span></dd>
+
+            <dt class="font-medium">Created:</dt>
+            <dd><%= @batch.created_at.strftime("%Y-%m-%d %H:%M") %></dd>
+
+            <% if @batch.completed_at %>
+              <dt class="font-medium">Completed:</dt>
+              <dd><%= @batch.completed_at.strftime("%Y-%m-%d %H:%M") %></dd>
+            <% end %>
+
+            <% if @batch.applied_at %>
+              <dt class="font-medium">Applied:</dt>
+              <dd><%= @batch.applied_at.strftime("%Y-%m-%d %H:%M") %></dd>
+            <% end %>
+
+            <% if @batch.reviewed_by %>
+              <dt class="font-medium">Reviewed By:</dt>
+              <dd><%= @batch.reviewed_by.name %></dd>
+            <% end %>
+
+            <% if @batch.notes.present? %>
+              <dt class="font-medium">Notes:</dt>
+              <dd><%= @batch.notes %></dd>
+            <% end %>
+
+            <% if @batch.error_message.present? %>
+              <dt class="font-medium text-red-600">Error:</dt>
+              <dd class="text-red-600"><%= truncate(@batch.error_message, length: 200) %></dd>
+            <% end %>
+          </dl>
+        </div>
+      </div>
+
+      <%# Action buttons and progress indicator %>
+      <div class="mt-5 sm:ml-6 sm:mt-0 sm:flex sm:flex-shrink-0 sm:items-center"
+           data-controller="batch-apply"
+           data-batch-apply-batch-id-value="<%= @batch.id %>"
+           data-batch-apply-status-value="<%= @batch.status %>">
+
+        <%# Action buttons (shown when pending) %>
+        <div data-batch-apply-target="actions"
+             class="flex gap-2 <%= 'hidden' if @batch.applying? || @batch.processing? %>">
+          <% if @batch.pending? %>
+            <%= button_to "Apply",
+                          apply_admin_staged_batch_path(@batch),
+                          method: :post,
+                          class: "inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600",
+                          data: { turbo_confirm: "Are you sure you want to apply #{@batch.staged_changes.count} changes?" } %>
+
+            <%= button_to "Reject",
+                          reject_admin_staged_batch_path(@batch),
+                          method: :post,
+                          class: "inline-flex items-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600",
+                          data: { turbo_confirm: "Are you sure you want to reject this batch?" } %>
+          <% elsif @batch.applied? %>
+            <%= button_to "Rollback",
+                          rollback_admin_staged_batch_path(@batch),
+                          method: :post,
+                          class: "inline-flex items-center rounded-md bg-orange-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600",
+                          data: { turbo_confirm: "Are you sure you want to rollback this batch? This cannot be undone." } %>
+          <% end %>
+        </div>
+
+        <%# Progress indicator (shown when processing or applying) %>
+        <div data-batch-apply-target="progress"
+             class="w-64 <%= 'hidden' unless @batch.applying? || @batch.processing? %>">
+          <div class="text-sm font-medium text-gray-700 mb-2"
+               data-batch-apply-target="progressText">
+            <%= @batch.processing? ? "Processing" : "Applying" %>... <%= @batch.processing? ? @batch.processing_progress : @batch.apply_progress %>%
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2.5">
+            <div data-batch-apply-target="progressBar"
+                 class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300 ease-out"
+                 style="width: <%= @batch.processing? ? @batch.processing_progress : @batch.apply_progress %>%"></div>
+          </div>
+          <div class="text-xs text-gray-500 mt-1">
+            <% if @batch.processing? %>
+              Processing <%= @batch.processing_total || "..." %> records
+            <% else %>
+              Processing <%= @batch.apply_total || @batch.staged_changes.count %> changes
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%# Summary panel %>
+<div class="mb-6 grid grid-cols-3 gap-4">
+  <div class="bg-green-50 rounded-lg p-4 text-center">
+    <div class="text-2xl font-bold text-green-700"><%= @creates_count %></div>
+    <div class="text-sm text-green-600">Creates</div>
+  </div>
+  <div class="bg-blue-50 rounded-lg p-4 text-center">
+    <div class="text-2xl font-bold text-blue-700"><%= @updates_count %></div>
+    <div class="text-sm text-blue-600">Updates</div>
+  </div>
+  <div class="bg-gray-50 rounded-lg p-4 text-center">
+    <div class="text-2xl font-bold text-gray-700"><%= @batch.summary["unchanged"].to_i %></div>
+    <div class="text-sm text-gray-600">Unchanged</div>
+  </div>
+</div>
+
+<%# Search and filter %>
+<div class="mb-6">
+  <%= form_with url: admin_staged_batch_path(@batch), method: :get, class: "flex flex-wrap gap-4", data: { turbo_frame: "_top" } do |f| %>
+    <div class="flex-1">
+      <%= f.text_field :search,
+                       value: params[:search],
+                       placeholder: "Search by identifier...",
+                       class: "block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" %>
+    </div>
+    <div>
+      <%= f.select :operation,
+                   options_for_select([["All Operations", ""], ["Creates", "create"], ["Updates", "update"]], params[:operation]),
+                   {},
+                   class: "block rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6" %>
+    </div>
+    <%= f.submit "Filter", class: "rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 cursor-pointer" %>
+    <% if params[:search].present? || params[:operation].present? %>
+      <%= link_to "Clear", admin_staged_batch_path(@batch), class: "rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50" %>
+    <% end %>
+  <% end %>
+</div>
+
+<%# Changes list %>
+<div class="bg-white shadow sm:rounded-lg">
+  <div class="px-4 py-5 sm:p-6">
+    <% if @changes.any? %>
+      <div class="divide-y divide-gray-100">
+        <%= render partial: "change", collection: @changes %>
+      </div>
+
+      <%# Pagination %>
+      <% if @pagy.pages > 1 %>
+        <div class="mt-6 border-t border-gray-200 pt-4">
+          <%== pagy_nav(@pagy) %>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="text-center text-sm text-gray-500 py-8">
+        No changes match your filters.
+      </p>
+    <% end %>
+  </div>
+</div>
+
+<%# Back link %>
+<div class="mt-6">
+  <%= link_to "&larr; Back to Staged Batches".html_safe, admin_staged_batches_path, class: "text-sm text-indigo-600 hover:text-indigo-500" %>
+</div>

@@ -1,0 +1,83 @@
+<% content_for :page_title, "Processors" %>
+<% content_for :page_description, "Trigger data processor jobs to refresh entity data from sources." %>
+
+<div class="mt-8 flow-root">
+  <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+    <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+      <table class="min-w-full divide-y divide-gray-300">
+        <thead>
+          <tr>
+            <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Processor</th>
+            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Last Run</th>
+            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
+            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Summary</th>
+            <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-0">
+              <span class="sr-only">Run</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 bg-white">
+          <% @processors.each do |processor| %>
+            <tr>
+              <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">
+                <%= processor[:entity_type] %>
+              </td>
+              <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                <% if processor[:last_batch] %>
+                  <%= time_ago_in_words(processor[:last_batch].created_at) %> ago
+                <% else %>
+                  Never
+                <% end %>
+              </td>
+              <td class="whitespace-nowrap px-3 py-4 text-sm">
+                <% if processor[:last_batch] %>
+                  <span class="<%= status_badge_classes(processor[:last_batch].status) %>">
+                    <%= processor[:last_batch].status.titleize %>
+                  </span>
+                <% else %>
+                  <span class="text-gray-400">—</span>
+                <% end %>
+              </td>
+              <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                <% if processor[:last_batch] %>
+                  <%= format_batch_summary(processor[:last_batch].summary) %>
+                <% else %>
+                  —
+                <% end %>
+              </td>
+              <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+                <% if processor[:processing] %>
+                  <div class="flex items-center justify-end gap-2"
+                       data-controller="batch-apply"
+                       data-batch-apply-batch-id-value="<%= processor[:processing_batch]&.id %>"
+                       data-batch-apply-status-value="processing">
+                    <svg class="animate-spin h-4 w-4 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="text-indigo-600" data-batch-apply-target="progressText">
+                      <%= processor[:processing_batch]&.processing_progress || 0 %>%
+                    </span>
+                    <% if processor[:processing_batch] %>
+                      <%= link_to "View", admin_staged_batch_path(processor[:processing_batch]), class: "text-indigo-600 hover:text-indigo-900 ml-2" %>
+                    <% end %>
+                  </div>
+                <% else %>
+                  <%= button_to "Run",
+                                admin_processors_path(entity_type: processor[:entity_type]),
+                                method: :post,
+                                class: "rounded-md bg-indigo-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600",
+                                data: { turbo_confirm: "Run #{processor[:entity_type]} processor?" } %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="mt-6">
+  <%= link_to "← Back to Staged Batches", admin_staged_batches_path, class: "text-sm text-indigo-600 hover:text-indigo-500" %>
+</div>

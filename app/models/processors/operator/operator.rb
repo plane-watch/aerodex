@@ -321,53 +321,54 @@ module Processors
         # 5. Creates the canonical Operator with provenance tracking
         # 6. Processes any remaining unmatched OpenTravel records
         #
-        # @return [Array<Hash>, true] Returns array of errors if any, otherwise true
-        def combine_sources
-          preload_reference_data
+        # @param triggered_by [User, nil] The user who triggered the run
+        # @return [StagedBatch] The batch containing staged changes
+        def combine_sources(triggered_by: nil)
+          with_staged_batch(entity_type: "Operator", triggered_by: triggered_by) do
+            preload_reference_data
 
-          errors = []
-          conflicts = []
+            # Declare indexed fields for staged record lookups.
+            # This enables find_staged_or_persisted to find operators staged
+            # earlier in this batch when processing unmatched sources.
+            index_staged_records_by(::Operator, :icao_code, :name)
 
-          progress_bar = create_progress_bar(@vrs_records.count)
+            errors = []
+            conflicts = []
 
-          with_bulk_import do
-            ::Operator.transaction do
-              # Phase 1: Process VRS records, matching with OTD where possible
-              @vrs_records.each do |vrs_record|
-                otd_record = find_matching_otd(vrs_record)
+            progress_bar = create_progress_bar(@vrs_records.count)
 
-                result = if otd_record.present?
-                           @remaining_otd_ids.delete(otd_record.id)
-                           merge_sources(vrs_record, otd_record, conflicts)
-                         else
-                           create_from_single_source(vrs_record)
-                         end
+            # Phase 1: Process VRS records, matching with OTD where possible
+            @vrs_records.each do |vrs_record|
+              otd_record = find_matching_otd(vrs_record)
 
-                errors << result[:error] if result[:error]
-                progress_bar.increment!
-              end
+              result = if otd_record.present?
+                         @remaining_otd_ids.delete(otd_record.id)
+                         merge_sources(vrs_record, otd_record, conflicts)
+                       else
+                         create_from_single_source(vrs_record)
+                       end
 
-              # Phase 2: Process remaining unmatched OTD records
-              progress_bar = create_progress_bar(@remaining_otd_ids.count)
-              @remaining_otd_ids.each do |otd_id|
-                otd_record = @otd_by_id[otd_id]
-                result = create_from_single_source(otd_record)
-                errors << result[:error] if result[:error]
-                progress_bar.increment!
-              end
+              errors << result[:error] if result[:error]
+              progress_bar.increment!
+            end
+
+            # Phase 2: Process remaining unmatched OTD records
+            progress_bar = create_progress_bar(@remaining_otd_ids.count)
+            @remaining_otd_ids.each do |otd_id|
+              otd_record = @otd_by_id[otd_id]
+              result = create_from_single_source(otd_record)
+              errors << result[:error] if result[:error]
+              progress_bar.increment!
+            end
+
+            # Log any conflicts for review
+            log_conflicts(conflicts) if conflicts.any?
+
+            # Store errors in batch notes if any
+            if errors.any?
+              current_batch.notes = "Processing completed with #{errors.count} errors"
             end
           end
-
-          # Log any conflicts for review
-          log_conflicts(conflicts) if conflicts.any?
-
-          # Force Meilisearch reindex
-          ::Operator.reindex!
-
-          # Create an import report
-          new_import_report(errors, @vrs_records.count + @remaining_otd_ids.count)
-
-          errors.any? ? errors : true
         ensure
           clear_caches
         end
@@ -558,7 +559,8 @@ module Processors
           operator.last_combined_at = Time.current
 
           if operator.valid?
-            operator.save!
+            # Stage the change instead of saving directly
+            stage_operator_change(operator, is_new: is_new)
             { operator: operator, created: is_new, updated: !is_new }
           else
             {
@@ -620,7 +622,8 @@ module Processors
           operator.last_combined_at = Time.current
 
           if operator.valid?
-            operator.save!
+            # Stage the change instead of saving directly
+            stage_operator_change(operator, is_new: is_new)
             { operator: operator, created: is_new, updated: !is_new }
           else
             {
@@ -634,37 +637,35 @@ module Processors
         end
 
         # Finds an existing operator that matches any of the source records.
+        # Searches staged records first (for records staged earlier in this batch),
+        # then falls back to the database.
         # Searches by ICAO code first, then falls back to name match.
         # Does NOT search by IATA code as IATA codes can be shared across operators.
         #
         # @param sources [Array<ApplicationRecord>] The source records to search for
         # @return [::Operator, nil] The matching operator or nil
         def find_existing_operator_from_sources(sources)
-          # Check if any source has an ICAO code - this affects our search strategy.
-          # ICAO codes are authoritative unique identifiers. If a source has an ICAO code,
-          # we should ONLY match operators with that same ICAO code, not fall through
-          # to IATA/name matching which could find a different operator.
           icao_codes = sources.map(&:icao_code).compact.uniq
           has_icao = icao_codes.any?
 
-          # Try ICAO codes first (most reliable)
           if has_icao
-            operator = ::Operator.find_by(icao_code: icao_codes)
+            # Check staged cache first, then database
+            operator = find_staged_or_persisted(::Operator, icao_code: icao_codes)
             return operator if operator
 
             # Source has ICAO but no match found - do NOT fall through to IATA/name search.
-            # This would risk matching/updating a different operator that shares IATA code.
             return nil
           end
-
-          # Note: We intentionally do NOT search by IATA code. IATA codes can be
-          # legitimately shared across different operators (e.g., airline groups),
-          # so matching by IATA would risk finding the wrong operator.
 
           # Fall back to exact name match (case-insensitive) - only if no ICAO code
           names = sources.map(&:name).compact.uniq
           names.each do |name|
-            operator = ::Operator.find_by("LOWER(name) = ?", name.downcase)
+            # Check staged cache first (already case-insensitive)
+            operator = find_in_staged_cache(::Operator, name: name)
+            return operator if operator
+
+            # Fall back to case-insensitive database lookup
+            operator = ::Operator.where("LOWER(name) = ?", name.downcase).first
             return operator if operator
           end
 
@@ -680,6 +681,17 @@ module Processors
             Rails.logger.debug "Conflict on #{conflict[:field]}: " \
                                "#{conflict[:candidates].map { |c| "#{c[:source_type]}=#{c[:value].inspect}" }.join(' vs ')}"
           end
+        end
+
+        # Stages an operator change for later application.
+        #
+        # @param operator [::Operator] The operator to stage
+        # @param is_new [Boolean] Whether this is a new record
+        def stage_operator_change(operator, is_new:)
+          operation = is_new ? :create : :update
+          identifier = operator.icao_code || operator.iata_code || operator.name
+
+          stage_change(operator, operation: operation, identifier: identifier)
         end
 
         # Resolves the country for an operator from AirlineCodes data.

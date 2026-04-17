@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: users
@@ -15,7 +17,8 @@
 #  confirmation_sent_at     :datetime
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null
-#  contribution_trust_score :integer          default("50"), not null
+#  contribution_trust_score :integer          default(50), not null
+#  admin                    :boolean          default(FALSE), not null
 #
 # Indexes
 #
@@ -26,7 +29,13 @@
 require "test_helper"
 
 class UserTest < ActiveSupport::TestCase
-  # test "the truth" do
-  #   assert true
-  # end
+  test "admin? returns false by default" do
+    user = User.new(email: "test@example.com", password: "password123")
+    assert_not user.admin?
+  end
+
+  test "admin? returns true when admin flag is set" do
+    user = User.new(email: "admin@example.com", password: "password123", admin: true)
+    assert user.admin?
+  end
 end

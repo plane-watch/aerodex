@@ -3,7 +3,7 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 ruby '3.3.7'
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem 'rails', '~> 8.0'
+gem 'rails', '~> 8.1', '>= 8.1.2'
 
 # The original asset pipeline for Rails [https://github.com/rails/sprockets-rails]
 gem 'sprockets-rails'
@@ -68,7 +68,7 @@ gem 'devise', '~> 4.9'
 gem 'excon', '~> 0.100.0'
 gem 'meilisearch-rails', '~> 0.9.1'
 gem 'pagy', '~> 6.4'
-gem 'paper_trail', '~> 16.0'
+gem 'paper_trail', '~> 17.0'
 gem 'table_print', '~> 1.5'
 # for string comparison distance calculation
 gem "jaro_winkler", "~> 1.5"

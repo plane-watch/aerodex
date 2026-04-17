@@ -25,9 +25,6 @@ module Processors
         registration_date
       ].freeze
 
-      # Batch size for bulk insert/update operations
-      BATCH_SIZE = 1000
-
       class << self
         # Combines a single aircraft by ICAO hex code.
         #
@@ -59,21 +56,20 @@ module Processors
             return { error: result[:error] }
           end
 
-          if result[:attributes].blank?
+          if result[:record].nil?
             # No changes needed
             aircraft = @aircraft_cache[icao]
             return { aircraft: aircraft, unchanged: true }
           end
 
-          # Save the record
+          # Save the record directly (not staged)
+          record = result[:record]
+          record.save!
+
           if result[:new_record]
-            ::Aircraft.insert_all([result[:attributes]])
-            aircraft = ::Aircraft.find_by(icao: icao)
-            { aircraft: aircraft, created: true }
+            { aircraft: record, created: true, conflicts: conflicts }
           else
-            ::Aircraft.upsert_all([result[:attributes]], unique_by: :id)
-            aircraft = ::Aircraft.find_by(icao: icao)
-            { aircraft: aircraft, updated: true }
+            { aircraft: record, updated: true, conflicts: conflicts }
           end
         ensure
           clear_caches
@@ -92,75 +88,116 @@ module Processors
           sources
         end
 
-        # Combines aircraft data from all available sources into canonical Aircraft records.
+        # Combines aircraft data from all available sources into staged changes.
         #
-        # @return [Array<Hash>, true] Returns array of errors if any, otherwise true
-        def combine_sources
-          # Collect all sources grouped by icao (the unique identifier)
-          sources_by_icao = group_sources_by_icao
-          errors = []
-          conflicts = []
-          pending_inserts = []
-          pending_updates = []
+        # If stub operators are created during processing (when an aircraft references
+        # an operator that doesn't exist), they are tracked in a separate StagedBatch
+        # for visibility. The stubs are saved immediately (so we have IDs for FK
+        # references), but the batch provides an audit trail.
+        #
+        # @param triggered_by [User, nil] The user who triggered the run
+        # @return [StagedBatch] The batch containing staged changes
+        def combine_sources(triggered_by: nil)
+          @created_stub_operators = []
 
-          # Pre-load lookup caches to avoid N+1 queries
-          load_lookup_caches
+          aircraft_batch = with_staged_batch(entity_type: "Aircraft", triggered_by: triggered_by) do
+            # Collect all sources grouped by icao (the unique identifier)
+            sources_by_icao = group_sources_by_icao
+            errors = []
+            conflicts = []
 
-          progress_bar = create_progress_bar(sources_by_icao.count)
+            # Pre-load lookup caches to avoid N+1 queries
+            load_lookup_caches
 
-          with_bulk_import do
+            progress_bar = create_progress_bar(sources_by_icao.count)
+
             sources_by_icao.each do |icao, sources|
               result = merge_sources_for_icao(icao, sources, conflicts)
 
               if result[:error]
                 errors << result[:error]
-              elsif result[:attributes]
-                if result[:new_record]
-                  pending_inserts << result[:attributes]
-                else
-                  pending_updates << result[:attributes]
-                end
+              elsif result[:record]
+                # Stage the change instead of saving directly
+                stage_aircraft_change(result[:record], is_new: result[:new_record])
+              else
+                # No changes needed
+                current_batch.summary["unchanged"] += 1
               end
 
               progress_bar.increment!
-
-              # Flush batches periodically
-              if pending_inserts.size >= BATCH_SIZE
-                flush_inserts(pending_inserts)
-                pending_inserts.clear
-              end
-              if pending_updates.size >= BATCH_SIZE
-                flush_updates(pending_updates)
-                pending_updates.clear
-              end
             end
 
-            # Flush remaining records
-            flush_inserts(pending_inserts) if pending_inserts.any?
-            flush_updates(pending_updates) if pending_updates.any?
+            # Log any conflicts for review
+            log_conflicts(conflicts) if conflicts.any?
+
+            # Store errors and conflict count in batch notes if any
+            notes = []
+            notes << "#{errors.count} validation errors" if errors.any?
+            notes << "#{conflicts.count} field conflicts" if conflicts.any?
+            current_batch.notes = "Processing completed with #{notes.join(', ')}" if notes.any?
           end
 
-          # Log any conflicts for review
-          log_conflicts(conflicts) if conflicts.any?
+          # Create a separate batch for stub operators if any were created
+          if @created_stub_operators.any?
+            create_stub_operators_batch(triggered_by, aircraft_batch)
+          end
 
-          # Report unmatched operators for human review
+          # Log a summary of operators we couldn't match for later review
           report_unmatched_operators
 
-          # Reindex and reset counter caches
-          finalize_combine(
-            ::Aircraft,
-            counter_caches: {
-              ::Operator => :aircraft_count,
-              ::AircraftType => :aircraft_count
-            }
-          )
-
-          # Create an import report
-          new_import_report(errors, sources_by_icao.count)
-
-          errors.any? ? errors : true
+          aircraft_batch
         ensure
           clear_caches
+          @created_stub_operators = nil
+        end
+
+        # Creates a StagedBatch documenting stub operators that were auto-created.
+        #
+        # The stubs are already saved (we needed their IDs), but this batch provides
+        # visibility into what was created and allows for review/cleanup.
+        #
+        # @param triggered_by [User, nil] The user who triggered the run
+        # @param aircraft_batch [StagedBatch] The related Aircraft batch
+        def create_stub_operators_batch(triggered_by, aircraft_batch)
+          stub_batch = StagedBatch.create!(
+            processor_type: name,
+            entity_type: "Operator",
+            status: "applied", # Already applied - these are informational records
+            created_by_id: triggered_by&.id,
+            applied_at: Time.current,
+            reviewed_by_id: triggered_by&.id,
+            reviewed_at: Time.current,
+            summary: {
+              "created" => @created_stub_operators.size,
+              "updated" => 0,
+              "unchanged" => 0
+            },
+            notes: "Stub operators auto-created during Aircraft processing (batch ##{aircraft_batch.id}). " \
+                   "These records have names from source data and low confidence - may need enrichment."
+          )
+
+          # Create StagedChange records for each stub (for audit trail)
+          @created_stub_operators.each do |operator|
+            StagedChange.create!(
+              staged_batch: stub_batch,
+              record_type: "Operator",
+              record_id: operator.id,
+              record_identifier: operator.name,
+              operation: "create",
+              diff: {
+                "name" => [nil, operator.name],
+                "country_id" => [nil, operator.country_id]
+              }
+            )
+          end
+
+          # Add reference to the stub batch in the aircraft batch notes
+          aircraft_batch.notes ||= ""
+          aircraft_batch.notes += "#{@created_stub_operators.size} stub operator(s) were auto-created " \
+                                  "(see batch ##{stub_batch.id} for details).\n"
+          aircraft_batch.save!
+
+          Rails.logger.info "Created stub operators batch ##{stub_batch.id} with #{@created_stub_operators.size} records"
         end
 
         private
@@ -194,17 +231,13 @@ module Processors
           @operators_by_icao = ::Operator.where.not(icao_code: [nil, '']).index_by(&:icao_code)
           @operators_by_name = ::Operator.all.index_by { |o| o.name.downcase }
 
-          # Build a normalised name cache for fuzzy matching.
-          # Stores ARRAYS of operators per key to handle collisions (e.g., multiple operators
-          # with same canonical name but different ICAO codes).
-          @operators_by_normalised_name = Hash.new { |h, k| h[k] = [] }
+          # Build a normalised name cache for fuzzy matching
+          # (strips corporate suffixes and airline terms like "Airlines", "International", etc.)
+          @operators_by_normalised_name = {}
           ::Operator.find_each do |op|
             normalised_key = aggressive_canonical_key(op.name)
-            @operators_by_normalised_name[normalised_key] << op if normalised_key.present?
+            @operators_by_normalised_name[normalised_key] = op if normalised_key.present?
           end
-
-          # Track unmatched operators for reporting
-          @unmatched_operators = Hash.new { |h, k| h[k] = { icao: nil, aircraft: [] } }
 
           # Preload existing aircraft by icao for O(1) lookups
           @aircraft_cache = {}
@@ -214,6 +247,11 @@ module Processors
 
           # Ensure trust scores are cached
           SourceTrustScore.send(:ensure_cache_loaded)
+
+          # Collects operator names we couldn't match during processing, for post-run reporting.
+          # Keyed by the downcased operator name; each entry tracks any ICAO code seen and the
+          # list of aircraft (by Mode S hex) that referenced the unmatched operator.
+          @unmatched_operators = Hash.new { |h, k| h[k] = { icao: nil, aircraft: [] } }
         end
 
         # Groups all source records by their icao code.
@@ -261,14 +299,14 @@ module Processors
           sources
         end
 
-        # Merges sources for a single icao and returns attributes for batch processing.
+        # Merges sources for a single icao and returns the record for staging.
         #
         # @param icao [String] The Mode S hex code
         # @param sources [Array] The source records to merge
         # @param conflicts [Array] Array to collect conflict information
-        # @return [Hash] Result with :attributes and :new_record, or :error key
+        # @return [Hash] Result with :record and :new_record, or :error key, or empty hash if unchanged
         def merge_sources_for_icao(icao, sources, conflicts)
-          # Find existing record from cache or initialize a new one
+          # Find existing record from cache or initialise a new one
           record = @aircraft_cache[icao]
           if record.nil?
             record = ::Aircraft.new(icao: icao)
@@ -298,13 +336,14 @@ module Processors
           end
 
           # Handle related records separately (require lookups, not simple field merge)
-          # Note: assign_operator may create new operators synchronously (needs IDs)
+          # Note: assign_operator may create new operators synchronously if not found
           assign_aircraft_type(record, sources)
           assign_operator(record, sources)
           assign_registration_country(record, sources)
 
-          # Check for changes BEFORE setting provenance
-          has_changes = is_new_record || record.changes.any?
+          # Check for meaningful changes (content fields, not just metadata like provenance)
+          meaningful_changes = record.changes.keys - %w[field_provenance last_combined_at]
+          has_changes = is_new_record || meaningful_changes.any?
 
           unless has_changes
             # No changes needed
@@ -318,7 +357,7 @@ module Processors
 
           record.last_combined_at = Time.current
 
-          # Validate before returning for batch processing
+          # Validate before returning for staging
           unless record.valid?
             return {
               error: {
@@ -329,9 +368,9 @@ module Processors
             }
           end
 
-          # Return attributes for batch processing
+          # Return record for staging
           {
-            attributes: is_new_record ? record_to_insert_attributes(record) : record_to_update_attributes(record),
+            record: record,
             new_record: is_new_record
           }
         end
@@ -472,13 +511,18 @@ module Processors
         # Assigns the operator to an aircraft based on source data.
         # Uses pre-loaded cache to avoid N+1 queries.
         #
-        # Matching strategy:
-        # 0. Check for human-confirmed match decision (highest priority)
-        # 1. Try ICAO code lookup (most reliable)
-        # 2. Try exact name match (case-insensitive)
-        # 3. Try normalised name match with best-candidate selection
-        # 4. Check for private owner (operator = owner means no Operator record needed)
-        # 5. Log unmatched commercial operators for review (no stub creation)
+        # Matching strategy (in priority order):
+        # 0.  Human-confirmed match decision (OperatorMatchDecision) wins if present
+        # 1.  ICAO code lookup from cache. If the source asserted an ICAO but we couldn't
+        #     resolve it, log for review and stop — we don't fall through to name matching
+        #     or stub creation, because the unresolved ICAO is a data-quality signal
+        # 2.  Exact (case-insensitive) name match
+        # 3.  Normalised name match (strips "Pty Ltd", "Airlines", etc.)
+        # 4a. Private-owner detection: if the source's operator name matches the aircraft's
+        #     owner, leave operator_id nil (owner field is sufficient)
+        # 4b. Create a stub Operator as a last resort so that staged Aircraft records have
+        #     a valid FK. Stubs are tracked in @created_stub_operators and surfaced in a
+        #     separate "applied" StagedBatch for review
         #
         # @param record [::Aircraft] The aircraft record
         # @param sources [Array] The source records
@@ -509,75 +553,65 @@ module Processors
               record.operator = operator
               return
             end
-            # Has ICAO but no match - log for review, don't fall through
+            # Has ICAO but no match - log for review, don't fall through.
+            # We don't create a stub here because the source asserted a specific
+            # ICAO we couldn't resolve; that's a data-quality issue worth surfacing
+            # rather than papering over with an auto-created operator.
             log_unmatched_operator(record.icao, source_with_operator.operator_name, source_with_operator.operator_icao)
             return
           end
 
           # Strategy 2: Try exact name match (case-insensitive)
-          if source_with_operator.operator_name.present?
+          if operator.nil? && source_with_operator.operator_name.present?
             operator = @operators_by_name[source_with_operator.operator_name.downcase]
-            if operator
-              record.operator = operator
-              return
-            end
           end
 
-          # Strategy 3: Try normalised name match with best-candidate selection
-          if source_with_operator.operator_name.present?
+          # Strategy 3: Try normalised name match
+          # This handles cases like "VIRGIN AUSTRALIA INTERNATIONAL AIRLINES PTY LTD" -> "Virgin Australia"
+          if operator.nil? && source_with_operator.operator_name.present?
             source_normalised_key = aggressive_canonical_key(source_with_operator.operator_name)
-            if source_normalised_key.present?
-              country_id = cached_country_for_source(source_with_operator)&.id
-              operator = find_best_operator_for_key(source_normalised_key, country_id: country_id)
-              if operator
-                record.operator = operator
-                return
-              end
-            end
+            operator = @operators_by_normalised_name[source_normalised_key] if source_normalised_key.present?
           end
 
-          # Strategy 4: Check for private owner (operator = owner means no Operator record needed)
-          if source_with_operator.operator_name.present?
+          # Strategy 4a: Check for private owner (operator == owner means no Operator record needed)
+          if operator.nil? && source_with_operator.operator_name.present?
             owner_name = sources.map(&:owner).compact.first
             if owner_name.present? && names_effectively_match?(source_with_operator.operator_name, owner_name)
               # Private owner - the owner field is sufficient, no Operator record needed.
               # Leave operator_id nil (which is now allowed).
               return
             end
-
-            # Unmatched commercial operator - log for review (don't create stub)
-            log_unmatched_operator(record.icao, source_with_operator.operator_name, nil)
-          end
-        end
-
-        # Finds the best operator from candidates sharing a canonical key.
-        # Prefers: parent operators > operators with ICAO > operators with IATA > others.
-        # Optionally filters by country.
-        #
-        # @param key [String] The canonical name key
-        # @param country_id [Integer, nil] Optional country ID to filter by
-        # @return [Operator, nil] The best matching operator, or nil if none
-        def find_best_operator_for_key(key, country_id: nil)
-          candidates = @operators_by_normalised_name[key]
-          return nil if candidates.empty?
-
-          # Filter by country if provided
-          if country_id
-            country_candidates = candidates.select { |op| op.country_id == country_id }
-            candidates = country_candidates if country_candidates.any?
           end
 
-          # Prefer parent operators for ambiguous matches (they represent the organisation)
-          parent = candidates.find(&:parent?)
-          return parent if parent
+          # Strategy 4b: Create a stub operator if still not found and add to cache.
+          # NOTE: This creates a real operator record immediately (not staged) because:
+          # - Aircraft records need valid FK references to be staged
+          # - These auto-inserted operators are low-confidence placeholders
+          # - They can be enriched later by the Operator processor
+          # The created stubs are tracked in @created_stub_operators and documented
+          # in a separate "applied" StagedBatch for visibility.
+          if operator.nil? && source_with_operator.operator_name.present?
+            country = cached_country_for_source(source_with_operator)
+            if country
+              operator = ::Operator.create!(
+                name: source_with_operator.operator_name,
+                country: country
+              )
 
-          # Otherwise prefer operators with ICAO > IATA > neither
-          candidates.max_by do |op|
-            score = 0
-            score += 100 if op.icao_code.present?
-            score += 50 if op.iata_code.present?
-            score
+              # Track for the stub operators batch
+              @created_stub_operators << operator if @created_stub_operators
+
+              # Add to all caches for subsequent lookups
+              @operators_by_name[operator.name.downcase] = operator
+              normalised_key = aggressive_canonical_key(operator.name)
+              @operators_by_normalised_name[normalised_key] = operator if normalised_key.present?
+            else
+              # No country available - can't create stub, log for review instead
+              log_unmatched_operator(record.icao, source_with_operator.operator_name, nil)
+            end
           end
+
+          record.operator = operator if operator.present?
         end
 
         # Checks if two names are effectively the same after canonicalisation.
@@ -706,80 +740,15 @@ module Processors
           Rails.logger.info ConflictFormatter.summary(conflicts)
         end
 
-        # Converts a record to a hash of attributes for batch insert (new records).
+        # Stages an aircraft change for later application.
         #
-        # @param record [::Aircraft] The aircraft record
-        # @return [Hash] Attributes hash (without id - let PostgreSQL generate it)
-        def record_to_insert_attributes(record)
-          now = Time.current
-          {
-            icao: record.icao,
-            registration: record.registration,
-            serial_number: record.serial_number,
-            model: record.model,
-            owner: record.owner,
-            engine_count: record.engine_count,
-            engine_model: record.engine_model,
-            registration_date: record.registration_date,
-            aircraft_type_id: record.aircraft_type_id,
-            operator_id: record.operator_id,
-            registration_country_id: record.registration_country_id,
-            manufacture_year: record.manufacture_year,
-            cabin_configuration: record.cabin_configuration,
-            aircraft_name: record.aircraft_name,
-            status: record.status,
-            field_provenance: record.field_provenance,
-            last_combined_at: record.last_combined_at,
-            created_at: now,
-            updated_at: now
-          }
-        end
+        # @param record [::Aircraft] The aircraft record to stage
+        # @param is_new [Boolean] Whether this is a new record
+        def stage_aircraft_change(record, is_new:)
+          operation = is_new ? :create : :update
+          identifier = record.icao
 
-        # Converts a record to a hash of attributes for batch update (existing records).
-        #
-        # @param record [::Aircraft] The aircraft record
-        # @return [Hash] Attributes hash (with id for upsert matching)
-        def record_to_update_attributes(record)
-          now = Time.current
-          {
-            id: record.id,
-            icao: record.icao,
-            registration: record.registration,
-            serial_number: record.serial_number,
-            model: record.model,
-            owner: record.owner,
-            engine_count: record.engine_count,
-            engine_model: record.engine_model,
-            registration_date: record.registration_date,
-            aircraft_type_id: record.aircraft_type_id,
-            operator_id: record.operator_id,
-            registration_country_id: record.registration_country_id,
-            manufacture_year: record.manufacture_year,
-            cabin_configuration: record.cabin_configuration,
-            aircraft_name: record.aircraft_name,
-            status: record.status,
-            field_provenance: record.field_provenance,
-            last_combined_at: record.last_combined_at,
-            updated_at: now
-          }
-        end
-
-        # Flushes pending inserts to the database in a batch.
-        #
-        # @param records [Array<Hash>] Array of attribute hashes
-        def flush_inserts(records)
-          return if records.empty?
-
-          ::Aircraft.insert_all(records)
-        end
-
-        # Flushes pending updates to the database in a batch.
-        #
-        # @param records [Array<Hash>] Array of attribute hashes
-        def flush_updates(records)
-          return if records.empty?
-
-          ::Aircraft.upsert_all(records, unique_by: :id)
+          stage_change(record, operation: operation, identifier: identifier)
         end
       end
     end

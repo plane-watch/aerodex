@@ -15,7 +15,8 @@
 #  confirmation_sent_at     :datetime
 #  created_at               :datetime         not null
 #  updated_at               :datetime         not null
-#  contribution_trust_score :integer          default("50"), not null
+#  contribution_trust_score :integer          default(50), not null
+#  admin                    :boolean          default(FALSE), not null
 #
 # Indexes
 #
@@ -27,14 +28,30 @@
 # model remove the "{}" from the fixture names and add the columns immediately
 # below each fixture, per the syntax in the comments below
 #
+# Note: encrypted_password is bcrypt hash for 'password123'
+# Devise requires confirmed_at to be set for confirmable users to sign in.
+#
 one:
   email: "admin@me.com"
+  encrypted_password: "$2a$12$sa5Q200TqWWOclmLqTtYcOPSyYXxEWSjXI83WSR4s8y0uufd.9pcy"
+  confirmed_at: <%= Time.current %>
   contribution_trust_score: 50
 
 trusted_contributor:
   email: "trusted@example.com"
+  encrypted_password: "$2a$12$sa5Q200TqWWOclmLqTtYcOPSyYXxEWSjXI83WSR4s8y0uufd.9pcy"
+  confirmed_at: <%= Time.current %>
   contribution_trust_score: 95
 
 new_contributor:
   email: "new@example.com"
+  encrypted_password: "$2a$12$sa5Q200TqWWOclmLqTtYcOPSyYXxEWSjXI83WSR4s8y0uufd.9pcy"
+  confirmed_at: <%= Time.current %>
   contribution_trust_score: 10
+
+admin:
+  email: "superadmin@example.com"
+  encrypted_password: "$2a$12$sa5Q200TqWWOclmLqTtYcOPSyYXxEWSjXI83WSR4s8y0uufd.9pcy"
+  confirmed_at: <%= Time.current %>
+  contribution_trust_score: 50
+  admin: true
