@@ -4,9 +4,6 @@ require 'test_helper'
 
 class TrustCalculatorTest < ActiveSupport::TestCase
   FakeClass = Struct.new(:name)
-  FakeSource = Struct.new(:id, :klass) do
-    alias_method :class, :klass
-  end
 
   setup do
     SourceTrustScore.delete_all
@@ -14,7 +11,7 @@ class TrustCalculatorTest < ActiveSupport::TestCase
   end
 
   test 'calculates trust from SourceConfig when no database override' do
-    source = FakeSource.new(1, FakeClass.new('Source::Operator::VRSDataOperatorSource'))
+    source = fake_source('Source::Operator::VRSDataOperatorSource')
 
     calculator = TrustCalculator.new(source, field: :name, entity_type: 'Operator')
 
@@ -30,7 +27,7 @@ class TrustCalculatorTest < ActiveSupport::TestCase
       base_trust: 95
     )
 
-    source = FakeSource.new(1, FakeClass.new('Source::Operator::VRSDataOperatorSource'))
+    source = fake_source('Source::Operator::VRSDataOperatorSource')
 
     calculator = TrustCalculator.new(source, field: :name, entity_type: 'Operator')
 
@@ -38,7 +35,7 @@ class TrustCalculatorTest < ActiveSupport::TestCase
   end
 
   test 'uses SourceConfig field override when present' do
-    source = FakeSource.new(1, FakeClass.new('Source::Operator::OpenTravelOperatorSource'))
+    source = fake_source('Source::Operator::OpenTravelOperatorSource')
 
     calculator = TrustCalculator.new(source, field: :name, entity_type: 'Operator')
 
@@ -47,10 +44,19 @@ class TrustCalculatorTest < ActiveSupport::TestCase
   end
 
   test 'returns source_type as demodulized class name' do
-    source = FakeSource.new(1, FakeClass.new('Source::Operator::VRSDataOperatorSource'))
+    source = fake_source('Source::Operator::VRSDataOperatorSource')
 
     calculator = TrustCalculator.new(source, field: :name, entity_type: 'Operator')
 
     assert_equal 'VRSDataOperatorSource', calculator.source_type
+  end
+
+  private
+
+  def fake_source(class_name)
+    source = Object.new
+    source.define_singleton_method(:id) { 1 }
+    source.define_singleton_method(:class) { FakeClass.new(class_name) }
+    source
   end
 end

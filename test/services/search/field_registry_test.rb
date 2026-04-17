@@ -3,10 +3,13 @@
 require 'test_helper'
 
 class SearchFieldRegistryTest < ActiveSupport::TestCase
-  test 'returns fields for Aircraft model' do
+  test 'returns filterable attributes for Aircraft model' do
     fields = Search::FieldRegistry.fields_for('Aircraft')
 
+    assert_kind_of Array, fields
     assert_includes fields, :registration
+    assert_includes fields, :aircraft_manufacturer
+    assert_includes fields, :operator
   end
 
   test 'returns empty array for unknown model' do
@@ -19,12 +22,20 @@ class SearchFieldRegistryTest < ActiveSupport::TestCase
     field_names = Search::FieldRegistry.field_names_for('Aircraft')
 
     assert_includes field_names, 'registration'
+    assert_includes field_names, 'aircraft_manufacturer'
+    assert_includes field_names, 'operator'
   end
 
   test 'meilisearch_attribute_for returns field name when valid' do
     attr = Search::FieldRegistry.meilisearch_attribute_for('Aircraft', 'registration')
 
     assert_equal 'registration', attr
+  end
+
+  test 'meilisearch_attribute_for returns aircraft_manufacturer for that field' do
+    attr = Search::FieldRegistry.meilisearch_attribute_for('Aircraft', 'aircraft_manufacturer')
+
+    assert_equal 'aircraft_manufacturer', attr
   end
 
   test 'meilisearch_attribute_for returns nil for unknown field' do
@@ -34,12 +45,8 @@ class SearchFieldRegistryTest < ActiveSupport::TestCase
   end
 
   test 'valid_field? returns true for known fields' do
-    fields = Search::FieldRegistry.fields_for('Aircraft')
-    skip 'No filterable attributes configured in test environment' if fields.empty?
-
-    field = fields.first
-    assert Search::FieldRegistry.valid_field?('Aircraft', field)
-    assert Search::FieldRegistry.valid_field?('Aircraft', field.to_s)
+    assert Search::FieldRegistry.valid_field?('Aircraft', 'aircraft_manufacturer')
+    assert Search::FieldRegistry.valid_field?('Aircraft', :aircraft_manufacturer)
   end
 
   test 'valid_field? returns false for unknown fields' do
@@ -47,14 +54,15 @@ class SearchFieldRegistryTest < ActiveSupport::TestCase
   end
 
   test 'suggest_fields returns matching fields' do
-    fields = Search::FieldRegistry.fields_for('Aircraft')
-    skip 'No filterable attributes configured in test environment' if fields.empty?
+    suggestions = Search::FieldRegistry.suggest_fields('Aircraft', 'air')
 
-    field = fields.first
-    prefix = field.to_s[0..2]
-    suggestions = Search::FieldRegistry.suggest_fields('Aircraft', prefix)
+    assert(suggestions.any? { |s| s[:value] == 'aircraft_manufacturer' })
+  end
 
-    assert(suggestions.any? { |s| s[:value] == field.to_s })
+  test 'suggest_fields is case insensitive' do
+    suggestions = Search::FieldRegistry.suggest_fields('Aircraft', 'AIR')
+
+    assert(suggestions.any? { |s| s[:value] == 'aircraft_manufacturer' })
   end
 
   test 'suggest_fields returns empty for no matches' do

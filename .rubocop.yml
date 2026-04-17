@@ -11,15 +11,21 @@ Metrics/AbcSize:
   Enabled: false
 
 AllCops:
-  TargetRubyVersion: 3.0
-  NewCops: enable
+  TargetRubyVersion: 3.3
+  NewCops: pending
   Exclude:
     - 'db/schema.rb'
 
 Metrics/BlockLength:
-  Enabled: false
+  Exclude:
+    - 'test/**/*'
+    - 'lib/tasks/**/*'
 
 Metrics/ClassLength:
+  Exclude:
+    - 'test/**/*'
+
+Metrics/ParameterLists:
   Enabled: false
 
 Style/StringLiterals:
@@ -34,9 +40,6 @@ Style/TrailingCommaInHashLiteral:
   Enabled: false
 
 Style/TrailingCommaInArrayLiteral:
-  Enabled: false
-
-Metrics/ParameterLists:
   Enabled: false
 
 Layout/LineLength:

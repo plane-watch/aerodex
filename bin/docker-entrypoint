@@ -1,15 +1,12 @@
 #!/bin/sh -e
 
-# Enable jemalloc for reduced memory usage and latency if available.
-if [ -z "${LD_PRELOAD+x}" ]; then
-  LD_PRELOAD=$(find /usr -name libjemalloc.so.2 -print -quit 2>/dev/null)
-  export LD_PRELOAD
-fi
-
 # Remove a potentially stale PID file left by a previous container run.
 rm -f tmp/pids/server.pid
 
 # Run pending database migrations automatically on container start.
+# NOTE: This is safe for single-replica deployments. For multi-replica
+# production setups, run migrations as a separate one-shot command
+# (e.g., docker compose run web bin/rails db:prepare) before starting.
 if [ "${SKIP_MIGRATIONS}" != "true" ]; then
   ./bin/rails db:prepare
 fi
@@ -20,7 +17,7 @@ if [ "${RAILS_ENV}" = "development" ] && [ ! -f tmp/.docker_seeded ]; then
   echo "==> First run detected: seeding database..."
   ./bin/rails db:seed
 
-  if [ -d db/sources ] && [ "$(ls -A db/sources/*.json 2>/dev/null)" ]; then
+  if [ -d db/sources ] && ls db/sources/*.json >/dev/null 2>&1; then
     echo "==> Importing sources..."
     ./bin/rails sources:import
     echo "==> Running all processors..."
