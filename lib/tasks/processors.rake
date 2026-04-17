@@ -43,6 +43,40 @@ namespace :processors do
     puts "Summary: #{batch.summary}"
   end
 
+  desc "Run all processors synchronously"
+  task run_all_sync: :environment do
+    processors = Dir[Rails.root.join("app/models/processors/**/")].filter_map do |dir|
+      entity = File.basename(dir)
+      next if entity == "." || entity == "processors"
+
+      processor_file = File.join(dir, "#{entity}.rb")
+      entity.camelize if File.exist?(processor_file)
+    end
+
+    if processors.empty?
+      puts "No processors found."
+      next
+    end
+
+    puts "Running #{processors.count} processors..."
+    processors.each do |entity_type|
+      processor_class = "Processors::#{entity_type}::#{entity_type}"
+
+      begin
+        processor_class.constantize
+      rescue NameError
+        puts "  Skipping unknown processor: #{processor_class}"
+        next
+      end
+
+      puts "  Running #{processor_class}..."
+      batch = ProcessorJob.perform_now(processor_class)
+      puts "  Completed: #{batch.status} - #{batch.summary}"
+    end
+
+    puts "All processors complete."
+  end
+
   desc "List all available processors"
   task list: :environment do
     processors = Dir[Rails.root.join("app/models/processors/**/")].map do |dir|

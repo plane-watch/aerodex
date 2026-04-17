@@ -1,0 +1,41 @@
+# Development Dockerfile for Aerodex
+# Installs all dependencies (including dev/test groups) and runs via foreman.
+
+ARG RUBY_VERSION=3.3.7
+FROM docker.io/library/ruby:${RUBY_VERSION}-alpine
+
+WORKDIR /rails
+
+# Install system dependencies (build + runtime)
+RUN apk add --no-cache \
+      build-base \
+      curl \
+      git \
+      libpq-dev \
+      nodejs \
+      npm \
+      postgresql-client \
+      python3 \
+      tzdata \
+      yaml-dev && \
+    npm install -g yarn
+
+# Install foreman for Procfile-based process management
+RUN gem install foreman
+
+ENV BUNDLE_PATH="/usr/local/bundle"
+
+# Install Ruby gems (all groups, including dev and test)
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+# Install Node.js packages
+COPY package.json yarn.lock ./
+RUN yarn install
+
+# Copy the rest of the application
+COPY . .
+
+ENTRYPOINT ["/rails/bin/docker-entrypoint"]
+EXPOSE 4000
+CMD ["foreman", "start", "-f", "Procfile.dev"]

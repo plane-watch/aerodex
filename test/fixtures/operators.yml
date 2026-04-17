@@ -2,22 +2,21 @@
 #
 # Table name: operators
 #
-#  id                 :integer          not null, primary key
-#  name               :string
-#  icao_code          :string
-#  iata_code          :string
-#  created_at         :datetime         not null
-#  updated_at         :datetime         not null
-#  country_id         :integer
-#  field_provenance   :jsonb            default("{}"), not null
-#  last_combined_at   :datetime
-#  aircraft_count     :integer          default("0"), not null
-#  parent_operator_id :integer
+#  id               :integer          not null, primary key
+#  aircraft_count   :integer          default(0), not null
+#  country          :string
+#  country_id       :integer
+#  created_at       :datetime         not null
+#  field_provenance :jsonb            default("{}"), not null
+#  iata_code        :string
+#  icao_code        :string
+#  last_combined_at :datetime
+#  name             :string
+#  updated_at       :datetime         not null
 #
 # Indexes
 #
-#  index_operators_on_country_id          (country_id)
-#  index_operators_on_parent_operator_id  (parent_operator_id)
+#  index_operators_on_country_id  (country_id)
 #
 
 american_airlines:

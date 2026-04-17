@@ -3,13 +3,12 @@
 # Table name: flight_information_regions
 #
 #  id         :integer          not null, primary key
-#  icao_code  :string
-#  country    :string
-#  region     :string
 #  bounds     :polygon
-#  created_at :datetime         not null
-#  updated_at :datetime         not null
 #  country_id :integer          not null
+#  created_at :datetime         not null
+#  icao_code  :string
+#  region     :string
+#  updated_at :datetime         not null
 #
 # Indexes
 #

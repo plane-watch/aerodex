@@ -4,19 +4,19 @@
 #
 #  id               :integer          not null, primary key
 #  airport_id       :integer
-#  runway_name      :string
-#  heading          :decimal(, )
-#  length           :decimal(, )
-#  width            :decimal(, )
+#  closed           :boolean          default(FALSE)
 #  created_at       :datetime         not null
-#  updated_at       :datetime         not null
-#  le_ident         :string
-#  he_ident         :string
-#  surface          :string
-#  lighted          :boolean          default("false")
-#  closed           :boolean          default("false")
 #  field_provenance :jsonb            default("{}"), not null
+#  he_ident         :string
+#  heading          :decimal(, )
 #  last_combined_at :datetime
+#  le_ident         :string
+#  length           :decimal(, )
+#  lighted          :boolean          default(FALSE)
+#  runway_name      :string
+#  surface          :string
+#  updated_at       :datetime         not null
+#  width            :decimal(, )
 #
 
 require "test_helper"

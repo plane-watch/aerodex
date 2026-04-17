@@ -1,0 +1,65 @@
+# Production compose configuration for Aerodex
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      RAILS_ENV: production
+      DATABASE_URL: "${DATABASE_URL:-postgres://aerodex:${AERODEX_DATABASE_PASSWORD}@postgres:5432/aerodex_production}"
+      REDIS_URL: "${REDIS_URL:-redis://redis:6379/1}"
+      RAILS_MASTER_KEY: "${RAILS_MASTER_KEY}"
+      MEILISEARCH_URL: "${MEILISEARCH_URL:-http://meilisearch:7700}"
+      RAILS_SERVE_STATIC_FILES: "true"
+      RAILS_LOG_TO_STDOUT: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_started
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: aerodex
+      POSTGRES_PASSWORD: "${AERODEX_DATABASE_PASSWORD}"
+      POSTGRES_DB: aerodex_production
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aerodex"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  meilisearch:
+    image: getmeili/meilisearch:latest
+    volumes:
+      - meilisearch_data:/meili_data
+    environment:
+      MEILI_ENV: production
+      MEILI_MASTER_KEY: "${MEILI_MASTER_KEY}"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  meilisearch_data:

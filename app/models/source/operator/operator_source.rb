@@ -3,18 +3,18 @@
 # Table name: operator_sources
 #
 #  id               :integer          not null, primary key
-#  icao_code        :string
-#  iata_code        :string
-#  name             :string
-#  type             :string           not null
-#  import_date      :datetime         not null
-#  data             :jsonb            default("\"{}\""), not null
 #  created_at       :datetime         not null
-#  updated_at       :datetime         not null
-#  excluded         :boolean          default("false"), not null
-#  exclusion_reason :string
+#  data             :jsonb            default("\"{}\""), not null
+#  excluded         :boolean          default(FALSE), not null
 #  excluded_at      :datetime
 #  excluded_by      :string
+#  exclusion_reason :string
+#  iata_code        :string
+#  icao_code        :string
+#  import_date      :datetime         not null
+#  name             :string
+#  type             :string           not null
+#  updated_at       :datetime         not null
 #
 # Indexes
 #

@@ -3,25 +3,25 @@
 # Table name: aircraft
 #
 #  id                      :integer          not null, primary key
-#  icao                    :string
+#  aircraft_name           :string
 #  aircraft_type_id        :integer
-#  serial_number           :string
-#  manufacture_year        :integer
-#  owner                   :string
-#  operator_id             :integer
-#  registration            :string
-#  registration_date       :date
+#  cabin_configuration     :string
+#  created_at              :datetime         not null
 #  engine_count            :integer
 #  engine_model            :string
-#  created_at              :datetime         not null
-#  updated_at              :datetime         not null
-#  cabin_configuration     :string
-#  aircraft_name           :string
-#  status                  :integer          default("0")
-#  model                   :string
-#  registration_country_id :integer          not null
 #  field_provenance        :jsonb            default("{}"), not null
+#  icao                    :string
 #  last_combined_at        :datetime
+#  manufacture_year        :integer
+#  model                   :string
+#  operator_id             :integer
+#  owner                   :string
+#  registration            :string
+#  registration_country_id :integer          not null
+#  registration_date       :date
+#  serial_number           :string
+#  status                  :integer          default(0)
+#  updated_at              :datetime         not null
 #
 # Indexes
 #

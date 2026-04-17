@@ -4,30 +4,30 @@
 # Table name: aircraft_sources
 #
 #  id                        :integer          not null, primary key
-#  type                      :string           not null
-#  icao                      :string           not null
-#  registration              :string           not null
-#  serial_number             :string
-#  model                     :string
-#  type_code                 :string
-#  manufacturer_code         :string
-#  owner                     :string
-#  operator_name             :string
-#  operator_icao             :string
+#  created_at                :datetime         not null
+#  data                      :jsonb            default("{}"), not null
 #  engine_count              :integer
 #  engine_model              :string
-#  registration_date         :date
-#  registration_country_code :string
-#  manufacture_year          :integer
-#  status                    :string
-#  data                      :jsonb            default("{}"), not null
-#  import_date               :datetime         not null
-#  created_at                :datetime         not null
-#  updated_at                :datetime         not null
-#  excluded                  :boolean          default("false"), not null
-#  exclusion_reason          :string
+#  excluded                  :boolean          default(FALSE), not null
 #  excluded_at               :datetime
 #  excluded_by               :string
+#  exclusion_reason          :string
+#  icao                      :string           not null
+#  import_date               :datetime         not null
+#  manufacture_year          :integer
+#  manufacturer_code         :string
+#  model                     :string
+#  operator_icao             :string
+#  operator_name             :string
+#  owner                     :string
+#  registration              :string           not null
+#  registration_country_code :string
+#  registration_date         :date
+#  serial_number             :string
+#  status                    :string
+#  type                      :string           not null
+#  type_code                 :string
+#  updated_at                :datetime         not null
 #
 # Indexes
 #

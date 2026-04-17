@@ -3,16 +3,16 @@
 # Table name: manufacturers
 #
 #  id                   :integer          not null, primary key
-#  name                 :string
-#  created_at           :datetime         not null
-#  updated_at           :datetime         not null
-#  icao_code            :string
+#  aircraft_count       :integer          default(0), not null
+#  aircraft_types_count :integer          default(0), not null
 #  alt_names            :jsonb
 #  country_id           :integer
+#  created_at           :datetime         not null
 #  field_provenance     :jsonb            default("{}"), not null
+#  icao_code            :string
 #  last_combined_at     :datetime
-#  aircraft_types_count :integer          default("0"), not null
-#  aircraft_count       :integer          default("0"), not null
+#  name                 :string
+#  updated_at           :datetime         not null
 #
 # Indexes
 #

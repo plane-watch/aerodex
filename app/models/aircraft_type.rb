@@ -3,18 +3,18 @@
 # Table name: aircraft_types
 #
 #  id               :integer          not null, primary key
-#  manufacturer_id  :integer
-#  type_code        :string
-#  name             :string
-#  created_at       :datetime         not null
-#  updated_at       :datetime         not null
+#  aircraft_count   :integer          default(0), not null
 #  category         :integer
-#  wtc              :string
-#  engines          :integer
+#  created_at       :datetime         not null
 #  engine_type      :string
+#  engines          :integer
 #  field_provenance :jsonb            default("{}"), not null
 #  last_combined_at :datetime
-#  aircraft_count   :integer          default("0"), not null
+#  manufacturer_id  :integer
+#  name             :string
+#  type_code        :string
+#  updated_at       :datetime         not null
+#  wtc              :string
 #
 # Indexes
 #

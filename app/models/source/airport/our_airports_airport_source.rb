@@ -3,27 +3,27 @@
 # Table name: airport_sources
 #
 #  id               :integer          not null, primary key
-#  icao_code        :string
-#  iata_code        :string
-#  ident            :string
-#  name             :string           not null
-#  city             :string
-#  municipality     :string
-#  country_code     :string
-#  latitude         :decimal(9, 6)
-#  longitude        :decimal(9, 6)
-#  elevation        :decimal(, )
-#  timezone         :string
 #  airport_type     :string
-#  type             :string           not null
-#  import_date      :datetime         not null
-#  data             :jsonb            default("\"{}\""), not null
+#  city             :string
+#  country_code     :string
 #  created_at       :datetime         not null
-#  updated_at       :datetime         not null
-#  excluded         :boolean          default("false"), not null
-#  exclusion_reason :string
+#  data             :jsonb            default("\"{}\""), not null
+#  elevation        :decimal(, )
+#  excluded         :boolean          default(FALSE), not null
 #  excluded_at      :datetime
 #  excluded_by      :string
+#  exclusion_reason :string
+#  iata_code        :string
+#  icao_code        :string
+#  ident            :string
+#  import_date      :datetime         not null
+#  latitude         :decimal(9, 6)
+#  longitude        :decimal(9, 6)
+#  municipality     :string
+#  name             :string           not null
+#  timezone         :string
+#  type             :string           not null
+#  updated_at       :datetime         not null
 #
 # Indexes
 #

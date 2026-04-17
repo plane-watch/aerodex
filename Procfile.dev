@@ -1,3 +1,3 @@
-web: unset PORT && env RUBY_DEBUG_OPEN=true bin/rails server -p 4000
+web: unset PORT && env RUBY_DEBUG_OPEN=true bin/rails server -p 4000 -b ${BINDING:-127.0.0.1}
 js: yarn build --watch
-css: yarn build:css --watch
+css: node_modules/.bin/tailwindcss -i ./app/assets/stylesheets/application.tailwind.css -o ./app/assets/builds/application.css --minify --watch=always
