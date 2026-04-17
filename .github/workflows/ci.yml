@@ -20,6 +20,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -27,8 +29,18 @@ jobs:
           ruby-version: ${{ env.RUBY_VERSION }}
           bundler-cache: true
 
-      - name: Run RuboCop
-        run: bundle exec rubocop --parallel
+      - name: Get changed Ruby files
+        id: changed
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha || github.event.before }}"
+          FILES=$(git diff --name-only --diff-filter=d "$BASE_SHA" HEAD -- '*.rb' '*.rake' | tr '\n' ' ')
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+
+      - name: Run RuboCop on changed files
+        if: steps.changed.outputs.files != ''
+        env:
+          CHANGED_FILES: ${{ steps.changed.outputs.files }}
+        run: bundle exec rubocop --parallel --force-exclusion $CHANGED_FILES
 
   test:
     name: Test
