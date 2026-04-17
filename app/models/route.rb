@@ -5,9 +5,9 @@
 #  id                   :integer          not null, primary key
 #  call_sign            :string
 #  created_at           :datetime         not null
-#  operator_id          :integer          not null
-#  route_segments_count :integer          default(0), not null
 #  updated_at           :datetime         not null
+#  operator_id          :integer          not null
+#  route_segments_count :integer          default("0"), not null
 #
 # Indexes
 #

@@ -4,11 +4,11 @@
 # Table name: source_trust_scores
 #
 #  id          :integer          not null, primary key
-#  base_trust  :integer          default(50), not null
-#  created_at  :datetime         not null
 #  entity_type :string           not null
-#  field_name  :string
 #  source_type :string           not null
+#  field_name  :string
+#  base_trust  :integer          default("50"), not null
+#  created_at  :datetime         not null
 #  updated_at  :datetime         not null
 #
 # Indexes

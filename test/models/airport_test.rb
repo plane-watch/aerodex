@@ -3,23 +3,23 @@
 # Table name: airports
 #
 #  id                           :integer          not null, primary key
-#  airport_runways_count        :integer          default(0), not null
-#  altitude                     :decimal(, )
+#  name                         :string
 #  city                         :string
 #  country                      :string
-#  country_id                   :integer          not null
-#  created_at                   :datetime         not null
-#  field_provenance             :jsonb            default("{}"), not null
-#  flight_information_region_id :integer
 #  iata_code                    :string
 #  icao_code                    :string
-#  last_combined_at             :datetime
+#  wmo_code                     :string
+#  flight_information_region_id :integer
 #  latitude                     :decimal(9, 6)
 #  longitude                    :decimal(9, 6)
-#  name                         :string
+#  altitude                     :decimal(, )
 #  timezone                     :string
+#  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
-#  wmo_code                     :string
+#  country_id                   :integer          not null
+#  field_provenance             :jsonb            default("{}"), not null
+#  last_combined_at             :datetime
+#  airport_runways_count        :integer          default("0"), not null
 #
 # Indexes
 #
