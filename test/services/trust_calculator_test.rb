@@ -5,6 +5,7 @@ require 'test_helper'
 class TrustCalculatorTest < ActiveSupport::TestCase
   setup do
     SourceTrustScore.delete_all
+    SourceTrustScore.clear_cache!
   end
 
   test 'calculates trust from SourceConfig when no database override' do

@@ -278,8 +278,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_23_062050) do
     t.string "icao_code"
     t.datetime "last_combined_at"
     t.string "name"
+    t.bigint "parent_operator_id"
     t.datetime "updated_at", null: false
     t.index ["country_id"], name: "index_operators_on_country_id"
+    t.index ["parent_operator_id"], name: "index_operators_on_parent_operator_id"
   end
 
   create_table "route_segments", force: :cascade do |t|
@@ -458,6 +460,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_23_062050) do
   add_foreign_key "flight_information_regions", "countries"
   add_foreign_key "manufacturers", "countries"
   add_foreign_key "operators", "countries"
+  add_foreign_key "operators", "operators", column: "parent_operator_id"
   add_foreign_key "routes", "operators"
   add_foreign_key "staged_batches", "users", column: "created_by_id"
   add_foreign_key "staged_batches", "users", column: "reviewed_by_id"

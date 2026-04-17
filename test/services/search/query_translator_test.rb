@@ -7,7 +7,7 @@ class SearchQueryTranslatorTest < ActiveSupport::TestCase
 
   test 'generates filter for exact field match' do
     tokens = [
-      Search::SearchToken.new(type: :field_value, field: 'manufacturer', value: 'Boeing', exact: true)
+      Search::SearchToken.new(type: :field_value, field: 'aircraft_manufacturer', value: 'Boeing', exact: true)
     ]
 
     translator = Search::QueryTranslator.new(tokens, 'Aircraft')
@@ -18,7 +18,7 @@ class SearchQueryTranslatorTest < ActiveSupport::TestCase
 
   test 'generates filter for multiple field matches with AND' do
     tokens = [
-      Search::SearchToken.new(type: :field_value, field: 'manufacturer', value: 'Boeing', exact: true),
+      Search::SearchToken.new(type: :field_value, field: 'aircraft_manufacturer', value: 'Boeing', exact: true),
       Search::SearchToken.new(type: :field_value, field: 'operator', value: 'Qantas', exact: true)
     ]
 
@@ -30,7 +30,7 @@ class SearchQueryTranslatorTest < ActiveSupport::TestCase
 
   test 'generates negated filter' do
     tokens = [
-      Search::SearchToken.new(type: :field_value, field: 'manufacturer', value: 'Boeing', exact: true, negated: true)
+      Search::SearchToken.new(type: :field_value, field: 'aircraft_manufacturer', value: 'Boeing', exact: true, negated: true)
     ]
 
     translator = Search::QueryTranslator.new(tokens, 'Aircraft')
@@ -43,9 +43,9 @@ class SearchQueryTranslatorTest < ActiveSupport::TestCase
 
   test 'respects OR operator between tokens' do
     tokens = [
-      Search::SearchToken.new(type: :field_value, field: 'manufacturer', value: 'Boeing', exact: true),
+      Search::SearchToken.new(type: :field_value, field: 'aircraft_manufacturer', value: 'Boeing', exact: true),
       Search::SearchToken.new(type: :boolean_or),
-      Search::SearchToken.new(type: :field_value, field: 'manufacturer', value: 'Airbus', exact: true)
+      Search::SearchToken.new(type: :field_value, field: 'aircraft_manufacturer', value: 'Airbus', exact: true)
     ]
 
     translator = Search::QueryTranslator.new(tokens, 'Aircraft')
@@ -58,19 +58,19 @@ class SearchQueryTranslatorTest < ActiveSupport::TestCase
 
   test 'uses attributesToSearchOn for partial matches' do
     tokens = [
-      Search::SearchToken.new(type: :field_value, field: 'manufacturer', value: 'Boe', exact: false)
+      Search::SearchToken.new(type: :field_value, field: 'aircraft_manufacturer', value: 'Boe', exact: false)
     ]
 
     translator = Search::QueryTranslator.new(tokens, 'Aircraft')
     options = translator.to_meilisearch_options
 
     assert_includes options[:attributesToSearchOn], 'aircraft_manufacturer'
-    assert_nil options[:filter] # Partial matches don't use filters
+    assert_nil options[:filter]
   end
 
   test 'search_query includes partial match values' do
     tokens = [
-      Search::SearchToken.new(type: :field_value, field: 'manufacturer', value: 'Boe', exact: false)
+      Search::SearchToken.new(type: :field_value, field: 'aircraft_manufacturer', value: 'Boe', exact: false)
     ]
 
     translator = Search::QueryTranslator.new(tokens, 'Aircraft')
@@ -82,20 +82,15 @@ class SearchQueryTranslatorTest < ActiveSupport::TestCase
 
   test 'handles mix of exact and partial matches' do
     tokens = [
-      Search::SearchToken.new(type: :field_value, field: 'manufacturer', value: 'Boeing', exact: true),
+      Search::SearchToken.new(type: :field_value, field: 'aircraft_manufacturer', value: 'Boeing', exact: true),
       Search::SearchToken.new(type: :field_value, field: 'operator', value: 'Qan', exact: false)
     ]
 
     translator = Search::QueryTranslator.new(tokens, 'Aircraft')
     options = translator.to_meilisearch_options
 
-    # Exact match goes to filter
     assert_equal 'aircraft_manufacturer = "Boeing"', options[:filter]
-
-    # Partial match goes to attributesToSearchOn
     assert_includes options[:attributesToSearchOn], 'operator'
-
-    # Partial value in search query
     assert_equal 'Qan', translator.search_query
   end
 
@@ -127,7 +122,7 @@ class SearchQueryTranslatorTest < ActiveSupport::TestCase
 
   test 'has_field_filters? returns true for valid field tokens' do
     tokens = [
-      Search::SearchToken.new(type: :field_value, field: 'manufacturer', value: 'Boeing', exact: true)
+      Search::SearchToken.new(type: :field_value, field: 'aircraft_manufacturer', value: 'Boeing', exact: true)
     ]
 
     translator = Search::QueryTranslator.new(tokens, 'Aircraft')
