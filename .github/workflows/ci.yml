@@ -82,6 +82,11 @@ jobs:
         env:
           MEILI_ENV: development
           MEILI_NO_ANALYTICS: "true"
+        options: >-
+          --health-cmd "curl -f http://localhost:7700/health"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4

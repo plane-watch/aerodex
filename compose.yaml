@@ -21,7 +21,7 @@ services:
       redis:
         condition: service_healthy
       meilisearch:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
 
   postgres:
@@ -57,6 +57,11 @@ services:
     environment:
       MEILI_ENV: production
       MEILI_MASTER_KEY: "${MEILI_MASTER_KEY:?set MEILI_MASTER_KEY}"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
 volumes:

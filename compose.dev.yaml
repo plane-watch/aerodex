@@ -31,7 +31,7 @@ services:
       redis:
         condition: service_healthy
       meilisearch:
-        condition: service_started
+        condition: service_healthy
     stdin_open: true
     tty: true
 
@@ -71,6 +71,11 @@ services:
       - meilisearch_dev_data:/meili_data
     environment:
       MEILI_ENV: development
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_dev_data:
