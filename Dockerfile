@@ -61,9 +61,13 @@ RUN apk add --no-cache \
 COPY --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --from=build /rails /rails
 
-# Create a non-root user for running the application
+# Create a non-root user for running the application.
+# `mkdir -p` guards against missing dirs because `.dockerignore` excludes the
+# contents of log/, storage/, tmp/ (including their `.keep` files), which means
+# those directories may not exist in the runtime stage at this point.
 RUN addgroup --system --gid 1000 rails && \
     adduser --system --uid 1000 --ingroup rails --shell /bin/sh rails && \
+    mkdir -p db log storage tmp && \
     chown -R rails:rails db log storage tmp
 USER 1000:1000
 

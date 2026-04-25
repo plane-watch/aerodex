@@ -11,8 +11,9 @@ services:
       RAILS_ENV: production
       DATABASE_URL: "${DATABASE_URL:-postgres://aerodex:${AERODEX_DATABASE_PASSWORD}@postgres:5432/aerodex_production}"
       REDIS_URL: "${REDIS_URL:-redis://redis:6379/1}"
-      RAILS_MASTER_KEY: "${RAILS_MASTER_KEY}"
+      RAILS_MASTER_KEY: "${RAILS_MASTER_KEY:?set RAILS_MASTER_KEY}"
       MEILISEARCH_URL: "${MEILISEARCH_URL:-http://meilisearch:7700}"
+      MEILI_MASTER_KEY: "${MEILI_MASTER_KEY:?set MEILI_MASTER_KEY}"
       RAILS_SERVE_STATIC_FILES: "true"
       RAILS_LOG_TO_STDOUT: "true"
     depends_on:
