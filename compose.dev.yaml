@@ -1,0 +1,85 @@
+# Development compose configuration for Aerodex
+# Mounts the local source and runs all services needed for development.
+#
+# Usage:
+#   docker compose -f compose.dev.yaml up              # Start all services
+#   docker compose -f compose.dev.yaml run web rake sources:import
+#   docker compose -f compose.dev.yaml run web rake processors:run_all_sync
+#   docker compose -f compose.dev.yaml run web rake processors:run_sync[Aircraft]
+#   docker compose -f compose.dev.yaml run web rake processors:list
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "4000:4000"
+    volumes:
+      - .:/rails
+      - bundle_cache:/usr/local/bundle
+      - node_modules:/rails/node_modules
+    environment:
+      RAILS_ENV: development
+      DATABASE_URL: "postgres://aerodex:aerodex@postgres:5432/aerodex_development"
+      REDIS_URL: "redis://redis:6379/1"
+      MEILISEARCH_URL: "http://meilisearch:7700"
+      BINDING: "0.0.0.0"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    stdin_open: true
+    tty: true
+
+  postgres:
+    image: postgres:17-alpine
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: aerodex
+      POSTGRES_PASSWORD: aerodex
+      POSTGRES_DB: aerodex_development
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aerodex"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.12
+    ports:
+      - "127.0.0.1:7700:7700"
+    volumes:
+      - meilisearch_dev_data:/meili_data
+    environment:
+      MEILI_ENV: development
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+  meilisearch_dev_data:
+  bundle_cache:
+  node_modules:

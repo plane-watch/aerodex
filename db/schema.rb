@@ -251,6 +251,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_23_062050) do
     t.index ["country_id"], name: "index_manufacturers_on_country_id"
   end
 
+  create_table "operator_match_decisions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "decided_by"
+    t.integer "decision_type", default: 0, null: false
+    t.string "matched_icao_code"
+    t.string "matched_name", null: false
+    t.text "notes"
+    t.bigint "operator_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["matched_icao_code"], name: "index_operator_match_decisions_on_matched_icao_code"
+    t.index ["matched_name", "matched_icao_code"], name: "idx_match_decisions_unique_name_icao", unique: true
+    t.index ["matched_name"], name: "index_operator_match_decisions_on_matched_name"
+    t.index ["operator_id"], name: "index_operator_match_decisions_on_operator_id"
+  end
+
   create_table "operator_sources", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.jsonb "data", default: "{}", null: false
@@ -278,8 +293,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_23_062050) do
     t.string "icao_code"
     t.datetime "last_combined_at"
     t.string "name"
+    t.bigint "parent_operator_id"
     t.datetime "updated_at", null: false
     t.index ["country_id"], name: "index_operators_on_country_id"
+    t.index ["parent_operator_id"], name: "index_operators_on_parent_operator_id"
   end
 
   create_table "route_segments", force: :cascade do |t|
@@ -457,7 +474,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_23_062050) do
   add_foreign_key "airports", "countries"
   add_foreign_key "flight_information_regions", "countries"
   add_foreign_key "manufacturers", "countries"
+  add_foreign_key "operator_match_decisions", "operators"
   add_foreign_key "operators", "countries"
+  add_foreign_key "operators", "operators", column: "parent_operator_id"
   add_foreign_key "routes", "operators"
   add_foreign_key "staged_batches", "users", column: "created_by_id"
   add_foreign_key "staged_batches", "users", column: "reviewed_by_id"

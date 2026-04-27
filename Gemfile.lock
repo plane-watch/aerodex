@@ -178,7 +178,13 @@ GEM
     net-smtp (0.5.1)
       net-protocol
     nio4r (2.7.5)
+    nokogiri (1.19.0-aarch64-linux-musl)
+      racc (~> 1.4)
     nokogiri (1.19.0-arm64-darwin)
+      racc (~> 1.4)
+    nokogiri (1.19.0-x86_64-linux-gnu)
+      racc (~> 1.4)
+    nokogiri (1.19.0-x86_64-linux-musl)
       racc (~> 1.4)
     options (2.3.2)
     orm_adapter (0.5.0)
@@ -190,7 +196,10 @@ GEM
     parser (3.3.10.0)
       ast (~> 2.4.1)
       racc
+    pg (1.6.3-aarch64-linux-musl)
     pg (1.6.3-arm64-darwin)
+    pg (1.6.3-x86_64-linux)
+    pg (1.6.3-x86_64-linux-musl)
     pp (0.6.3)
       prettyprint
     prettyprint (0.2.0)
@@ -337,10 +346,13 @@ GEM
     zeitwerk (2.7.4)
 
 PLATFORMS
+  aarch64-linux-musl
   arm64-darwin-22
   arm64-darwin-23
   arm64-darwin-24
   arm64-darwin-25
+  x86_64-linux
+  x86_64-linux-musl
 
 DEPENDENCIES
   aasm (~> 5.5)

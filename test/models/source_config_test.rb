@@ -54,8 +54,8 @@ class SourceConfigTest < ActiveSupport::TestCase
   test 'CASA config has field overrides for operator and owner' do
     config = SourceConfig.for('CASAAircraftSource')
 
-    assert_equal 40, config[:field_overrides][:operator]
-    assert_equal 40, config[:field_overrides][:owner]
+    assert_equal 85, config[:field_overrides][:operator]
+    assert_equal 95, config[:field_overrides][:owner]
     assert_equal 85, config[:base_trust]
   end
 

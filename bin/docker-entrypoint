@@ -1,0 +1,34 @@
+#!/bin/sh -e
+
+# Remove a potentially stale PID file left by a previous container run.
+rm -f tmp/pids/server.pid
+
+# Run pending database migrations automatically on container start.
+# NOTE: This is safe for single-replica deployments. For multi-replica
+# production setups, run migrations as a separate one-shot command
+# (e.g., docker compose run web bin/rails db:prepare) before starting.
+if [ "${SKIP_MIGRATIONS}" != "true" ]; then
+  ./bin/rails db:prepare
+fi
+
+# Run seeds and data import on first run (development only).
+# The marker file prevents re-running on subsequent container starts.
+if [ "${RAILS_ENV}" = "development" ] && [ ! -f tmp/.docker_seeded ]; then
+  echo "==> First run detected: seeding database..."
+  ./bin/rails db:seed
+
+  if [ -d db/sources ] && ls db/sources/*.json >/dev/null 2>&1; then
+    echo "==> Importing sources..."
+    ./bin/rails sources:import
+    echo "==> Running all processors..."
+    ./bin/rails processors:run_all_sync
+  else
+    echo "==> No source files found in db/sources/, skipping import and processors."
+  fi
+
+  mkdir -p tmp
+  touch tmp/.docker_seeded
+  echo "==> First-run setup complete."
+fi
+
+exec "${@}"

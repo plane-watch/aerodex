@@ -3,16 +3,15 @@
 require 'test_helper'
 
 class TrustCalculatorTest < ActiveSupport::TestCase
+  FakeClass = Struct.new(:name)
+
   setup do
     SourceTrustScore.delete_all
+    SourceTrustScore.clear_cache!
   end
 
   test 'calculates trust from SourceConfig when no database override' do
-    # Create a mock source record
-    source = OpenStruct.new(
-      id: 1,
-      class: OpenStruct.new(name: 'Source::Operator::VRSDataOperatorSource')
-    )
+    source = fake_source('Source::Operator::VRSDataOperatorSource')
 
     calculator = TrustCalculator.new(source, field: :name, entity_type: 'Operator')
 
@@ -28,10 +27,7 @@ class TrustCalculatorTest < ActiveSupport::TestCase
       base_trust: 95
     )
 
-    source = OpenStruct.new(
-      id: 1,
-      class: OpenStruct.new(name: 'Source::Operator::VRSDataOperatorSource')
-    )
+    source = fake_source('Source::Operator::VRSDataOperatorSource')
 
     calculator = TrustCalculator.new(source, field: :name, entity_type: 'Operator')
 
@@ -39,10 +35,7 @@ class TrustCalculatorTest < ActiveSupport::TestCase
   end
 
   test 'uses SourceConfig field override when present' do
-    source = OpenStruct.new(
-      id: 1,
-      class: OpenStruct.new(name: 'Source::Operator::OpenTravelOperatorSource')
-    )
+    source = fake_source('Source::Operator::OpenTravelOperatorSource')
 
     calculator = TrustCalculator.new(source, field: :name, entity_type: 'Operator')
 
@@ -51,13 +44,19 @@ class TrustCalculatorTest < ActiveSupport::TestCase
   end
 
   test 'returns source_type as demodulized class name' do
-    source = OpenStruct.new(
-      id: 1,
-      class: OpenStruct.new(name: 'Source::Operator::VRSDataOperatorSource')
-    )
+    source = fake_source('Source::Operator::VRSDataOperatorSource')
 
     calculator = TrustCalculator.new(source, field: :name, entity_type: 'Operator')
 
     assert_equal 'VRSDataOperatorSource', calculator.source_type
+  end
+
+  private
+
+  def fake_source(class_name)
+    source = Object.new
+    source.define_singleton_method(:id) { 1 }
+    source.define_singleton_method(:class) { FakeClass.new(class_name) }
+    source
   end
 end
