@@ -10,8 +10,12 @@ module Search
   # - Boolean operators (AND/OR)
   # - Negation
   #
+  # Field names must match the model's `filterable_attributes` exactly; this
+  # class does not alias user-friendly names to physical attributes. For
+  # Aircraft, the manufacturer field is exposed as `aircraft_manufacturer`.
+  #
   # @example Basic usage
-  #   parser = QueryParser.new('manufacturer:Boeing operator:Qantas')
+  #   parser = QueryParser.new('aircraft_manufacturer:Boeing operator:Qantas')
   #   tokens = parser.parse
   #   translator = QueryTranslator.new(tokens, 'Aircraft')
   #
@@ -21,7 +25,7 @@ module Search
   #   # }
   #
   # @example With partial matching
-  #   parser = QueryParser.new('manufacturer:Boe*')
+  #   parser = QueryParser.new('aircraft_manufacturer:Boe*')
   #   tokens = parser.parse
   #   translator = QueryTranslator.new(tokens, 'Aircraft')
   #
