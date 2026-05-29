@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class Enrichment::RunwaySerializerTest < ActiveSupport::TestCase
+class EnrichmentRunwaySerializerTest < ActiveSupport::TestCase
   test 'serialises a runway, converting decimals to floats' do
     result = Enrichment::RunwaySerializer.call(airport_runways(:yssy_rwy_16r))
 

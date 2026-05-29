@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class Enrichment::OperatorSerializerTest < ActiveSupport::TestCase
+class EnrichmentOperatorSerializerTest < ActiveSupport::TestCase
   test 'serialises an operator with its country and a nil parent' do
     result = Enrichment::OperatorSerializer.call(operators(:american_airlines))
 

@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class Enrichment::AircraftQueryTest < ActiveSupport::TestCase
+class EnrichmentAircraftQueryTest < ActiveSupport::TestCase
   test 'finds an aircraft by ICAO case-insensitively' do
     expected = aircraft(:one)
 

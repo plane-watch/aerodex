@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class Enrichment::RequestParserTest < ActiveSupport::TestCase
+class EnrichmentRequestParserTest < ActiveSupport::TestCase
   test 'parses a JSON object into a symbolised hash' do
     result = Enrichment::RequestParser.parse('{"icao":"7C1469","include":["provenance"]}')
 

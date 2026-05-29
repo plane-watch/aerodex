@@ -2,9 +2,9 @@
 
 require 'test_helper'
 
-class Enrichment::RouteQueryTest < ActiveSupport::TestCase
+class EnrichmentRouteQueryTest < ActiveSupport::TestCase
   test 'finds a route by callsign case-insensitively' do
-    expected = routes(:aa_1)
+    expected = routes(:aa1)
 
     assert_equal expected, Enrichment::RouteQuery.call('aa1')
     assert_equal expected, Enrichment::RouteQuery.call('AA1')

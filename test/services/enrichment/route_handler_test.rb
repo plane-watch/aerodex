@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class Enrichment::RouteHandlerTest < ActiveSupport::TestCase
+class EnrichmentRouteHandlerTest < ActiveSupport::TestCase
   test 'returns found route for a known callsign' do
     reply = JSON.parse(Enrichment::RouteHandler.new.call({ callsign: 'AA1' }.to_json))
 

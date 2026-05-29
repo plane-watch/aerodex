@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class Enrichment::AirportQueryTest < ActiveSupport::TestCase
+class EnrichmentAirportQueryTest < ActiveSupport::TestCase
   test 'finds an airport by ICAO case-insensitively' do
     expected = airports(:yssy)
 

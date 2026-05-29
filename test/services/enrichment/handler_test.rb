@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class Enrichment::HandlerTest < ActiveSupport::TestCase
+class EnrichmentHandlerTest < ActiveSupport::TestCase
   # A minimal concrete handler used to exercise the base-class behaviour.
   class EchoHandler < Enrichment::Handler
     private

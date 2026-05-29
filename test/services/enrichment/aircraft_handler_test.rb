@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class Enrichment::AircraftHandlerTest < ActiveSupport::TestCase
+class EnrichmentAircraftHandlerTest < ActiveSupport::TestCase
   test 'returns found aircraft for a known ICAO' do
     reply = JSON.parse(Enrichment::AircraftHandler.new.call({ icao: aircraft(:one).icao }.to_json))
 

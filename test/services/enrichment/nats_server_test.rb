@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class Enrichment::NatsServerTest < ActiveSupport::TestCase
+class EnrichmentNatsServerTest < ActiveSupport::TestCase
   # A stand-in for a nats-pure message: captures whatever the server responds.
   class FakeMessage
     attr_reader :subject, :data, :reply, :responses

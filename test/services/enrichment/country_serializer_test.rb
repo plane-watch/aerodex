@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class Enrichment::CountrySerializerTest < ActiveSupport::TestCase
+class EnrichmentCountrySerializerTest < ActiveSupport::TestCase
   test 'serialises a country to the v2 shape' do
     country = countries(:australia)
     result = Enrichment::CountrySerializer.call(country)

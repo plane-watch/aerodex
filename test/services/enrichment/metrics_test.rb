@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class Enrichment::MetricsTest < ActiveSupport::TestCase
+class EnrichmentMetricsTest < ActiveSupport::TestCase
   test 'records a request observation against the counter and histogram' do
     before = Enrichment::Metrics.requests.get(labels: { subject: 'v2.enrich.aircraft', result: 'hit' })
 

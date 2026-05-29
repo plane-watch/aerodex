@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class Enrichment::AircraftSerializerTest < ActiveSupport::TestCase
+class EnrichmentAircraftSerializerTest < ActiveSupport::TestCase
   test 'serialises an aircraft with nested type, operator and country' do
     result = Enrichment::AircraftSerializer.call(aircraft(:one))
 

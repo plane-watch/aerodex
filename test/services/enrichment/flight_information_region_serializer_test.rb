@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class Enrichment::FlightInformationRegionSerializerTest < ActiveSupport::TestCase
+class EnrichmentFlightInformationRegionSerializerTest < ActiveSupport::TestCase
   test 'serialises a flight information region to the v2 shape' do
     result = Enrichment::FlightInformationRegionSerializer.call(flight_information_regions(:melbourne))
 

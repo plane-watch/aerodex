@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class Enrichment::DispatcherTest < ActiveSupport::TestCase
+class EnrichmentDispatcherTest < ActiveSupport::TestCase
   setup { @dispatcher = Enrichment::Dispatcher.new }
 
   test 'routes a known subject to its handler' do

@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class Enrichment::AirportSerializerTest < ActiveSupport::TestCase
+class EnrichmentAirportSerializerTest < ActiveSupport::TestCase
   test 'serialises an airport with country, FIR and runways' do
     result = Enrichment::AirportSerializer.call(airports(:yssy))
 

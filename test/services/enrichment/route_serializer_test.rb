@@ -2,9 +2,9 @@
 
 require 'test_helper'
 
-class Enrichment::RouteSerializerTest < ActiveSupport::TestCase
+class EnrichmentRouteSerializerTest < ActiveSupport::TestCase
   test 'serialises a route with operator and ordered segments' do
-    result = Enrichment::RouteSerializer.call(routes(:aa_1))
+    result = Enrichment::RouteSerializer.call(routes(:aa1))
 
     assert_equal 'AA1', result[:callsign]
     assert_equal 'American Airlines', result[:operator][:name]
@@ -19,7 +19,7 @@ class Enrichment::RouteSerializerTest < ActiveSupport::TestCase
   end
 
   test 'orders segments by their order column' do
-    result = Enrichment::RouteSerializer.call(routes(:aa_1))
+    result = Enrichment::RouteSerializer.call(routes(:aa1))
 
     orders = result[:segments].map { |segment| segment[:order] }
     assert_equal orders.sort, orders

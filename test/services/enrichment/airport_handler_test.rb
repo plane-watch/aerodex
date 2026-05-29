@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class Enrichment::AirportHandlerTest < ActiveSupport::TestCase
+class EnrichmentAirportHandlerTest < ActiveSupport::TestCase
   test 'returns found airport for a known ICAO' do
     reply = JSON.parse(Enrichment::AirportHandler.new.call({ icao: 'YSSY' }.to_json))
 

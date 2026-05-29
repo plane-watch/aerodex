@@ -15,7 +15,7 @@
 #  index_routes_on_operator_id_and_call_sign  (operator_id,call_sign) UNIQUE
 #
 
-aa_1:
+aa1:
   operator: american_airlines
   call_sign: AA1
 

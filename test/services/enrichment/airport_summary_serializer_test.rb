@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class Enrichment::AirportSummarySerializerTest < ActiveSupport::TestCase
+class EnrichmentAirportSummarySerializerTest < ActiveSupport::TestCase
   test 'serialises a lean airport with its country and float coordinates' do
     result = Enrichment::AirportSummarySerializer.call(airports(:yssy))
 

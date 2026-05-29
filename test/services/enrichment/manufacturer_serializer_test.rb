@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class Enrichment::ManufacturerSerializerTest < ActiveSupport::TestCase
+class EnrichmentManufacturerSerializerTest < ActiveSupport::TestCase
   test 'serialises a manufacturer with its country' do
     result = Enrichment::ManufacturerSerializer.call(manufacturers(:boeing))
 

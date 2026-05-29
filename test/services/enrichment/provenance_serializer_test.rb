@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class Enrichment::ProvenanceSerializerTest < ActiveSupport::TestCase
+class EnrichmentProvenanceSerializerTest < ActiveSupport::TestCase
   test 'returns the per-field provenance with source metadata' do
     aircraft = aircraft(:one)
     aircraft.field_provenance = {
@@ -21,7 +21,7 @@ class Enrichment::ProvenanceSerializerTest < ActiveSupport::TestCase
   end
 
   test 'returns nil for a record that does not track provenance' do
-    assert_nil Enrichment::ProvenanceSerializer.call(routes(:aa_1))
+    assert_nil Enrichment::ProvenanceSerializer.call(routes(:aa1))
   end
 
   test 'returns an empty hash when no fields are tracked' do

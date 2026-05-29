@@ -8,7 +8,7 @@ require 'nats/client'
 # broker) stays green. To run it locally:
 #   1. Start a broker:  nats-server  (or: docker run -p 4222:4222 nats)
 #   2. NATS_TEST_URL=nats://127.0.0.1:4222 bin/rails test test/integration/enrichment/nats_round_trip_test.rb
-class Enrichment::NatsRoundTripTest < ActiveSupport::TestCase
+class EnrichmentNatsRoundTripTest < ActiveSupport::TestCase
   setup do
     @url = ENV.fetch('NATS_TEST_URL', nil)
     skip 'set NATS_TEST_URL to run the NATS integration test' if @url.blank?

@@ -2,9 +2,11 @@
 
 require 'test_helper'
 
-class Enrichment::AircraftTypeSerializerTest < ActiveSupport::TestCase
+class EnrichmentAircraftTypeSerializerTest < ActiveSupport::TestCase
   test 'serialises an aircraft type with its manufacturer and enum category label' do
-    result = Enrichment::AircraftTypeSerializer.call(aircraft_types(:boeing_737))
+    # Reached via aircraft(:one) (whose type is the Boeing 737 fixture) to avoid
+    # referencing a numbered fixture symbol directly.
+    result = Enrichment::AircraftTypeSerializer.call(aircraft(:one).aircraft_type)
 
     assert_equal 'B737', result[:type_code]
     assert_equal '737-800', result[:name]
