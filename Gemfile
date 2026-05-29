@@ -83,3 +83,12 @@ gem "aasm", "~> 5.5"
 # Offline timezone lookup from coordinates
 gem "wheretz", "~> 0.0.6"
 gem "parallel"
+
+# NATS client for the enrichment service (see docs/superpowers/specs/2026-05-28-nats-enrichment-design.md)
+gem "nats-pure", "~> 2.5"
+
+# Prometheus metrics for the enrichment service
+gem "prometheus-client", "~> 4.2"
+
+# HTTP server used to expose the enrichment service's Prometheus metrics endpoint
+gem "webrick", "~> 1.8"
