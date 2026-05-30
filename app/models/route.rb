@@ -18,8 +18,15 @@ class Route < ApplicationRecord
   include MeiliSearch::Rails
   extend Pagy::Meilisearch
 
-  has_many :route_segments
+  has_many :route_segments, dependent: :destroy
   belongs_to :operator
+
+  # Allows the combine processor to stage a route together with its segments as
+  # a single nested-attributes payload, applied atomically via the staged batch.
+  accepts_nested_attributes_for :route_segments, allow_destroy: true
+
+  # A route is uniquely identified by its operator and callsign.
+  validates :call_sign, uniqueness: { scope: :operator_id }
 
   has_paper_trail
   # Preload associations for MeiliSearch reindexing to avoid N+1 queries
