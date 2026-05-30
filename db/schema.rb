@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_23_062050) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_30_042827) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -309,6 +309,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_23_062050) do
     t.datetime "updated_at", null: false
     t.index ["airport_id"], name: "index_route_segments_on_airport_id"
     t.index ["route_id"], name: "index_route_segments_on_route_id"
+  end
+
+  create_table "route_sources", force: :cascade do |t|
+    t.string "airline_code", null: false
+    t.string "airport_codes", null: false
+    t.string "callsign", null: false
+    t.datetime "created_at", null: false
+    t.jsonb "data", default: {}, null: false
+    t.boolean "excluded", default: false, null: false
+    t.datetime "excluded_at"
+    t.string "excluded_by"
+    t.string "exclusion_reason"
+    t.datetime "import_date", null: false
+    t.string "type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["airline_code"], name: "index_route_sources_on_airline_code"
+    t.index ["callsign", "type"], name: "index_route_sources_on_callsign_and_type", unique: true
+    t.index ["data"], name: "index_route_sources_on_data", using: :gin
+    t.index ["excluded"], name: "index_route_sources_on_excluded"
   end
 
   create_table "routes", force: :cascade do |t|
