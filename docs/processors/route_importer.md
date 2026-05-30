@@ -30,7 +30,7 @@ Processors::Route::VRS.import('/path/to/standing-data/routes/schema-01')
 
 ### Stage 2 — Combine (source rows into canonical routes)
 
-`Processors::Route::Route#combine_sources` resolves each source row's airline code
+`Processors::Route::Route.combine_sources` resolves each source row's airline code
 to an `Operator` (by ICAO, then IATA) and each airport code to an `Airport`
 (by ICAO, then IATA), then stages a `Route` — with its `RouteSegment` children as
 nested attributes — into a `StagedBatch` for review.
