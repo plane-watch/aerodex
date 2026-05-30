@@ -120,6 +120,30 @@ module Processors
         assert_equal 1, batch.staged_changes.count
         assert_equal 'QFA1', batch.staged_changes.first.record_identifier
       end
+
+      test 'resolves the operator and airports by IATA code when ICAO does not match' do
+        create_source(callsign: 'QF9', airline_code: 'QF', airport_codes: 'SIN-LHR')
+
+        batch = Processors::Route::Route.combine_sources
+
+        assert_equal 1, batch.staged_changes.count
+        change = batch.staged_changes.first
+        assert_equal @qantas.id, change.new_values['operator_id']
+
+        segments = change.new_values['route_segments_attributes']
+        airport_ids = segments.map { |s| s['airport_id'] }
+        assert_equal [@wsss.id, @egll.id], airport_ids
+      end
+
+      test 'stages resolvable routes and skips unresolvable ones in the same run' do
+        create_source(callsign: 'QFA1', airline_code: 'QFA', airport_codes: 'YSSY-WSSS')
+        create_source(callsign: 'ZZZ1', airline_code: 'ZZZ', airport_codes: 'YSSY-WSSS')
+
+        batch = Processors::Route::Route.combine_sources
+
+        assert_equal 1, batch.staged_changes.count
+        assert_equal 'QFA1', batch.staged_changes.first.record_identifier
+      end
     end
   end
 end
