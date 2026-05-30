@@ -144,6 +144,17 @@ module Processors
         assert_equal 1, batch.staged_changes.count
         assert_equal 'QFA1', batch.staged_changes.first.record_identifier
       end
+
+      test 'records skipped routes in a SourceImportReport and the batch notes' do
+        Source::SourceImportReport.delete_all
+        create_source(callsign: 'ZZZ1', airline_code: 'ZZZ', airport_codes: 'YSSY-WSSS')
+
+        batch = Processors::Route::Route.combine_sources
+
+        assert_equal 0, batch.staged_changes.count
+        assert_equal 1, Source::SourceImportReport.count
+        assert_match(/Skipped 1/, batch.notes)
+      end
     end
   end
 end

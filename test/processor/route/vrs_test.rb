@@ -134,6 +134,39 @@ module Processors
         assert_equal 1, Source::Route::VRSRouteSource.count
         assert_equal 'EGLL-YPPH', Source::Route::VRSRouteSource.find_by(callsign: 'QFA1').airport_codes
       end
+
+      test 'import_all_from_github discovers paths and imports each present file' do
+        tree = {
+          tree: [
+            { path: 'routes/schema-01/Q/QFA-all.csv' },
+            { path: 'routes/schema-01/B/BAW-all.csv' }
+          ]
+        }.to_json
+        Excon.stub(
+          { scheme: 'https', host: 'api.github.com',
+            path: '/repos/vradarserver/standing-data/git/trees/main',
+            query: 'recursive=1', port: 443 },
+          { body: tree, status: 200 }
+        )
+        Excon.stub(
+          { scheme: 'https', host: 'raw.githubusercontent.com',
+            path: '/vradarserver/standing-data/main/routes/schema-01/Q/QFA-all.csv', port: 443 },
+          { body: CSV_DATA, status: 200 }
+        )
+        # The second discovered file is absent (404) and must be skipped, not raise.
+        Excon.stub(
+          { scheme: 'https', host: 'raw.githubusercontent.com',
+            path: '/vradarserver/standing-data/main/routes/schema-01/B/BAW-all.csv', port: 443 },
+          { status: 404 }
+        )
+
+        result = Processors::Route::VRS.import_all_from_github(progress: false)
+
+        assert_equal 2, Source::Route::VRSRouteSource.count
+        assert_equal 2, result[:success_count]
+      ensure
+        Excon.stubs.clear
+      end
     end
   end
 end
