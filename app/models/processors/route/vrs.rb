@@ -212,8 +212,19 @@ module Processors
         def flush(records)
           return if records.empty?
 
+          # Postgres rejects an INSERT ... ON CONFLICT that touches the same
+          # conflict row twice in a single statement, so a batch containing two
+          # rows with the same callsign would raise ActiveRecord::StatementInvalid.
+          # The external source is not guaranteed to be free of duplicates, so
+          # de-duplicate by callsign here, keeping the LAST occurrence to match
+          # upsert "last wins" semantics. All rows share the same type
+          # (SOURCE_TYPE), so de-duplicating by callsign alone is sufficient.
+          deduplicated = records.each_with_object({}) do |record, acc|
+            acc[record[:callsign]] = record
+          end.values
+
           now = Time.current
-          rows = records.map { |r| r.merge(created_at: now, updated_at: now) }
+          rows = deduplicated.map { |r| r.merge(created_at: now, updated_at: now) }
 
           Source::Route::VRSRouteSource.upsert_all(
             rows,
