@@ -33,6 +33,14 @@ module Source
         assert_equal %w[YSSY WSSS EGLL], build_source.airport_code_list
       end
 
+      test 'airport_code_list returns an empty array when airport_codes is nil' do
+        assert_equal [], build_source(airport_codes: nil).airport_code_list
+      end
+
+      test 'airport_code_list returns a single-element array for a one-airport route' do
+        assert_equal %w[YSSY], build_source(airport_codes: 'YSSY').airport_code_list
+      end
+
       test 'includable scope excludes flagged records' do
         included = build_source(callsign: 'QFA10')
         included.save!
