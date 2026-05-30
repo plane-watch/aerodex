@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_30_042827) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_30_043123) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -336,6 +336,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_30_042827) do
     t.bigint "operator_id", null: false
     t.integer "route_segments_count", default: 0, null: false
     t.datetime "updated_at", null: false
+    t.index ["operator_id", "call_sign"], name: "index_routes_on_operator_id_and_call_sign", unique: true
     t.index ["operator_id"], name: "index_routes_on_operator_id"
   end
 
