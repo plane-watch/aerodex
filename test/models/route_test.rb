@@ -11,7 +11,8 @@
 #
 # Indexes
 #
-#  index_routes_on_operator_id  (operator_id)
+#  index_routes_on_operator_id                (operator_id)
+#  index_routes_on_operator_id_and_call_sign  (operator_id,call_sign) UNIQUE
 #
 
 # frozen_string_literal: true
@@ -30,6 +31,12 @@ class RouteTest < ActiveSupport::TestCase
     duplicate = Route.new(operator: @operator, call_sign: 'AA999')
     assert_not duplicate.valid?
     assert_includes duplicate.errors.attribute_names, :call_sign
+  end
+
+  test 'call_sign may repeat across different operators' do
+    Route.create!(operator: @operator, call_sign: 'AA995')
+    other = Route.new(operator: operators(:united_airlines), call_sign: 'AA995')
+    assert other.valid?
   end
 
   test 'accepts nested route_segments attributes and maintains order' do
