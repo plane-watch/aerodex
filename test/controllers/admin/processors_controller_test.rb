@@ -47,4 +47,12 @@ class Admin::ProcessorsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to admin_processors_path
     assert_match(/Unknown processor/, flash[:alert])
   end
+
+  test "Route is a known processor entity type" do
+    assert_includes Admin::ProcessorsController::PROCESSOR_ENTITY_TYPES, "Route"
+  end
+
+  test "the Route combine processor class resolves" do
+    assert_nothing_raised { "Processors::Route::Route".constantize }
+  end
 end
