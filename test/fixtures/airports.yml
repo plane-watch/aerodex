@@ -50,3 +50,25 @@ klax:
   altitude: 125
   timezone: America/Los_Angeles
 
+wsss:
+  name: Singapore Changi Airport
+  city: Singapore
+  country: australia
+  iata_code: SIN
+  icao_code: WSSS
+  latitude: 1.359167
+  longitude: 103.989441
+  altitude: 22
+  timezone: Asia/Singapore
+
+egll:
+  name: London Heathrow Airport
+  city: London
+  country: australia
+  iata_code: LHR
+  icao_code: EGLL
+  latitude: 51.4775
+  longitude: -0.461389
+  altitude: 83
+  timezone: Europe/London
+

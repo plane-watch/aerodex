@@ -49,3 +49,9 @@ air_france:
   icao_code: AFR
   iata_code: AF
 
+qantas:
+  name: Qantas
+  country: australia
+  icao_code: QFA
+  iata_code: QF
+
