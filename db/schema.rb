@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_30_043123) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_31_041739) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -429,6 +429,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_30_043123) do
   end
 
   create_table "staged_changes", force: :cascade do |t|
+    t.datetime "applied_at"
     t.datetime "created_at", null: false
     t.jsonb "diff", default: {}, null: false
     t.integer "operation", null: false
@@ -438,6 +439,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_30_043123) do
     t.uuid "staged_batch_id", null: false
     t.index ["record_identifier"], name: "index_staged_changes_on_record_identifier"
     t.index ["record_type", "record_id"], name: "index_staged_changes_on_record_type_and_record_id"
+    t.index ["staged_batch_id", "applied_at"], name: "index_staged_changes_on_staged_batch_id_and_applied_at"
     t.index ["staged_batch_id"], name: "index_staged_changes_on_staged_batch_id"
   end
 
