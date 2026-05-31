@@ -538,8 +538,8 @@ class StagedBatchTest < ActiveSupport::TestCase
     end
 
     # Should have progress broadcasts and a completion broadcast
-    assert broadcasts.any? { |b| b[:event] == "progress" }
-    assert broadcasts.any? { |b| b[:event] == "complete" && b[:status] == "applied" }
+    assert(broadcasts.any? { |b| b[:event] == "progress" })
+    assert(broadcasts.any? { |b| b[:event] == "complete" && b[:status] == "applied" })
   end
 
   # ===========================================================================
@@ -551,7 +551,7 @@ class StagedBatchTest < ActiveSupport::TestCase
 
     batch.apply!(by: users(:admin))
 
-    assert batch.staged_changes.all? { |c| c.reload.applied_at.present? }
+    assert(batch.staged_changes.all? { |c| c.reload.applied_at.present? })
   end
 
   test 'apply_single_change does not mark applied_at when the write fails' do
@@ -620,7 +620,7 @@ class StagedBatchTest < ActiveSupport::TestCase
     batch.reload
     assert batch.applied?
     assert_equal 100, batch.apply_progress
-    assert batch.staged_changes.all? { |c| c.applied_at.present? }
+    assert(batch.staged_changes.all? { |c| c.applied_at.present? })
     assert_equal 4, Country.where(iso_3char_code: %w[FAA FAB FAC FAD]).count
   end
 
