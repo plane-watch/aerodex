@@ -586,7 +586,7 @@ class StagedBatchTest < ActiveSupport::TestCase
     failing = batch.staged_changes.order(:id).third
     failing.update!(operation: :update, record_id: 0, diff: { 'name' => ['x', 'y'] })
 
-    batch.stub(:apply_batch_size, 2) do
+    with_apply_batch_size(batch, 2) do
       assert_raises(ActiveRecord::RecordNotFound) { batch.apply!(by: users(:admin)) }
     end
 
@@ -604,7 +604,7 @@ class StagedBatchTest < ActiveSupport::TestCase
     failing = batch.staged_changes.order(:id).third
     failing.update!(operation: :update, record_id: 0, diff: { 'name' => ['x', 'y'] })
 
-    batch.stub(:apply_batch_size, 2) do
+    with_apply_batch_size(batch, 2) do
       assert_raises(ActiveRecord::RecordNotFound) { batch.apply!(by: users(:admin)) }
     end
 
@@ -615,7 +615,7 @@ class StagedBatchTest < ActiveSupport::TestCase
       diff: { 'name' => [nil, 'Country FAC'], 'iso_3char_code' => [nil, 'FAC'], 'iso_2char_code' => [nil, 'FA'] }
     )
 
-    batch.stub(:apply_batch_size, 2) { batch.reload.apply!(by: users(:admin)) }
+    with_apply_batch_size(batch, 2) { batch.reload.apply!(by: users(:admin)) }
 
     batch.reload
     assert batch.applied?
@@ -663,6 +663,22 @@ class StagedBatchTest < ActiveSupport::TestCase
   end
 
   private
+
+  # Runs the given block with the batch's apply chunk size overridden, then
+  # restores the original behaviour. Used to force small chunks so chunk
+  # boundaries (and mid-apply failures) can be exercised in tests.
+  #
+  # Minitest 6 no longer ships minitest/mock's #stub, so the override is applied
+  # directly to the instance's singleton class.
+  #
+  # @param batch [StagedBatch] The batch whose chunk size to override
+  # @param size [Integer] The chunk size to use within the block
+  def with_apply_batch_size(batch, size)
+    batch.define_singleton_method(:apply_batch_size) { size }
+    yield
+  ensure
+    batch.singleton_class.send(:remove_method, :apply_batch_size)
+  end
 
   # Builds a pending batch of Country create changes, one per ISO 3-char code.
   #
