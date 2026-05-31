@@ -1,6 +1,6 @@
 # Chunked Staged-Batch Apply Design
 
-**Date:** 2026-05-28
+**Date:** 2026-05-31
 **Status:** Approved design, pending implementation plan
 
 ## Purpose
@@ -34,8 +34,10 @@ report visible progress and can resume after a failure.
   combiners) already use `find_each` and broadcast progress per record, with each
   `staged_changes.create!` committing independently. It is not a single
   transaction and is not changed here.
-- **`apply_single_change` semantics.** How an individual create/update is applied
-  (including nested route segments) is unchanged.
+- **`apply_single_change` create/update semantics.** How an individual
+  create/update is applied (including nested route segments) is unchanged; the
+  only addition is that it now sets the change's `applied_at` after a successful
+  write.
 - **The stale-data check semantics**, the ActionCable broadcasts, and the
   progress-throttling behaviour are unchanged (only *where* they run moves).
 - **A "run again" UI affordance.** Re-running a processor to produce a fresh
@@ -85,7 +87,9 @@ composite index `(staged_batch_id, applied_at)` to make "the unapplied changes
 for this batch" an indexed lookup.
 
 `applied_at` is the single source of truth for what has been applied. It is set
-*in the same transaction* as the change it marks, so a committed chunk always has
+by `apply_single_change` itself — immediately after the record's `save!`/`update!`
+succeeds — so the marker is written *in the same transaction* as the change it
+marks and can never be missed by a caller. A committed chunk therefore always has
 its records and their markers consistent.
 
 ### 2. Chunked apply loop
@@ -102,10 +106,7 @@ def apply_changes!
 
   remaining.find_each(batch_size: APPLY_BATCH_SIZE).each_slice(APPLY_BATCH_SIZE) do |chunk|
     transaction do
-      chunk.each do |change|
-        apply_single_change(change)
-        change.update_column(:applied_at, Time.current)
-      end
+      chunk.each { |change| apply_single_change(change) } # apply_single_change marks applied_at
     end
     applied += chunk.size
     update_apply_progress(applied)   # own committed write + broadcast, visible to pollers
@@ -113,8 +114,29 @@ def apply_changes!
 end
 ```
 
+`apply_single_change` is extended to set `applied_at` immediately after a
+successful `save!`/`update!`:
+
+```ruby
+def apply_single_change(change)
+  model_class = change.record_type.constantize
+  if change.operation == "create"
+    model_class.new(change.new_values).save!
+  else
+    model_class.find(change.record_id).update!(change.new_values)
+  end
+  change.update_column(:applied_at, Time.current) # marked within the caller's chunk transaction
+rescue ActiveRecord::RecordInvalid => e
+  # ... existing enriched-context re-raise (unchanged)
+end
+```
+
+Because the marking lives inside `apply_single_change`, every caller — the chunk
+loop here, tests, or any future single-change path — records completion
+consistently and within whatever transaction surrounds the call.
+
 (The exact slicing mechanism is a plan detail; the contract is: each chunk is one
-committed transaction that both applies its changes and marks their `applied_at`.)
+committed transaction in which every applied change also has its `applied_at` set.)
 
 ### 3. `apply!` flow
 
@@ -191,6 +213,8 @@ unapplied changes.
   are committed and their `applied_at` set, status `failed`, `apply_progress`
   reflects only the committed chunk; then re-invoke `apply!` and assert it
   completes, status `applied`, with no duplicated creates (resume + idempotency).
+- **`apply_single_change` marks completion:** applying a single change sets its
+  `applied_at` after the write succeeds, and leaves it unset when the write raises.
 - **Idempotent no-op:** applying a batch whose changes are all `applied_at`-marked
   finalises status without re-applying anything.
 - **Stale data:** an update whose target was modified after the batch was created
@@ -204,7 +228,7 @@ unapplied changes.
 |---|---|
 | Chunked transactions (commit per 1000) | Bounds lock/WAL/memory; makes committed progress visible to pollers. |
 | `applied_at` per change | Explicit, robust completion marker enabling safe resume and idempotency. |
-| Marker set in the change's own transaction | Guarantees records and their "done" flag commit together. |
+| Marker set inside `apply_single_change` | Guarantees records and their "done" flag commit together and that no caller can forget to mark a change. |
 | `failed` is resumable via `apply!` | User-approved; the `applied_at` markers make re-runs safe. |
 | Resume and run-again kept as separate entry points | `apply!` only moves forward; a fresh run is the existing combine flow. |
 | Per-record atomicity preserved | A create with nested segments is still one `save!` within its chunk. |
