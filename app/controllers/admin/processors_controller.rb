@@ -11,6 +11,7 @@ module Admin
       Country
       Manufacturer
       Operator
+      Route
       Runway
     ].freeze
 

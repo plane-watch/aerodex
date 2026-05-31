@@ -11,7 +11,8 @@
 #
 # Indexes
 #
-#  index_routes_on_operator_id  (operator_id)
+#  index_routes_on_operator_id                (operator_id)
+#  index_routes_on_operator_id_and_call_sign  (operator_id,call_sign) UNIQUE
 #
 
 aa_1:
