@@ -51,10 +51,14 @@
 # - failed: Processing encountered an error
 # - applying: Batch is being applied in a background job
 #
+# The class length sits above the default limit because a batch's apply/reject
+# lifecycle, progress broadcasting and per-change application are one cohesive
+# responsibility; splitting them would scatter tightly-coupled logic.
+# rubocop:disable Metrics/ClassLength
 class StagedBatch < ApplicationRecord
   # Associations
-  belongs_to :created_by, class_name: "User", optional: true
-  belongs_to :reviewed_by, class_name: "User", optional: true
+  belongs_to :created_by, class_name: 'User', optional: true
+  belongs_to :reviewed_by, class_name: 'User', optional: true
   has_many :staged_changes, dependent: :destroy
 
   # Enums
@@ -77,7 +81,7 @@ class StagedBatch < ApplicationRecord
   # Scopes
   scope :for_entity, ->(type) { where(entity_type: type) }
   scope :recent, -> { order(created_at: :desc) }
-  scope :actionable, -> { where(status: [:pending, :applied]) }
+  scope :actionable, -> { where(status: %i[pending applied]) }
 
   # Custom errors
   class InvalidStatusError < StandardError; end
@@ -103,7 +107,7 @@ class StagedBatch < ApplicationRecord
     unless pending? || applying? || failed?
       raise InvalidStatusError, "Batch must be pending, applying or failed (current: #{status})"
     end
-    raise ApplyError, "Cannot apply batch with no changes" if staged_changes.empty?
+    raise ApplyError, 'Cannot apply batch with no changes' if staged_changes.empty?
 
     start_apply!
     check_for_stale_data!
@@ -140,10 +144,10 @@ class StagedBatch < ApplicationRecord
   def broadcast_processing_progress(progress)
     update_column(:processing_progress, progress)
     StagedBatchChannel.broadcast_to(self, {
-      event: "processing_progress",
-      progress: progress,
-      status: status
-    })
+                                      event: 'processing_progress',
+                                      progress: progress,
+                                      status: status
+                                    })
   rescue StandardError => e
     Rails.logger.warn "Failed to broadcast processing progress for batch #{id}: #{e.message}"
   end
@@ -177,7 +181,7 @@ class StagedBatch < ApplicationRecord
 
       if record.updated_at > created_at
         raise StaleDataError, "Record #{change.record_type}##{change.record_id} " \
-                              "was modified after batch was created"
+                              'was modified after batch was created'
       end
     end
   end
@@ -207,7 +211,7 @@ class StagedBatch < ApplicationRecord
   def apply_single_change(change)
     model_class = change.record_type.constantize
 
-    if change.operation == "create"
+    if change.operation == 'create'
       record = model_class.new(change.new_values)
       record.save!
     else
@@ -246,7 +250,7 @@ class StagedBatch < ApplicationRecord
   # @param values [Hash] The attribute values
   # @return [String] Formatted key-value pairs like "icao_code: AYD, name: Example"
   def extract_identifiers(values)
-    return "" if values.blank?
+    return '' if values.blank?
 
     # Common identifier fields, in priority order
     identifier_keys = %w[icao_code iata_code code name identifier id slug]
@@ -258,10 +262,10 @@ class StagedBatch < ApplicationRecord
     found_keys = values.keys.first(2).map(&:to_s) if found_keys.empty?
 
     # Limit to 3 identifiers to keep the message readable
-    found_keys.first(3).map { |key|
+    found_keys.first(3).map do |key|
       value = values[key] || values[key.to_sym]
       "#{key}: #{value}"
-    }.join(", ")
+    end.join(', ')
   end
 
   # Minimum percentage change before broadcasting (prevents flooding)
@@ -335,10 +339,10 @@ class StagedBatch < ApplicationRecord
   # @param progress [Integer] Progress percentage (0-100)
   def broadcast_progress(progress)
     StagedBatchChannel.broadcast_to(self, {
-      event: "progress",
-      progress: progress,
-      status: status
-    })
+                                      event: 'progress',
+                                      progress: progress,
+                                      status: status
+                                    })
   rescue StandardError => e
     Rails.logger.warn "Failed to broadcast progress for batch #{id}: #{e.message}"
   end
@@ -347,10 +351,10 @@ class StagedBatch < ApplicationRecord
   # Failures are logged but don't interrupt the apply operation.
   def broadcast_completion
     StagedBatchChannel.broadcast_to(self, {
-      event: "complete",
-      status: status,
-      error_message: error_message
-    })
+                                      event: 'complete',
+                                      status: status,
+                                      error_message: error_message
+                                    })
   rescue StandardError => e
     Rails.logger.warn "Failed to broadcast completion for batch #{id}: #{e.message}"
   end
@@ -359,7 +363,7 @@ class StagedBatch < ApplicationRecord
   def run_post_apply_hooks
     # Reindex affected models for search
     model_class = entity_type.safe_constantize
-    return unless model_class&.respond_to?(:reindex!)
+    return unless model_class.respond_to?(:reindex!)
 
     model_class.reindex!
   rescue StandardError => e
@@ -368,3 +372,4 @@ class StagedBatch < ApplicationRecord
     # TODO: Consider adding a 'reindex_failed' flag to the batch
   end
 end
+# rubocop:enable Metrics/ClassLength
