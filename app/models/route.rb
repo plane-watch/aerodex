@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: routes
@@ -41,5 +43,14 @@ class Route < ApplicationRecord
     end
 
     filterable_attributes %i[id call_sign operator]
+  end
+
+  def string
+    codes = []
+    route_segments.each do |segment|
+      codes.push(segment.airport.icao_code)
+    end
+
+    codes.join('-')
   end
 end
