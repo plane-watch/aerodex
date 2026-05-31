@@ -84,37 +84,36 @@ class StagedBatch < ApplicationRecord
   class StaleDataError < StandardError; end
   class ApplyError < StandardError; end
 
-  # Applies all staged changes to the database.
+  # Number of staged changes applied per committed transaction.
+  APPLY_BATCH_SIZE = 1000
+
+  # Applies the batch's outstanding staged changes in committed chunks.
+  #
+  # Each chunk of APPLY_BATCH_SIZE changes is applied in its own transaction and
+  # committed before the next, so progress is visible to other connections and a
+  # failure only rolls back the current chunk. Re-invoking apply! on a failed or
+  # in-flight batch resumes over the remaining (applied_at IS NULL) changes; the
+  # applied_at marker makes resume idempotent.
   #
   # @param by [User, nil] The user approving the batch
-  # @raise [InvalidStatusError] If batch is not pending or applying
-  # @raise [StaleDataError] If any target record was modified after staging
-  # @raise [ApplyError] If apply fails
+  # @raise [InvalidStatusError] If the batch is not pending, applying or failed
+  # @raise [StaleDataError] If an unapplied update target was modified after staging
+  # @raise [ApplyError] If the batch has no changes
   def apply!(by:)
-    raise InvalidStatusError, "Batch must be pending or applying (current: #{status})" unless pending? || applying?
+    unless pending? || applying? || failed?
+      raise InvalidStatusError, "Batch must be pending, applying or failed (current: #{status})"
+    end
     raise ApplyError, "Cannot apply batch with no changes" if staged_changes.empty?
 
-    transaction do
-      check_for_stale_data!
-      apply_changes!
-
-      self.status = :applied
-      self.applied_at = Time.current
-      self.reviewed_by = by
-      self.reviewed_at = Time.current
-      self.apply_progress = 100
-      save!
-    end
+    start_apply!
+    check_for_stale_data!
+    apply_changes!
+    finish_apply!(by)
 
     broadcast_completion
     run_post_apply_hooks
   rescue StandardError => e
-    # Record the failure (outside transaction so it persists)
-    update!(
-      status: :failed,
-      error_message: "#{e.class}: #{e.message}",
-      apply_progress: 0
-    )
+    mark_failed!(e)
     broadcast_completion
     raise
   end
@@ -166,14 +165,13 @@ class StagedBatch < ApplicationRecord
 
   private
 
-  # Checks if any target records have been modified since the batch was created.
-  # Only checks update operations - create operations will fail naturally if unique
-  # constraints are violated during save!.
+  # Checks whether any unapplied UPDATE target has been modified since the batch
+  # was created. Creates are not checked - they fail naturally on unique
+  # constraint violations during save!.
   #
   # @raise [StaleDataError] If stale data is detected
   def check_for_stale_data!
-    # Check updates for external modifications
-    staged_changes.updates.find_each do |change|
+    staged_changes.updates.where(applied_at: nil).find_each do |change|
       record = change.record
       next unless record
 
@@ -184,11 +182,18 @@ class StagedBatch < ApplicationRecord
     end
   end
 
-  # Applies all staged changes using standard ActiveRecord.
+  # Applies the outstanding changes in committed chunks, advancing progress
+  # after each chunk commits.
   def apply_changes!
-    staged_changes.find_each.with_index do |change, index|
-      apply_single_change(change)
-      broadcast_progress_if_needed(index)
+    total = apply_total || staged_changes.count
+    applied = staged_changes.where.not(applied_at: nil).count
+
+    staged_changes.where(applied_at: nil).order(:id).find_in_batches(batch_size: apply_batch_size) do |chunk|
+      transaction do
+        chunk.each { |change| apply_single_change(change) }
+      end
+      applied += chunk.size
+      update_apply_progress(applied, total)
     end
   end
 
@@ -262,19 +267,66 @@ class StagedBatch < ApplicationRecord
   # Minimum percentage change before broadcasting (prevents flooding)
   PROGRESS_BROADCAST_INTERVAL = 1
 
-  # Broadcasts progress if the percentage has changed.
+  # Persists and broadcasts apply progress. The update_column is its own
+  # committed write (outside any chunk transaction), so other connections see it.
   #
-  # @param index [Integer] Current change index (0-based)
-  def broadcast_progress_if_needed(index)
-    total = apply_total || staged_changes.count
-    new_progress = ((index + 1) * 100 / total).to_i
-
+  # @param applied [Integer] Number of changes applied so far
+  # @param total [Integer] Total changes in the batch
+  def update_apply_progress(applied, total)
+    new_progress = total.zero? ? 100 : (applied * 100 / total)
     return if new_progress == apply_progress
-    # Only broadcast at intervals, but always broadcast 100%
-    return if (new_progress % PROGRESS_BROADCAST_INTERVAL != 0) && new_progress != 100
 
     update_column(:apply_progress, new_progress)
     broadcast_progress(new_progress)
+  end
+
+  # Moves the batch into the applying state, fixing the total once and seeding
+  # progress from any already-applied changes (for resume). Committed immediately.
+  def start_apply!
+    update!(
+      status: :applying,
+      apply_total: staged_changes.count,
+      apply_progress: current_apply_percentage
+    )
+    broadcast_progress(apply_progress)
+  end
+
+  # Finalises a fully-applied batch.
+  #
+  # @param by [User, nil] The approving user
+  def finish_apply!(by)
+    update!(
+      status: :applied,
+      applied_at: Time.current,
+      reviewed_by: by,
+      reviewed_at: Time.current,
+      apply_progress: 100
+    )
+  end
+
+  # Records a failure while retaining the committed apply_progress so the UI
+  # shows true partial progress and the batch can be resumed.
+  #
+  # @param error [StandardError] The failure
+  def mark_failed!(error)
+    update!(status: :failed, error_message: "#{error.class}: #{error.message}")
+  end
+
+  # The percentage of changes already applied (used to seed progress on resume).
+  #
+  # @return [Integer]
+  def current_apply_percentage
+    total = staged_changes.count
+    return 0 if total.zero?
+
+    staged_changes.where.not(applied_at: nil).count * 100 / total
+  end
+
+  # The chunk size for apply transactions. Extracted so tests can shrink it.
+  #
+  # @return [Integer]
+  def apply_batch_size
+    APPLY_BATCH_SIZE
   end
 
   # Broadcasts current progress to subscribed clients.
