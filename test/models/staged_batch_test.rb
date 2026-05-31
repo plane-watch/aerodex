@@ -566,6 +566,102 @@ class StagedBatchTest < ActiveSupport::TestCase
     assert_nil change.reload.applied_at
   end
 
+  # ===========================================================================
+  # Chunked apply, failure and resume
+  # ===========================================================================
+
+  test 'apply! sets apply_total once and finishes at 100' do
+    batch = create_country_batch(%w[DAA DAB DAC])
+
+    batch.apply!(by: users(:admin))
+
+    assert batch.applied?
+    assert_equal 3, batch.apply_total
+    assert_equal 100, batch.apply_progress
+  end
+
+  test 'a failing chunk commits earlier chunks and leaves the batch resumable' do
+    batch = create_country_batch(%w[EAA EAB EAC EAD])
+    # The third change targets a missing record, so chunk 2 (size 2) rolls back.
+    failing = batch.staged_changes.order(:id).third
+    failing.update!(operation: :update, record_id: 0, diff: { 'name' => ['x', 'y'] })
+
+    batch.stub(:apply_batch_size, 2) do
+      assert_raises(ActiveRecord::RecordNotFound) { batch.apply!(by: users(:admin)) }
+    end
+
+    batch.reload
+    assert batch.failed?
+    # Chunk 1 (first two creates) committed and is marked applied.
+    assert_equal 2, batch.staged_changes.where.not(applied_at: nil).count
+    assert_equal 2, Country.where(iso_3char_code: %w[EAA EAB]).count
+    # Progress reflects the committed chunk, not reset to zero.
+    assert_equal 50, batch.apply_progress
+  end
+
+  test 'apply! resumes a failed batch and completes once the bad change is fixed' do
+    batch = create_country_batch(%w[FAA FAB FAC FAD])
+    failing = batch.staged_changes.order(:id).third
+    failing.update!(operation: :update, record_id: 0, diff: { 'name' => ['x', 'y'] })
+
+    batch.stub(:apply_batch_size, 2) do
+      assert_raises(ActiveRecord::RecordNotFound) { batch.apply!(by: users(:admin)) }
+    end
+
+    # Fix the bad change: turn it back into a valid create.
+    failing.reload.update!(
+      operation: :create,
+      record_id: nil,
+      diff: { 'name' => [nil, 'Country FAC'], 'iso_3char_code' => [nil, 'FAC'], 'iso_2char_code' => [nil, 'FA'] }
+    )
+
+    batch.stub(:apply_batch_size, 2) { batch.reload.apply!(by: users(:admin)) }
+
+    batch.reload
+    assert batch.applied?
+    assert_equal 100, batch.apply_progress
+    assert batch.staged_changes.all? { |c| c.applied_at.present? }
+    assert_equal 4, Country.where(iso_3char_code: %w[FAA FAB FAC FAD]).count
+  end
+
+  test 'apply! finalises a resumed batch whose changes are already all applied' do
+    batch = create_country_batch(%w[GAA GAB])
+    batch.apply!(by: users(:admin)) # fully applied; every change marked
+
+    # Simulate a crash that applied everything but never reached finish_apply!:
+    # the batch is left resumable with all changes already marked applied_at.
+    batch.update_columns(status: StagedBatch.statuses[:failed], apply_progress: 100)
+
+    assert_no_difference -> { Country.count } do
+      batch.reload.apply!(by: users(:admin))
+    end
+    assert batch.reload.applied?
+  end
+
+  test 'apply! raises StaleDataError when an unapplied update target changed after staging' do
+    country = Country.create!(name: 'Staleland', iso_3char_code: 'STL', iso_2char_code: 'ST')
+
+    batch = StagedBatch.create!(
+      processor_type: 'Processors::Country::Country',
+      entity_type: 'Country',
+      status: :pending,
+      summary: { 'created' => 0, 'updated' => 1, 'unchanged' => 0 }
+    )
+    batch.staged_changes.create!(
+      record_type: 'Country',
+      record_id: country.id,
+      record_identifier: 'STL',
+      operation: :update,
+      diff: { 'name' => ['Staleland', 'Renamedland'] }
+    )
+
+    # Simulate an external modification after the batch was created.
+    country.update_column(:updated_at, 1.hour.from_now)
+
+    assert_raises(StagedBatch::StaleDataError) { batch.apply!(by: users(:admin)) }
+    assert batch.reload.failed?
+  end
+
   private
 
   # Builds a pending batch of Country create changes, one per ISO 3-char code.
