@@ -7,7 +7,7 @@
 # backing the uniqueness validation on the Route model.
 class AddUniqueIndexToRoutes < ActiveRecord::Migration[8.0]
   def change
-    add_index :routes, [:operator_id, :call_sign],
+    add_index :routes, %i[operator_id call_sign],
               unique: true,
               name: 'index_routes_on_operator_id_and_call_sign'
   end

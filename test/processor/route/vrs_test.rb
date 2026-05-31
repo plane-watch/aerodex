@@ -118,7 +118,7 @@ module Processors
       end
 
       test 'import_csv_data rescues malformed CSV and reports one error' do
-        malformed = %Q(Callsign,Code,Number,AirlineCode,AirportCodes\nQFA1,QFA,1,QFA,"unterminated\n)
+        malformed = %(Callsign,Code,Number,AirlineCode,AirportCodes\nQFA1,QFA,1,QFA,"unterminated\n)
         result = Processors::Route::VRS.import_csv_data(malformed, source_name: 'broken.csv')
 
         assert_equal 0, Source::Route::VRSRouteSource.count

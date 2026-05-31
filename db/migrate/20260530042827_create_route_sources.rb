@@ -35,7 +35,7 @@ class CreateRouteSources < ActiveRecord::Migration[8.0]
       t.timestamps
     end
 
-    add_index :route_sources, [:callsign, :type], unique: true
+    add_index :route_sources, %i[callsign type], unique: true
     add_index :route_sources, :airline_code
     add_index :route_sources, :excluded
     add_index :route_sources, :data, using: :gin
