@@ -17,6 +17,8 @@
 #  index_routes_on_operator_id_and_call_sign  (operator_id,call_sign) UNIQUE
 #
 
+# Represents a flight route operated under a callsign, composed of an ordered
+# sequence of RouteSegments (the airports called at, in order of flight).
 class Route < ApplicationRecord
   include MeiliSearch::Rails
   extend Pagy::Meilisearch
