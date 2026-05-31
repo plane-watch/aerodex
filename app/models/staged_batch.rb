@@ -192,7 +192,10 @@ class StagedBatch < ApplicationRecord
     end
   end
 
-  # Applies a single staged change using save!/update!
+  # Applies a single staged change using save!/update! and records its
+  # completion by setting applied_at. The applied_at write happens within
+  # whatever transaction surrounds the call (the chunk transaction in
+  # apply_changes!), so a record and its marker always commit together.
   #
   # @param change [StagedChange] The change to apply
   # @raise [ActiveRecord::RecordInvalid] Re-raised with enriched context about the failing record
@@ -206,6 +209,8 @@ class StagedBatch < ApplicationRecord
       record = model_class.find(change.record_id)
       record.update!(change.new_values)
     end
+
+    change.update_column(:applied_at, Time.current)
   rescue ActiveRecord::RecordInvalid => e
     # Enrich the error with context about which record failed
     context = build_change_context(change)

@@ -541,6 +541,58 @@ class StagedBatchTest < ActiveSupport::TestCase
     assert broadcasts.any? { |b| b[:event] == "progress" }
     assert broadcasts.any? { |b| b[:event] == "complete" && b[:status] == "applied" }
   end
+
+  # ===========================================================================
+  # applied_at marking
+  # ===========================================================================
+
+  test 'apply! sets applied_at on every change that is applied' do
+    batch = create_country_batch(%w[AAA BBB])
+
+    batch.apply!(by: users(:admin))
+
+    assert batch.staged_changes.all? { |c| c.reload.applied_at.present? }
+  end
+
+  test 'apply_single_change does not mark applied_at when the write fails' do
+    batch = create_country_batch(%w[CCC])
+    change = batch.staged_changes.first
+
+    # Make the create invalid so save! raises (duplicate ISO code is not the
+    # mechanism here; use an update to a missing record which raises cleanly).
+    change.update!(operation: :update, record_id: 0, diff: { 'name' => ['x', 'y'] })
+
+    assert_raises(ActiveRecord::RecordNotFound) { batch.apply!(by: users(:admin)) }
+    assert_nil change.reload.applied_at
+  end
+
+  private
+
+  # Builds a pending batch of Country create changes, one per ISO 3-char code.
+  #
+  # @param codes [Array<String>] ISO 3-char codes to stage creates for
+  # @return [StagedBatch]
+  def create_country_batch(codes)
+    batch = StagedBatch.create!(
+      processor_type: 'Processors::Country::Country',
+      entity_type: 'Country',
+      status: :pending,
+      summary: { 'created' => codes.size, 'updated' => 0, 'unchanged' => 0 }
+    )
+    codes.each do |code|
+      batch.staged_changes.create!(
+        record_type: 'Country',
+        record_identifier: code,
+        operation: :create,
+        diff: {
+          'name' => [nil, "Country #{code}"],
+          'iso_3char_code' => [nil, code],
+          'iso_2char_code' => [nil, code[0, 2]]
+        }
+      )
+    end
+    batch
+  end
 end
 
 # Tests for processing progress broadcast methods
