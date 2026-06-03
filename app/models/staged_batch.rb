@@ -99,39 +99,48 @@ class StagedBatch < ApplicationRecord
   # in-flight batch resumes over the remaining (applied_at IS NULL) changes; the
   # applied_at marker makes resume idempotent.
   #
-  # @param by [User, nil] The user approving the batch
+  # @param by [User, Integer, nil] The user (or user id) approving the batch
   # @raise [InvalidStatusError] If the batch is not pending, applying or failed
   # @raise [StaleDataError] If an unapplied update target was modified after staging
   # @raise [ApplyError] If the batch has no changes
+  # @raise [ActiveRecord::RecordNotFound] If by is an id that matches no user
   def apply!(by:)
     unless pending? || applying? || failed?
       raise InvalidStatusError, "Batch must be pending, applying or failed (current: #{status})"
     end
     raise ApplyError, 'Cannot apply batch with no changes' if staged_changes.empty?
 
-    start_apply!
-    check_for_stale_data!
-    apply_changes!
-    finish_apply!(by)
+    # Resolve the reviewer up front, before the failure-tracked work below, so
+    # invalid input fails fast without applying anything. Resolving (or using
+    # it) late would flip a fully-applied batch to failed because the reviewer
+    # is only assigned in finish_apply!.
+    reviewer = resolve_reviewer(by)
 
-    broadcast_completion
-    run_post_apply_hooks
-  rescue StandardError => e
-    mark_failed!(e)
-    broadcast_completion
-    raise
+    begin
+      start_apply!
+      check_for_stale_data!
+      apply_changes!
+      finish_apply!(reviewer)
+
+      broadcast_completion
+      run_post_apply_hooks
+    rescue StandardError => e
+      mark_failed!(e)
+      broadcast_completion
+      raise
+    end
   end
 
   # Rejects the batch, discarding all staged changes.
   #
-  # @param by [User, nil] The user rejecting the batch
+  # @param by [User, Integer, nil] The user (or user id) rejecting the batch
   # @param reason [String, nil] Optional rejection reason
   def reject!(by:, reason: nil)
     raise InvalidStatusError, "Batch must be pending to reject (current: #{status})" unless pending?
 
     update!(
       status: :rejected,
-      reviewed_by: by,
+      reviewed_by: resolve_reviewer(by),
       reviewed_at: Time.current,
       notes: reason
     )
@@ -297,15 +306,27 @@ class StagedBatch < ApplicationRecord
 
   # Finalises a fully-applied batch.
   #
-  # @param by [User, nil] The approving user
-  def finish_apply!(by)
+  # @param reviewer [User, nil] The approving user (already resolved)
+  def finish_apply!(reviewer)
     update!(
       status: :applied,
       applied_at: Time.current,
-      reviewed_by: by,
+      reviewed_by: reviewer,
       reviewed_at: Time.current,
       apply_progress: 100
     )
+  end
+
+  # Resolves the reviewer argument to a User (or nil). Accepts a User instance,
+  # a user id, or nil, so the method is convenient to call from a console or a
+  # background job. Raises ActiveRecord::RecordNotFound for an unknown id.
+  #
+  # @param by [User, Integer, String, nil]
+  # @return [User, nil]
+  def resolve_reviewer(by)
+    return by if by.nil? || by.is_a?(User)
+
+    User.find(by)
   end
 
   # Records a failure while retaining the committed apply_progress so the UI

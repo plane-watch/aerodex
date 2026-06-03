@@ -662,6 +662,33 @@ class StagedBatchTest < ActiveSupport::TestCase
     assert batch.reload.failed?
   end
 
+  # ===========================================================================
+  # Reviewer (:by) resolution
+  # ===========================================================================
+
+  test 'apply! accepts a user id for :by and finalises as applied (regression)' do
+    # Previously an Integer :by raised AssociationTypeMismatch in finish_apply!
+    # after every change was applied, flipping the fully-applied batch to failed.
+    # The id must resolve to a User and the batch must finish applied.
+    batch = create_country_batch(%w[IAA IAB])
+
+    batch.apply!(by: users(:admin).id)
+
+    assert batch.applied?
+    assert_not batch.failed?
+    assert_equal users(:admin), batch.reviewed_by
+    assert_equal 100, batch.apply_progress
+  end
+
+  test 'reject! accepts a user id for :by' do
+    batch = create_country_batch(%w[KAA])
+
+    batch.reject!(by: users(:admin).id, reason: 'not wanted')
+
+    assert batch.rejected?
+    assert_equal users(:admin), batch.reviewed_by
+  end
+
   private
 
   # Runs the given block with the batch's apply chunk size overridden, then
