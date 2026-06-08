@@ -1,10 +1,13 @@
+# frozen_string_literal: true
+
+# View helpers for rendering countries, including resolving flag assets.
 module CountriesHelper
   # The placeholder flag shown when a country has no two-character ISO code,
   # or when no matching flag asset exists on disk. Some formerly-assigned
   # ISO 3166-1 codes (e.g. "CS" for Serbia and Montenegro) have no bundled
   # flag, and Sprockets raises AssetNotFound for a missing asset, which would
   # otherwise crash the page.
-  FALLBACK_FLAG_CODE = 'xx'.freeze
+  FALLBACK_FLAG_CODE = 'xx'
 
   # Resolves the flag asset path for the given country.
   #
