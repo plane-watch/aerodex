@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'nats/client'
+require 'timeout'
 
 module Enrichment
   # The long-lived NATS consumer for the enrichment service. Connects to NATS,
@@ -19,6 +20,12 @@ module Enrichment
     SUBJECT_WILDCARD = 'v2.enrich.*'
     # The queue group; all replicas share it so each request is handled once.
     DEFAULT_QUEUE_GROUP = 'aerodex-enrich-v2'
+    # The upper bound on how long #shutdown waits for the drain to complete.
+    # Slightly longer than nats-pure's own 30s drain timeout, so a drain that
+    # times out internally still reports through the error callback before the
+    # process gives up waiting. The orchestrator's termination grace period must
+    # in turn be longer than this.
+    DRAIN_WAIT_SECONDS = 35
 
     # @param url [String, nil] The NATS server URL (defaults to NATS_URL).
     # @param queue_group [String] The queue group name.
@@ -33,6 +40,7 @@ module Enrichment
       @metrics_server = metrics_server
       @dispatcher = Dispatcher.new
       @stop = Queue.new
+      @closed = Queue.new
     end
 
     # Connects, subscribes and blocks until signalled to shut down, then drains.
@@ -52,6 +60,10 @@ module Enrichment
 
     def connect
       @nats = NATS.connect(@url)
+      # NATS#drain is asynchronous: it hands the work to a background thread and
+      # returns immediately. The connection fires on_close once that thread has
+      # finished draining, which is what #await_drain blocks on.
+      @nats.on_close { @closed.push(true) }
       @nats.on_reconnect { Metrics.increment_reconnects }
       @nats.on_error { |error| Rails.logger.error("[enrichment] NATS error: #{error.class}: #{error.message}") }
     end
@@ -96,8 +108,22 @@ module Enrichment
     def shutdown
       Rails.logger.info('[enrichment] draining NATS connection')
       @nats&.drain
+      await_drain
       @metrics_server.stop
       Rails.logger.info('[enrichment] shut down cleanly')
+    end
+
+    # Blocks until the drain started by #shutdown has finished, so the process
+    # does not exit part-way through and drop in-flight replies. Gives up after
+    # DRAIN_WAIT_SECONDS rather than hanging indefinitely on a wedged broker.
+    def await_drain
+      return unless @nats
+
+      Timeout.timeout(DRAIN_WAIT_SECONDS) { @closed.pop }
+    rescue Timeout::Error
+      Rails.logger.warn(
+        "[enrichment] drain did not finish within #{DRAIN_WAIT_SECONDS}s; exiting anyway"
+      )
     end
   end
 end

@@ -52,4 +52,52 @@ class EnrichmentNatsServerTest < ActiveSupport::TestCase
     assert_equal 'v2.enrich.*', Enrichment::NatsServer::SUBJECT_WILDCARD
     assert_equal 'aerodex-enrich-v2', Enrichment::NatsServer::DEFAULT_QUEUE_GROUP
   end
+
+  # A stand-in for a nats-pure connection whose #drain is asynchronous, matching
+  # the real client: it hands off to a background thread and returns at once,
+  # firing the on_close callback only once the drain has finished.
+  class FakeConnection
+    DRAIN_DURATION = 0.2
+
+    def on_close(&callback)
+      @close_callback = callback
+    end
+
+    def drain
+      Thread.new do
+        sleep DRAIN_DURATION
+        @close_callback&.call
+      end
+    end
+  end
+
+  # A metrics server that only records that it was stopped.
+  class FakeMetricsServer
+    attr_reader :stopped
+
+    def stop
+      @stopped = true
+    end
+  end
+
+  test 'shutdown waits for the drain to finish before returning' do
+    connection = FakeConnection.new
+    metrics_server = FakeMetricsServer.new
+    server = Enrichment::NatsServer.new(
+      url: 'nats://unused.invalid:4222',
+      metrics_server: metrics_server
+    )
+    # Wire the connection up exactly as #connect does.
+    closed = server.instance_variable_get(:@closed)
+    connection.on_close { closed.push(true) }
+    server.instance_variable_set(:@nats, connection)
+
+    started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    server.send(:shutdown)
+    elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
+
+    assert_operator elapsed, :>=, FakeConnection::DRAIN_DURATION,
+                    'shutdown returned before the drain had completed'
+    assert metrics_server.stopped, 'the metrics server was not stopped'
+  end
 end
