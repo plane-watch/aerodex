@@ -39,12 +39,27 @@ Metrics/BlockLength:
     - 'test/**/*'
     - 'lib/tasks/**/*'
 
+# Both cops report on size alone. The processors and importers they flag are
+# long because they enumerate fields and sources, not because they carry
+# proportionate complexity, so satisfying them would mean splitting classes to
+# suit a line count rather than a responsibility. `Metrics/BlockLength` and
+# `Metrics/BlockNesting` stay enabled: those report local complexity, which is
+# worth acting on.
 Metrics/ClassLength:
-  Exclude:
-    - 'test/**/*'
+  Enabled: false
+
+Metrics/ModuleLength:
+  Enabled: false
 
 Metrics/ParameterLists:
   Enabled: false
+
+# The offences here are fixed-width tables written to the console and to the
+# log, such as `format('%-36s %-15s %-30s %s', ...)`. Annotating each token
+# would separate the format string from its arguments and make the column
+# widths harder to read, without adding safety at this number of arguments.
+Style/FormatStringToken:
+  MaxUnannotatedPlaceholdersAllowed: 5
 
 # The three cops below ship enabled in the base `rubocop` gem, whose defaults
 # target gems rather than Rails applications. Rails' own style guide
