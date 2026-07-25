@@ -17,3 +17,7 @@ public/assets
 
 Dockerfile*
 compose*.yaml
+
+# Never bake local environment files into the image; the build does `COPY . .`.
+.env
+.env.*
