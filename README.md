@@ -17,7 +17,11 @@ Flight routes are imported from the VRS [`standing-data`](https://github.com/vra
 Aerodex can serve its reference data over a NATS message bus for the
 flight-tracking pipeline, via a dedicated consumer process (`bin/enrichment-server`)
 that answers `v2.enrich.*` request-reply RPCs for aircraft, routes and airports.
-See [the NATS enrichment service documentation](docs/nats-enrichment.md) for details.
+It runs as the `enrich` service in the Compose stack, against an external broker
+in production and a bundled one in development.
+See [the NATS enrichment service documentation](docs/as-built/nats-enrichment.md) for
+running and operating it, and [the client reference](docs/as-built/nats-enrichment-service.md)
+for the wire contract.
 
 
 ## Getting Started
