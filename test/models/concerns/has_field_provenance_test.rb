@@ -67,7 +67,7 @@ class HasFieldProvenanceTest < ActiveSupport::TestCase
 
   test 'set_provenance_for_fields sets provenance for multiple fields' do
     @operator.set_provenance_for_fields(
-      [:name, :icao_code],
+      %i[name icao_code],
       source: @mock_source,
       confidence: 80
     )

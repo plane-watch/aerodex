@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-# rubocop:disable Metrics/AbcSize, Metrics/MethodLength
 # devise helper
 module DeviseHelper
   def devise_error_messages!
@@ -29,7 +28,7 @@ module DeviseHelper
 
     sentence = 'Ooops!'
     if resource.errors.count == 1
-      message =  resource.errors.full_messages[0]
+      message = resource.errors.full_messages[0]
       html = <<-HTML
         <div class="bg-red-lightest border-l-4 border-red text-orange-dark p-4" role="alert">
           <p class="font-bold">#{sentence}</p>

@@ -13,7 +13,7 @@ class CreateStagedChanges < ActiveRecord::Migration[8.1]
       t.datetime :created_at, null: false
     end
 
-    add_index :staged_changes, [:record_type, :record_id]
+    add_index :staged_changes, %i[record_type record_id]
     add_index :staged_changes, :record_identifier
   end
 end

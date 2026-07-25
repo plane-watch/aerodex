@@ -62,10 +62,10 @@ class Processors::BaseTest < ActiveSupport::TestCase
   test 'index_staged_records_by preserves existing cache entries' do
     existing_operator = Operator.new(icao_code: 'QFA', name: 'Qantas')
     Processors::Base.send(:staged_records_cache=, {
-      Operator => {
-        icao_code: { 'qfa' => existing_operator }
-      }
-    })
+                            Operator => {
+                              icao_code: { 'qfa' => existing_operator }
+                            }
+                          })
 
     Processors::Base.index_staged_records_by(Operator, :icao_code, :name)
 
@@ -185,7 +185,7 @@ class Processors::BaseTest < ActiveSupport::TestCase
     operator = Operator.new(icao_code: 'QFA')
     Processors::Base.cache_staged_record(operator)
 
-    result = Processors::Base.find_in_staged_cache(Operator, icao_code: ['JST', 'QFA', 'SIA'])
+    result = Processors::Base.find_in_staged_cache(Operator, icao_code: %w[JST QFA SIA])
     assert_equal operator, result
   end
 
@@ -198,7 +198,7 @@ class Processors::BaseTest < ActiveSupport::TestCase
     Processors::Base.cache_staged_record(qantas)
     Processors::Base.cache_staged_record(jetstar)
 
-    result = Processors::Base.find_in_staged_cache(Operator, icao_code: ['JST', 'QFA'])
+    result = Processors::Base.find_in_staged_cache(Operator, icao_code: %w[JST QFA])
     assert_equal jetstar, result
   end
 
@@ -280,7 +280,7 @@ class Processors::BaseTest < ActiveSupport::TestCase
 
     db_operator = Operator.create!(icao_code: 'TA1', name: 'Array Test')
 
-    result = Processors::Base.find_staged_or_persisted(Operator, icao_code: ['ZZ1', 'TA1'])
+    result = Processors::Base.find_staged_or_persisted(Operator, icao_code: %w[ZZ1 TA1])
     assert_equal db_operator, result
   ensure
     Operator.where(icao_code: 'TA1').delete_all

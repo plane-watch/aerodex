@@ -53,7 +53,8 @@ class ManufacturerNormalisationTest < ActiveSupport::TestCase
   end
 
   test 'normalise_manufacturer_name applies pattern matching for European manufacturers' do
-    assert_equal 'Aerospatiale', TestNormaliser.normalise_manufacturer_name('Societe Nationale Industrielle Aerospatiale')
+    assert_equal 'Aerospatiale',
+                 TestNormaliser.normalise_manufacturer_name('Societe Nationale Industrielle Aerospatiale')
     assert_equal 'Pilatus', TestNormaliser.normalise_manufacturer_name('Pilatus Aircraft Ltd')
     assert_equal 'ATR', TestNormaliser.normalise_manufacturer_name('Atr - Gie Avions De Transport Regional')
     assert_equal 'SAAB', TestNormaliser.normalise_manufacturer_name('S.A.A.B.')
@@ -82,11 +83,14 @@ class ManufacturerNormalisationTest < ActiveSupport::TestCase
 
   test 'normalise_manufacturer_name applies pattern matching for Russian manufacturers' do
     assert_equal 'Antonov', TestNormaliser.normalise_manufacturer_name('Antonov OKB')
-    assert_equal 'Tupolev', TestNormaliser.normalise_manufacturer_name('Aviatsionny Nauchno-Tekhnishesky Kompleks Imeni A N Tupoleva OAO')
+    assert_equal 'Tupolev',
+                 TestNormaliser.normalise_manufacturer_name('Aviatsionny Nauchno-Tekhnishesky Kompleks Imeni A N Tupoleva OAO')
     assert_equal 'Ilyushin', TestNormaliser.normalise_manufacturer_name('Aviatsionnyi Kompleks Imeni S.V.Ilyushina OAO')
-    assert_equal 'Sukhoi', TestNormaliser.normalise_manufacturer_name('Gosudarstvennoye Unitarnoye Predpriyatie Aviatsionnyi Voyenno-Promyshlennyi Komplex Sukhoi')
+    assert_equal 'Sukhoi',
+                 TestNormaliser.normalise_manufacturer_name('Gosudarstvennoye Unitarnoye Predpriyatie Aviatsionnyi Voyenno-Promyshlennyi Komplex Sukhoi')
     assert_equal 'MiG', TestNormaliser.normalise_manufacturer_name('Aviatsionnyi Nauchno-Promyshlennyi Kompleks MiG')
-    assert_equal 'Yakovlev', TestNormaliser.normalise_manufacturer_name('Moskovskii Mashinostroitelnyy Zavod "Skorost" Imeni A.S.Yakovleva')
+    assert_equal 'Yakovlev',
+                 TestNormaliser.normalise_manufacturer_name('Moskovskii Mashinostroitelnyy Zavod "Skorost" Imeni A.S.Yakovleva')
     assert_equal 'Mil', TestNormaliser.normalise_manufacturer_name('Mil OKB')
     assert_equal 'Kamov', TestNormaliser.normalise_manufacturer_name('Kamov OAO')
     assert_equal 'Beriev', TestNormaliser.normalise_manufacturer_name('Beriev OKB')
@@ -131,15 +135,19 @@ class ManufacturerNormalisationTest < ActiveSupport::TestCase
   end
 
   test 'normalise_manufacturer_name removes Germanic corporate suffixes' do
-    assert_equal 'Airconcept Flugzeug und Gerätebau', TestNormaliser.normalise_manufacturer_name('Airconcept Flugzeug und Gerätebau GmbH & Co KG')
-    assert_equal 'Akademische Fliegergruppe Berlin', TestNormaliser.normalise_manufacturer_name('Akademische Fliegergruppe Berlin eV')
+    assert_equal 'Airconcept Flugzeug und Gerätebau',
+                 TestNormaliser.normalise_manufacturer_name('Airconcept Flugzeug und Gerätebau GmbH & Co KG')
+    assert_equal 'Akademische Fliegergruppe Berlin',
+                 TestNormaliser.normalise_manufacturer_name('Akademische Fliegergruppe Berlin eV')
     assert_equal 'Binder Aviatik', TestNormaliser.normalise_manufacturer_name('Binder Aviatik KG')
   end
 
   test 'normalise_manufacturer_name removes other international corporate suffixes' do
     assert_equal 'Eiriavion', TestNormaliser.normalise_manufacturer_name('Eiriavion OY')
-    assert_equal 'Composites Technology Research Malaysia', TestNormaliser.normalise_manufacturer_name('Composites Technology Research Malaysia Sdn Bhd')
-    assert_equal 'Lambert Aircraft Engineering', TestNormaliser.normalise_manufacturer_name('Lambert Aircraft Engineering bvba')
+    assert_equal 'Composites Technology Research Malaysia',
+                 TestNormaliser.normalise_manufacturer_name('Composites Technology Research Malaysia Sdn Bhd')
+    assert_equal 'Lambert Aircraft Engineering',
+                 TestNormaliser.normalise_manufacturer_name('Lambert Aircraft Engineering bvba')
     assert_equal 'Jonker Sailplanes', TestNormaliser.normalise_manufacturer_name('Jonker Sailplanes CC')
   end
 
@@ -170,7 +178,8 @@ class ManufacturerNormalisationTest < ActiveSupport::TestCase
   end
 
   test 'remove_country_annotation removes multi-country annotation' do
-    assert_equal 'GIE Airbus Industrie', TestNormaliser.remove_country_annotation('GIE Airbus Industrie (France/Germany/UK/Spain)')
+    assert_equal 'GIE Airbus Industrie',
+                 TestNormaliser.remove_country_annotation('GIE Airbus Industrie (France/Germany/UK/Spain)')
   end
 
   test 'remove_country_annotation preserves names without annotations' do

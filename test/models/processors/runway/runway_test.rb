@@ -66,7 +66,7 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
       airport_ident: 'ZZZZ',
       le_ident: '99L',
       he_ident: '17R',
-      length_ft: 12000,
+      length_ft: 12_000,
       width_ft: 150,
       surface: 'ASP',
       lighted: false,
@@ -103,7 +103,7 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
     create_runway_source(
       le_ident: '99L',
       he_ident: '17R',
-      length_ft: 12000,
+      length_ft: 12_000,
       width_ft: 150,
       surface: 'ASP',
       lighted: true,
@@ -128,7 +128,7 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
     create_runway_source(
       le_ident: '99L',
       he_ident: '17R',
-      length_ft: 12000,
+      length_ft: 12_000,
       width_ft: 150,
       surface: 'ASP',
       lighted: true,
@@ -167,7 +167,7 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
     create_runway_source(
       le_ident: '99L',
       he_ident: '17R',
-      length_ft: 12000,
+      length_ft: 12_000,
       width_ft: 150,
       surface: 'ASP',
       lighted: true,
@@ -201,7 +201,7 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
     create_runway_source(
       le_ident: '99L',
       he_ident: '17R',
-      length_ft: 12000,
+      length_ft: 12_000,
       width_ft: 150,
       surface: 'ASP',
       lighted: true,
@@ -271,7 +271,7 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
     create_runway_source(
       le_ident: '99L',
       he_ident: '17R',
-      surface: 'ASPH'  # Should normalise to "asphalt"
+      surface: 'ASPH' # Should normalise to "asphalt"
     )
 
     batch = Processors::Runway::Runway.combine_sources
@@ -287,8 +287,8 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
     create_runway_source(
       le_ident: '99L',
       he_ident: '17R',
-      length_ft: 10000,  # ~3048 metres
-      width_ft: 150,     # ~45.7 metres
+      length_ft: 10_000, # ~3048 metres
+      width_ft: 150, # ~45.7 metres
       surface: 'ASP'
     )
 
@@ -339,7 +339,7 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
     create_runway_source(
       le_ident: '99L',
       he_ident: '17R',
-      length_ft: 12000,
+      length_ft: 12_000,
       width_ft: 150,
       surface: 'ASP',
       lighted: true,
@@ -417,7 +417,7 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
 
     # Create multiple runway sources for the same airport
     create_runway_source(le_ident: '16L', he_ident: '34R', surface: 'ASP')
-    create_runway_source(le_ident: '16R', he_ident: '34L', length_ft: 11500, width_ft: 145, surface: 'ASP')
+    create_runway_source(le_ident: '16R', he_ident: '34L', length_ft: 11_500, width_ft: 145, surface: 'ASP')
     create_runway_source(le_ident: '07', he_ident: '25', length_ft: 8000, width_ft: 100, surface: 'CON')
 
     batch = Processors::Runway::Runway.combine_sources
@@ -456,7 +456,7 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
       he_ident: '17R',
       length_ft: 5000,
       width_ft: 60,
-      surface: 'GRS',  # Grass
+      surface: 'GRS', # Grass
       lighted: false,
       closed: false
     )
@@ -492,7 +492,7 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
     create_runway_source(
       le_ident: '99L',
       he_ident: '17R',
-      length_ft: 12000,
+      length_ft: 12_000,
       width_ft: 150,
       surface: 'ASP',
       lighted: true,
@@ -585,7 +585,7 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
   end
 
   test 'combine_one returns error when no sources found' do
-    create_test_airport  # Create the airport but no runway sources
+    create_test_airport # Create the airport but no runway sources
 
     result = Processors::Runway::Runway.combine_one('ZZZZ', '16L')
 
@@ -660,7 +660,7 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
 
     # Create two runway sources with different le_idents
     create_runway_source(le_ident: '16L', he_ident: '34R')
-    create_runway_source(le_ident: '16R', he_ident: '34L', length_ft: 11500, width_ft: 145)
+    create_runway_source(le_ident: '16R', he_ident: '34L', length_ft: 11_500, width_ft: 145)
 
     batch = Processors::Runway::Runway.combine_sources
     batch.apply!(by: nil)
@@ -683,14 +683,14 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
       airport_ident: 'ZZZZ',
       le_ident: '16L',
       he_ident: '34R',
-      length_ft: 12000,
+      length_ft: 12_000,
       surface: 'ASP'
     )
     create_runway_source(
       airport_ident: 'YYYY',
       le_ident: '16L',
       he_ident: '34R',
-      length_ft: 10000,
+      length_ft: 10_000,
       width_ft: 120,
       surface: 'CON'
     )

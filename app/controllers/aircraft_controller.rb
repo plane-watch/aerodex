@@ -2,7 +2,7 @@ class AircraftController < ApplicationController
   include FieldSearchable
 
   def index
-    @pagy, @aircraft = field_search(Aircraft, params[:search], includes: [:aircraft_type, :operator])
+    @pagy, @aircraft = field_search(Aircraft, params[:search], includes: %i[aircraft_type operator])
 
     respond_to do |format|
       format.turbo_stream { render_infinite_scroll(partial: 'aircraft/aircraft', collection: @aircraft) }
@@ -11,7 +11,8 @@ class AircraftController < ApplicationController
   end
 
   def show
-    @aircraft = Aircraft.includes(:aircraft_type, :operator, :registration_country, manufacturer: :country).find(params[:id])
+    @aircraft = Aircraft.includes(:aircraft_type, :operator, :registration_country,
+                                  manufacturer: :country).find(params[:id])
   end
 
   private
@@ -22,5 +23,4 @@ class AircraftController < ApplicationController
       partial: partial, collection: collection
     )
   end
-
 end

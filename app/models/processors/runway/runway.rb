@@ -36,13 +36,12 @@ module Processors
 
           # Find the canonical airport
           airport = @airports_by_icao[airport_icao]
-          unless airport
-            return { error: "Airport not found: #{airport_icao}" }
-          end
+          return { error: "Airport not found: #{airport_icao}" } unless airport
 
           # Gather sources for this airport's runways
           sources = if le_ident.present?
-                      Source::Runway::OurAirportsRunwaySource.includable.where(airport_ident: airport_icao, le_ident: le_ident).to_a
+                      Source::Runway::OurAirportsRunwaySource.includable.where(airport_ident: airport_icao,
+                                                                               le_ident: le_ident).to_a
                     else
                       Source::Runway::OurAirportsRunwaySource.includable.where(airport_ident: airport_icao).to_a
                     end

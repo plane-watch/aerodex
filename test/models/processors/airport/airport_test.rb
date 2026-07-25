@@ -444,7 +444,7 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
     Source::Airport::OurAirportsAirportSource.create!(
       icao_code: 'PPPP',
       name: 'No Country Airport',
-      country_code: 'QQ',  # Non-existent country code
+      country_code: 'QQ', # Non-existent country code
       latitude: -41.0,
       longitude: 143.0,
       import_date: Time.current,

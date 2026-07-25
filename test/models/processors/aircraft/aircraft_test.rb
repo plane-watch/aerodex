@@ -29,8 +29,12 @@ class Processors::Aircraft::AircraftTest < ActiveSupport::TestCase
     # Clear source tables for our test ICAO codes
     Source::Aircraft::CASAAircraftSource.where(icao: TEST_ICAO_CODES).delete_all
     Source::Aircraft::CAANZAircraftSource.where(icao: TEST_ICAO_CODES).delete_all
-    Source::Aircraft::VRSAircraftSource.where(icao: TEST_ICAO_CODES).delete_all if defined?(Source::Aircraft::VRSAircraftSource)
-    Source::Aircraft::OpenskyAircraftSource.where(icao: TEST_ICAO_CODES).delete_all if defined?(Source::Aircraft::OpenskyAircraftSource)
+    if defined?(Source::Aircraft::VRSAircraftSource)
+      Source::Aircraft::VRSAircraftSource.where(icao: TEST_ICAO_CODES).delete_all
+    end
+    if defined?(Source::Aircraft::OpenskyAircraftSource)
+      Source::Aircraft::OpenskyAircraftSource.where(icao: TEST_ICAO_CODES).delete_all
+    end
 
     # Clear the trust score cache to ensure consistent behaviour
     SourceTrustScore.clear_cache!

@@ -44,9 +44,7 @@ namespace :staged_batches do
   task :apply, [:batch_id] => :environment do |_t, args|
     batch = StagedBatch.find(args[:batch_id])
 
-    unless batch.pending?
-      abort "Batch is not pending (status: #{batch.status})"
-    end
+    abort "Batch is not pending (status: #{batch.status})" unless batch.pending?
 
     print "Apply #{batch.staged_changes.count} changes to #{batch.entity_type}? [y/N] "
     response = $stdin.gets.chomp.downcase
@@ -63,9 +61,7 @@ namespace :staged_batches do
   task :reject, [:batch_id] => :environment do |_t, args|
     batch = StagedBatch.find(args[:batch_id])
 
-    unless batch.pending?
-      abort "Batch is not pending (status: #{batch.status})"
-    end
+    abort "Batch is not pending (status: #{batch.status})" unless batch.pending?
 
     print 'Reason (optional): '
     reason = $stdin.gets.chomp
@@ -84,7 +80,8 @@ namespace :staged_batches do
     puts '-' * 110
     batches.each do |batch|
       summary = "#{batch.summary['created'] || 0}c/#{batch.summary['updated'] || 0}u"
-      puts format('%-36s %-15s %-12s %-20s %s', batch.id, batch.entity_type, batch.status, batch.created_at.strftime('%Y-%m-%d %H:%M'), summary)
+      puts format('%-36s %-15s %-12s %-20s %s', batch.id, batch.entity_type, batch.status,
+                  batch.created_at.strftime('%Y-%m-%d %H:%M'), summary)
     end
   end
 end

@@ -29,9 +29,7 @@ module Processors
           # Gather sources for this manufacturer
           sources = gather_sources_for_icao_code(icao_code)
 
-          if sources.empty?
-            return { error: "No sources found for ICAO code: #{icao_code}" }
-          end
+          return { error: "No sources found for ICAO code: #{icao_code}" } if sources.empty?
 
           # Ensure trust scores are cached
           SourceTrustScore.send(:ensure_cache_loaded)
@@ -39,9 +37,7 @@ module Processors
           conflicts = []
           result = merge_sources_for_icao(icao_code, sources, conflicts)
 
-          if result[:error]
-            return { error: result[:error] }
-          end
+          return { error: result[:error] } if result[:error]
 
           is_new = result[:manufacturer]&.id_previously_changed?
           {
@@ -121,9 +117,7 @@ module Processors
             log_conflicts(conflicts) if conflicts.any?
 
             # Store conflict count in batch notes if any
-            if conflicts.any?
-              current_batch.notes = "Processing completed with #{conflicts.count} field conflicts"
-            end
+            current_batch.notes = "Processing completed with #{conflicts.count} field conflicts" if conflicts.any?
           end
         end
 
@@ -231,7 +225,9 @@ module Processors
           Rails.logger.info "Manufacturer combine completed with #{conflicts.count} field conflicts"
           conflicts.each do |conflict|
             Rails.logger.debug "Conflict on #{conflict[:field]}: " \
-                               "#{conflict[:candidates].map { |c| "#{c[:source_type]}=#{c[:value].inspect}" }.join(' vs ')}"
+                               "#{conflict[:candidates].map do |c|
+                                 "#{c[:source_type]}=#{c[:value].inspect}"
+                               end.join(' vs ')}"
           end
         end
       end

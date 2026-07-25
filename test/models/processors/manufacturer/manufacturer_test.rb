@@ -81,7 +81,7 @@ class Processors::Manufacturer::ManufacturerTest < ActiveSupport::TestCase
     assert_equal 1, batch.staged_changes.updates.count
     change = batch.staged_changes.first
     assert_equal 'YYTEST', change.record_identifier
-    assert_equal %w[Old\ Name New\ Name], change.diff['name']
+    assert_equal ['Old Name', 'New Name'], change.diff['name']
   end
 
   test 'combine_sources tracks unchanged records' do

@@ -112,7 +112,7 @@ class OpenTransportOperatorProcessorTest < ActiveSupport::TestCase
   end
 
   def test_record_becomes_invalid
-    travel_to Date.new(2010, 01, 01) do
+    travel_to Date.new(2010, 0o1, 0o1) do
       Processors::Operator::OpenTravel.import(url_for_test_name('record_becomes_invalid_before'))
     end
 
@@ -123,7 +123,7 @@ class OpenTransportOperatorProcessorTest < ActiveSupport::TestCase
     assert_equal 'Virgin Australia', where_before.first.name
     assert_equal '2000-08-31', where_before.first.data['validity_from']
 
-    travel_to Date.new(2013, 01, 01) do
+    travel_to Date.new(2013, 0o1, 0o1) do
       Processors::Operator::OpenTravel.import(url_for_test_name('record_becomes_invalid_after'))
     end
 

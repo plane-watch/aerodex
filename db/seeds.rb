@@ -12,7 +12,6 @@
 # Note: These values mirror SourceConfig defaults initially. Modify these to
 # customise trust scores for your deployment.
 
-
 # =============================================================================
 # Countries (from ISO 3166)
 # =============================================================================

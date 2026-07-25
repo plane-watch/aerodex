@@ -4,7 +4,7 @@ module Admin
   # Controller for managing staged batches.
   # Provides index, show, apply, reject, rollback, and status actions.
   class StagedBatchesController < BaseController
-    before_action :set_staged_batch, only: [:show, :apply, :reject, :rollback, :status]
+    before_action :set_staged_batch, only: %i[show apply reject rollback status]
 
     def index
       @batches = StagedBatch.recent

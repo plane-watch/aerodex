@@ -56,14 +56,10 @@ module Processors
           # @param directory_path [String] Path to the schema-01 directory
           # @return [Hash] Import results with :success_count, :error_count, :errors
           def import(directory_path)
-            unless File.directory?(directory_path)
-              raise ArgumentError, "Directory not found: #{directory_path}"
-            end
+            raise ArgumentError, "Directory not found: #{directory_path}" unless File.directory?(directory_path)
 
             csv_files = find_csv_files(directory_path)
-            if csv_files.empty?
-              raise ArgumentError, "No CSV files found in #{directory_path}"
-            end
+            raise ArgumentError, "No CSV files found in #{directory_path}" if csv_files.empty?
 
             with_bulk_import do
               import_files(csv_files)
@@ -284,13 +280,9 @@ module Processors
             registration = row['Registration']&.strip
 
             # Skip rows without required fields
-            if icao.blank?
-              return { error: { registration: registration, errors: ['Missing ICAO code'] } }
-            end
+            return { error: { registration: registration, errors: ['Missing ICAO code'] } } if icao.blank?
 
-            if registration.blank?
-              return { error: { icao: icao, errors: ['Missing registration'] } }
-            end
+            return { error: { icao: icao, errors: ['Missing registration'] } } if registration.blank?
 
             # Skip fake codes (ground vehicles, towers, etc.)
             type_code = row['ModelICAO']&.strip

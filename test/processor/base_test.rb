@@ -14,4 +14,4 @@ class Processors::BaseTest < ActiveSupport::TestCase
     assert_respond_to test_class, :get_source_from_url
     assert_respond_to test_class, :new_import_report
   end
-end 
+end
