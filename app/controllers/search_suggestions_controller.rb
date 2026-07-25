@@ -62,9 +62,9 @@ class SearchSuggestionsController < ApplicationController
       return
     end
 
-    if params[:mode] == 'value' && params[:field].blank?
-      render json: { error: 'field parameter is required for value mode' }, status: :bad_request
-      nil
-    end
+    return unless params[:mode] == 'value' && params[:field].blank?
+
+    render json: { error: 'field parameter is required for value mode' }, status: :bad_request
+    nil
   end
 end

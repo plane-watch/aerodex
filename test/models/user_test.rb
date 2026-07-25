@@ -26,16 +26,16 @@
 #  index_users_on_reset_password_token  (reset_password_token) UNIQUE
 #
 
-require "test_helper"
+require 'test_helper'
 
 class UserTest < ActiveSupport::TestCase
-  test "admin? returns false by default" do
-    user = User.new(email: "test@example.com", password: "password123")
+  test 'admin? returns false by default' do
+    user = User.new(email: 'test@example.com', password: 'password123')
     assert_not user.admin?
   end
 
-  test "admin? returns true when admin flag is set" do
-    user = User.new(email: "admin@example.com", password: "password123", admin: true)
+  test 'admin? returns true when admin flag is set' do
+    user = User.new(email: 'admin@example.com', password: 'password123', admin: true)
     assert user.admin?
   end
 end

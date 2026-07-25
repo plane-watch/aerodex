@@ -98,9 +98,7 @@ module OperatorNameCanonicalisation
     key = key.downcase
 
     # Remove all non-alphanumeric characters (spaces, hyphens, punctuation)
-    key = key.gsub(/[^a-z0-9]/, '')
-
-    key
+    key.gsub(/[^a-z0-9]/, '')
   end
 
   # Generates an aggressive canonical key that strips generic airline terms.
@@ -130,9 +128,7 @@ module OperatorNameCanonicalisation
     key = key.gsub(COMMON_TERMS_PATTERN, '')
 
     # Normalise to lowercase and remove non-alphanumeric
-    key = key.downcase.gsub(/[^a-z0-9]/, '')
-
-    key
+    key.downcase.gsub(/[^a-z0-9]/, '')
   end
 
   # Scores a name for quality/descriptiveness.
@@ -224,15 +220,11 @@ module OperatorNameCanonicalisation
     iata2 = op2[:iata_code].presence
 
     # If both have ICAO codes and they differ, definitely different operators
-    if icao1 && icao2 && icao1 != icao2
-      return true
-    end
+    return true if icao1 && icao2 && icao1 != icao2
 
     # If both have IATA codes and they differ, probably different operators
     # (unless one is a codeshare, but we'll treat as different to be safe)
-    if iata1 && iata2 && iata1 != iata2
-      return true
-    end
+    return true if iata1 && iata2 && iata1 != iata2
 
     # If codes match (or one is missing), they're likely the same operator
     false
@@ -250,9 +242,7 @@ module OperatorNameCanonicalisation
     return '' if name.blank?
 
     # Handle ALL CAPS names
-    if name == name.upcase && name.length > 3
-      name = name.titleize
-    end
+    name = name.titleize if name == name.upcase && name.length > 3
 
     # Normalise corporate suffix casing
     name = name.sub(/\bpty\b/i, 'Pty')

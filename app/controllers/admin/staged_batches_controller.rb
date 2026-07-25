@@ -4,7 +4,7 @@ module Admin
   # Controller for managing staged batches.
   # Provides index, show, apply, reject, rollback, and status actions.
   class StagedBatchesController < BaseController
-    before_action :set_staged_batch, only: [:show, :apply, :reject, :rollback, :status]
+    before_action :set_staged_batch, only: %i[show apply reject rollback status]
 
     def index
       @batches = StagedBatch.recent
@@ -21,7 +21,7 @@ module Admin
     def show
       @changes = @batch.staged_changes
       @changes = @changes.where(operation: params[:operation]) if params[:operation].present?
-      @changes = @changes.where("record_identifier ILIKE ?", "%#{params[:search]}%") if params[:search].present?
+      @changes = @changes.where('record_identifier ILIKE ?', "%#{params[:search]}%") if params[:search].present?
 
       @pagy, @changes = pagy(@changes, items: 50)
 
@@ -32,7 +32,7 @@ module Admin
 
     def apply
       unless @batch.pending?
-        redirect_to admin_staged_batch_path(@batch), alert: "Batch is not pending"
+        redirect_to admin_staged_batch_path(@batch), alert: 'Batch is not pending'
         return
       end
 
@@ -43,19 +43,19 @@ module Admin
       )
       ApplyBatchJob.perform_later(@batch.id, user_id: current_user.id)
 
-      redirect_to admin_staged_batch_path(@batch), notice: "Applying batch in background..."
+      redirect_to admin_staged_batch_path(@batch), notice: 'Applying batch in background...'
     end
 
     def reject
       @batch.reject!(by: current_user, reason: params[:reason])
-      redirect_to admin_staged_batch_path(@batch), notice: "Batch rejected."
+      redirect_to admin_staged_batch_path(@batch), notice: 'Batch rejected.'
     rescue StagedBatch::InvalidStatusError => e
       redirect_to admin_staged_batch_path(@batch), alert: "Failed to reject batch: #{e.message}"
     end
 
     def rollback
       # TODO: Implement rollback in Phase 7
-      redirect_to admin_staged_batch_path(@batch), alert: "Rollback not yet implemented."
+      redirect_to admin_staged_batch_path(@batch), alert: 'Rollback not yet implemented.'
     end
 
     # GET /admin/staged_batches/:id/status

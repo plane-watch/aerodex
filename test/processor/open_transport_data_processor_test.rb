@@ -4,6 +4,10 @@ class OpenTransportOperatorProcessorTest < ActiveSupport::TestCase
   def setup
     @mock_data_hostname = 'otdata.com'
 
+    # The payloads below are caret-separated records, one per line, exactly as
+    # the feed supplies them. Wrapping a line would insert whitespace into the
+    # data and change what the processor is being asked to parse.
+    # rubocop:disable Layout/LineLength
     @sample_data = {
       expired_record_only: 'pk^env_id^validity_from^validity_to^3char_code^2char_code^num_code^name^name2^alliance_code^alliance_status^type^wiki_link^flt_freq^alt_names^bases^key^version^parent_pk_list^successor_pk_list
       air-vista-georgia-v1^1^2014-08-04^2015-05-31^AJD^GT^0^flyvista^^^^^https://en.wikipedia.org/wiki/Flyvista^^en|flyvista|p=en|Vista Georgia|^TBS^air-vista-georgia^1^^',
@@ -23,6 +27,7 @@ class OpenTransportOperatorProcessorTest < ActiveSupport::TestCase
       record_becomes_invalid_after: 'pk^env_id^validity_from^validity_to^3char_code^2char_code^num_code^name^name2^alliance_code^alliance_status^type^wiki_link^flt_freq^alt_names^bases^key^version^parent_pk_list^successor_pk_list
       air-virgin-australia-v1^1^2000-08-31^2012-12-31^VOZ^DJ^856^Virgin Australia^^^^^https://en.wikipedia.org/wiki/Virgin_Australia^^en|Virgin Australia|=en|Virgin Blue|h=en|Pacific Blue|h=en|Virgin Australia Regional|h=en|SkyWest|h^^air-virgin-australia^1^m|air-virgin-australia-regional-v1^'
     }
+    # rubocop:enable Layout/LineLength
 
     # Setup Excon stubs
     @sample_data.each do |name, data|
@@ -112,7 +117,7 @@ class OpenTransportOperatorProcessorTest < ActiveSupport::TestCase
   end
 
   def test_record_becomes_invalid
-    travel_to Date.new(2010, 01, 01) do
+    travel_to Date.new(2010, 0o1, 0o1) do
       Processors::Operator::OpenTravel.import(url_for_test_name('record_becomes_invalid_before'))
     end
 
@@ -123,7 +128,7 @@ class OpenTransportOperatorProcessorTest < ActiveSupport::TestCase
     assert_equal 'Virgin Australia', where_before.first.name
     assert_equal '2000-08-31', where_before.first.data['validity_from']
 
-    travel_to Date.new(2013, 01, 01) do
+    travel_to Date.new(2013, 0o1, 0o1) do
       Processors::Operator::OpenTravel.import(url_for_test_name('record_becomes_invalid_after'))
     end
 

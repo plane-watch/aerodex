@@ -30,7 +30,7 @@
 #  index_aircraft_on_registration_country_id  (registration_country_id)
 #
 
-require "test_helper"
+require 'test_helper'
 
 class AircraftTest < ActiveSupport::TestCase
   # test "the truth" do

@@ -51,7 +51,7 @@ class CreateAircraftSources < ActiveRecord::Migration[8.0]
     add_index :aircraft_sources, :icao
     add_index :aircraft_sources, :registration
     add_index :aircraft_sources, :type
-    add_index :aircraft_sources, [:icao, :type], unique: true
+    add_index :aircraft_sources, %i[icao type], unique: true
     add_index :aircraft_sources, :data, using: :gin
   end
 end

@@ -55,14 +55,14 @@ module Processors
       #   "x 4 x ROLLS-ROYCE RB211 Trent 556-61<br>" => count: 4, model: "ROLLS-ROYCE RB211 Trent 556-61"
       #   "x 2 x CFM56-5B<br>" => count: 2, model: "CFM56-5B"
       #   "1 x PRATT & WHITNEY<br>" => count: 1, model: "PRATT & WHITNEY"
-      ENGINE_PATTERN = /
+      ENGINE_PATTERN = %r{
         (?:x\s*)?        # Optional leading "x "
         (\d+)            # Engine count (captured)
         \s*x\s*          # " x " separator
         (.+?)            # Engine model (captured, non-greedy)
-        (?:<br>|<br\/>)? # Optional HTML break tag
+        (?:<br>|<br/>)? # Optional HTML break tag
         \s*$             # End of string, possibly with trailing whitespace
-      /ix.freeze
+      }ix
 
       # Columns to store in the JSONB data field
       DATA_COLUMNS = %w[
@@ -97,9 +97,7 @@ module Processors
         # @param progress [Boolean] Whether to show progress bar
         # @return [Hash] Import results
         def import(file_path, progress: true)
-          unless File.exist?(file_path)
-            raise ArgumentError, "File not found: #{file_path}"
-          end
+          raise ArgumentError, "File not found: #{file_path}" unless File.exist?(file_path)
 
           # Count lines for progress bar (subtract 1 for header)
           total_lines = `wc -l < "#{file_path}"`.to_i - 1
@@ -209,7 +207,7 @@ module Processors
           return {} if registration.blank?
 
           # Skip empty/placeholder registrations
-          return {} if registration == 'NONE' || registration == 'UNKNOWN'
+          return {} if %w[NONE UNKNOWN].include?(registration)
 
           # Skip military/test registrations that are just numbers
           return {} if registration.match?(/\A\d+-\d+\z/)

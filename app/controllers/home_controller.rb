@@ -1,6 +1,5 @@
 class HomeController < ApplicationController
-  def index
-  end
+  def index; end
 
   def dashboard
     @aircraft_count = Aircraft.count

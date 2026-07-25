@@ -1,5 +1,4 @@
 class AircraftRegistrationValidator < ActiveModel::EachValidator
-
   REGISTRATION_PATTERNS = [
     # USA (FAA)
     /\AN[A-Z0-9]{1,5}\z/i,
@@ -414,11 +413,11 @@ class AircraftRegistrationValidator < ActiveModel::EachValidator
     # Isle of Man (Aircraft Registry)
     /\AM-[A-Z0-9]{4}\z/i,
 
-  ]
+  ].freeze
 
   def validate_each(record, attribute, value)
-    unless value =~ Regexp.union(REGISTRATION_PATTERNS)
-      record.errors[attribute] << (options[:message] || "is not a valid aircraft registration")
-    end
+    return if value =~ Regexp.union(REGISTRATION_PATTERNS)
+
+    record.errors[attribute] << (options[:message] || 'is not a valid aircraft registration')
   end
 end

@@ -24,14 +24,12 @@ module Processors
         #   result[:manufacturer]  # => <Manufacturer icao_code: "BOEING">
         def combine_one(icao_code)
           icao_code = icao_code.to_s.strip.upcase
-          raise ArgumentError, "ICAO code is required" if icao_code.blank?
+          raise ArgumentError, 'ICAO code is required' if icao_code.blank?
 
           # Gather sources for this manufacturer
           sources = gather_sources_for_icao_code(icao_code)
 
-          if sources.empty?
-            return { error: "No sources found for ICAO code: #{icao_code}" }
-          end
+          return { error: "No sources found for ICAO code: #{icao_code}" } if sources.empty?
 
           # Ensure trust scores are cached
           SourceTrustScore.send(:ensure_cache_loaded)
@@ -39,9 +37,7 @@ module Processors
           conflicts = []
           result = merge_sources_for_icao(icao_code, sources, conflicts)
 
-          if result[:error]
-            return { error: result[:error] }
-          end
+          return { error: result[:error] } if result[:error]
 
           is_new = result[:manufacturer]&.id_previously_changed?
           {
@@ -58,7 +54,9 @@ module Processors
         # @return [Array<ApplicationRecord>] All source records matching the code
         def gather_sources_for_icao_code(icao_code)
           sources = []
-          sources.concat(Source::Manufacturer::CfappsICAOIntManufacturerSource.includable.where(icao_code: icao_code).to_a)
+          sources.concat(
+            Source::Manufacturer::CfappsICAOIntManufacturerSource.includable.where(icao_code: icao_code).to_a
+          )
           if defined?(Source::Manufacturer::OpenskyManufacturerSource)
             sources.concat(Source::Manufacturer::OpenskyManufacturerSource.includable.where(icao_code: icao_code).to_a)
           end
@@ -70,7 +68,7 @@ module Processors
         # @param triggered_by [User, nil] The user who triggered the run
         # @return [StagedBatch] The batch containing staged changes
         def combine_sources(triggered_by: nil)
-          with_staged_batch(entity_type: "Manufacturer", triggered_by: triggered_by) do
+          with_staged_batch(entity_type: 'Manufacturer', triggered_by: triggered_by) do
             sources_by_icao = group_sources_by_icao
             conflicts = []
 
@@ -111,7 +109,7 @@ module Processors
                 record.last_combined_at = Time.current
                 stage_change(record, operation: :update, identifier: icao_code)
               else
-                current_batch.summary["unchanged"] += 1
+                current_batch.summary['unchanged'] += 1
               end
 
               progress_bar.increment!
@@ -121,9 +119,7 @@ module Processors
             log_conflicts(conflicts) if conflicts.any?
 
             # Store conflict count in batch notes if any
-            if conflicts.any?
-              current_batch.notes = "Processing completed with #{conflicts.count} field conflicts"
-            end
+            current_batch.notes = "Processing completed with #{conflicts.count} field conflicts" if conflicts.any?
           end
         end
 
@@ -231,7 +227,9 @@ module Processors
           Rails.logger.info "Manufacturer combine completed with #{conflicts.count} field conflicts"
           conflicts.each do |conflict|
             Rails.logger.debug "Conflict on #{conflict[:field]}: " \
-                               "#{conflict[:candidates].map { |c| "#{c[:source_type]}=#{c[:value].inspect}" }.join(' vs ')}"
+                               "#{conflict[:candidates].map do |c|
+                                 "#{c[:source_type]}=#{c[:value].inspect}"
+                               end.join(' vs ')}"
           end
         end
       end

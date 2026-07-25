@@ -1,5 +1,4 @@
 class JsonbSerializer
-
   def self.dump(hash)
     hash
   end

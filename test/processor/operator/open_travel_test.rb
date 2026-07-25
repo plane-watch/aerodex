@@ -8,4 +8,4 @@ module Processors
       # ... existing test code ...
     end
   end
-end 
+end

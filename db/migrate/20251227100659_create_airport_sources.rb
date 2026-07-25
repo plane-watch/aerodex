@@ -38,4 +38,3 @@ class CreateAirportSources < ActiveRecord::Migration[8.0]
     add_index :airport_sources, :data, using: :gin
   end
 end
-

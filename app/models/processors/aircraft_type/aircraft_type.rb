@@ -38,7 +38,7 @@ module Processors
         #   result[:aircraft_types]  # => [<AircraftType>, <AircraftType>, ...]
         def combine_one(type_code, name = nil)
           type_code = type_code.to_s.strip.upcase
-          raise ArgumentError, "Type code is required" if type_code.blank?
+          raise ArgumentError, 'Type code is required' if type_code.blank?
 
           # Gather sources for this type code (and optionally name)
           sources_grouped = gather_sources_for_type_code(type_code, name)
@@ -119,7 +119,7 @@ module Processors
         def combine_sources(triggered_by: nil)
           @created_stub_manufacturers = []
 
-          aircraft_type_batch = with_staged_batch(entity_type: "AircraftType", triggered_by: triggered_by) do
+          aircraft_type_batch = with_staged_batch(entity_type: 'AircraftType', triggered_by: triggered_by) do
             preload_reference_data
 
             grouped_sources = group_sources_by_type_code_and_name
@@ -133,7 +133,7 @@ module Processors
 
               if result[:error]
                 # Store errors in batch notes
-                current_batch.notes ||= ""
+                current_batch.notes ||= ''
                 current_batch.notes += "Error: #{result[:error]}\n"
               end
 
@@ -145,15 +145,13 @@ module Processors
 
             # Store conflict count in batch notes if any
             if conflicts.any?
-              current_batch.notes ||= ""
+              current_batch.notes ||= ''
               current_batch.notes += "Processing completed with #{conflicts.count} field conflicts\n"
             end
           end
 
           # Create a separate batch for stub manufacturers if any were created
-          if @created_stub_manufacturers.any?
-            create_stub_manufacturers_batch(triggered_by, aircraft_type_batch)
-          end
+          create_stub_manufacturers_batch(triggered_by, aircraft_type_batch) if @created_stub_manufacturers.any?
 
           aircraft_type_batch
         ensure
@@ -170,20 +168,21 @@ module Processors
         # @param aircraft_type_batch [StagedBatch] The related AircraftType batch
         def create_stub_manufacturers_batch(triggered_by, aircraft_type_batch)
           stub_batch = StagedBatch.create!(
-            processor_type: "Processors::AircraftType::AircraftType",
-            entity_type: "Manufacturer",
-            status: "applied", # Already applied - these are informational records
+            processor_type: 'Processors::AircraftType::AircraftType',
+            entity_type: 'Manufacturer',
+            status: 'applied', # Already applied - these are informational records
             created_by_id: triggered_by&.id,
             applied_at: Time.current,
             reviewed_by_id: triggered_by&.id,
             reviewed_at: Time.current,
             summary: {
-              "creates" => @created_stub_manufacturers.size,
-              "updates" => 0,
-              "unchanged" => 0
+              'creates' => @created_stub_manufacturers.size,
+              'updates' => 0,
+              'unchanged' => 0
             },
-            notes: "Stub manufacturers auto-created during AircraftType processing (batch ##{aircraft_type_batch.id}). " \
-                   "These records have placeholder names derived from ICAO codes and need enrichment."
+            notes: 'Stub manufacturers auto-created during AircraftType processing ' \
+                   "(batch ##{aircraft_type_batch.id}). These records have placeholder " \
+                   'names derived from ICAO codes and need enrichment.'
           )
 
           # Create StagedChange records for each stub (for audit trail)
@@ -191,24 +190,25 @@ module Processors
           @created_stub_manufacturers.each do |manufacturer|
             StagedChange.create!(
               staged_batch: stub_batch,
-              record_type: "Manufacturer",
+              record_type: 'Manufacturer',
               record_id: manufacturer.id,
               record_identifier: manufacturer.icao_code,
-              operation: "create",
+              operation: 'create',
               diff: {
-                "icao_code" => [nil, manufacturer.icao_code],
-                "name" => [nil, manufacturer.name]
+                'icao_code' => [nil, manufacturer.icao_code],
+                'name' => [nil, manufacturer.name]
               }
             )
           end
 
           # Add reference to the stub batch in the aircraft type batch notes
-          aircraft_type_batch.notes ||= ""
+          aircraft_type_batch.notes ||= ''
           aircraft_type_batch.notes += "#{@created_stub_manufacturers.size} stub manufacturer(s) were auto-created " \
                                         "(see batch ##{stub_batch.id} for details).\n"
           aircraft_type_batch.save!
 
-          Rails.logger.info "Created stub manufacturers batch ##{stub_batch.id} with #{@created_stub_manufacturers.size} records"
+          Rails.logger.info "Created stub manufacturers batch ##{stub_batch.id} " \
+                            "with #{@created_stub_manufacturers.size} records"
         end
 
         # Preloads all reference data needed for combining into memory.
@@ -312,12 +312,12 @@ module Processors
                 !different_variants?(name1, name2)
               end
 
-              if should_merge
-                group1.concat(group2)
-                groups.delete(group2)
-                merged = true
-                break
-              end
+              next unless should_merge
+
+              group1.concat(group2)
+              groups.delete(group2)
+              merged = true
+              break
             end
           end
 
@@ -350,10 +350,10 @@ module Processors
 
           # Skip records without a manufacturer - required for data integrity
           if manufacturer.nil?
-            current_batch.summary["skipped"] ||= 0
-            current_batch.summary["skipped"] += 1
+            current_batch.summary['skipped'] ||= 0
+            current_batch.summary['skipped'] += 1
             Rails.logger.info "Skipping AircraftType '#{type_code} - #{name}': no manufacturer code in source data"
-            return { skipped: true, reason: "no manufacturer" }
+            return { skipped: true, reason: 'no manufacturer' }
           end
 
           record.manufacturer = manufacturer
@@ -387,11 +387,11 @@ module Processors
               provenance_updates << { field: field, source: merger.best_source, confidence: merger.best_confidence }
             end
 
-            if merger.has_conflict?
-              conflict = merger.conflict_details
-              conflict[:identifier] = "#{type_code} - #{name}"
-              conflicts << conflict
-            end
+            next unless merger.has_conflict?
+
+            conflict = merger.conflict_details
+            conflict[:identifier] = "#{type_code} - #{name}"
+            conflicts << conflict
           end
 
           # Check for meaningful changes (content fields, not just metadata like provenance)
@@ -416,7 +416,7 @@ module Processors
             stage_change(record, operation: :update, identifier: identifier)
             { record: record, updated: true }
           else
-            current_batch.summary["unchanged"] += 1
+            current_batch.summary['unchanged'] += 1
             { record: record, unchanged: true }
           end
         end
@@ -483,11 +483,11 @@ module Processors
               provenance_updates << { field: field, source: merger.best_source, confidence: merger.best_confidence }
             end
 
-            if merger.has_conflict?
-              conflict = merger.conflict_details
-              conflict[:identifier] = "#{type_code} - #{name}"
-              conflicts << conflict
-            end
+            next unless merger.has_conflict?
+
+            conflict = merger.conflict_details
+            conflict[:identifier] = "#{type_code} - #{name}"
+            conflicts << conflict
           end
 
           # Check for changes BEFORE setting provenance

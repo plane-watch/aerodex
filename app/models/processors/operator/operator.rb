@@ -51,7 +51,7 @@ module Processors
 
           progress_bar = create_progress_bar(duplicates.count)
 
-          duplicates.each do |key, operators|
+          duplicates.each_value do |operators|
             result = merge_duplicate_group(operators, dry_run: dry_run)
 
             case result[:status]
@@ -66,7 +66,8 @@ module Processors
             progress_bar.increment!
           end
 
-          Rails.logger.info "Merge complete: #{stats[:merged]} merged, #{stats[:skipped]} skipped, #{stats[:errors].count} errors"
+          Rails.logger.info "Merge complete: #{stats[:merged]} merged, #{stats[:skipped]} skipped, " \
+                            "#{stats[:errors].count} errors"
 
           # Reindex after merging
           ::Operator.reindex! unless dry_run
@@ -83,7 +84,7 @@ module Processors
         #   Processors::Operator::Operator.add_auto_inserted_provenance
         def add_auto_inserted_provenance
           # Find operators without provenance
-          operators = ::Operator.where("field_provenance IS NULL OR field_provenance = ?", "{}")
+          operators = ::Operator.where('field_provenance IS NULL OR field_provenance = ?', '{}')
           total = operators.count
 
           Rails.logger.info "Adding provenance to #{total} auto-inserted operators"
@@ -96,12 +97,18 @@ module Processors
             operator.set_derived_provenance(
               :name,
               source_name: AUTO_INSERTED_SOURCE,
-              confidence: 30  # Low confidence - not from authoritative source
+              confidence: 30 # Low confidence - not from authoritative source
             )
 
             # Also set for any other fields that have values
-            operator.set_derived_provenance(:icao_code, source_name: AUTO_INSERTED_SOURCE, confidence: 30) if operator.icao_code.present?
-            operator.set_derived_provenance(:iata_code, source_name: AUTO_INSERTED_SOURCE, confidence: 30) if operator.iata_code.present?
+            if operator.icao_code.present?
+              operator.set_derived_provenance(:icao_code, source_name: AUTO_INSERTED_SOURCE,
+                                                          confidence: 30)
+            end
+            if operator.iata_code.present?
+              operator.set_derived_provenance(:iata_code, source_name: AUTO_INSERTED_SOURCE,
+                                                          confidence: 30)
+            end
 
             operator.last_combined_at ||= Time.current
             operator.save!
@@ -142,6 +149,12 @@ module Processors
             [normalised_name, op.country_id]
           end
 
+          # rubocop:disable Metrics/BlockLength -- the body below decides whether
+          # a group of same-named operators is a genuine set of siblings and, if
+          # so, builds the parent-child links between them. Extracting it would
+          # mean threading `stats`, `dry_run` and the group key through a new
+          # method, and `create_parent_child_relationships` currently has no test
+          # coverage to catch a mistake in doing so.
           groups.each do |(name, country_id), operators|
             # Skip single operators or empty names
             next if operators.size < 2
@@ -196,6 +209,7 @@ module Processors
               end
             end
           end
+          # rubocop:enable Metrics/BlockLength
 
           Rails.logger.info "Parent-child relationships: #{stats[:groups_found]} groups found, " \
                             "#{stats[:parents_created]} parents created, " \
@@ -219,7 +233,7 @@ module Processors
         #   result = Processors::Operator::Operator.combine_one("Qantas", by: :name)
         def combine_one(identifier, by: nil)
           identifier = identifier.to_s.strip
-          raise ArgumentError, "Identifier is required" if identifier.blank?
+          raise ArgumentError, 'Identifier is required' if identifier.blank?
 
           # Auto-detect identifier type if not specified
           by ||= case identifier.length
@@ -231,9 +245,7 @@ module Processors
           # Gather sources for this operator
           sources = gather_sources_for_identifier(identifier, by)
 
-          if sources.empty?
-            return { error: "No sources found for #{by}: #{identifier}" }
-          end
+          return { error: "No sources found for #{by}: #{identifier}" } if sources.empty?
 
           # Ensure trust scores are cached
           SourceTrustScore.send(:ensure_cache_loaded)
@@ -259,9 +271,7 @@ module Processors
 
           operator.last_combined_at = Time.current
 
-          unless operator.valid?
-            return { error: operator.errors.full_messages, operator: operator }
-          end
+          return { error: operator.errors.full_messages, operator: operator } unless operator.valid?
 
           operator.save!
 
@@ -284,15 +294,21 @@ module Processors
           when :icao
             sources.concat(Source::Operator::VRSDataOperatorSource.includable.where(icao_code: identifier).to_a)
             sources.concat(Source::Operator::OpenTravelOperatorSource.includable.where(icao_code: identifier).to_a)
-            sources.concat(Source::Operator::OpenFlightsOperatorSource.includable.where(icao_code: identifier).to_a) if defined?(Source::Operator::OpenFlightsOperatorSource)
+            if defined?(Source::Operator::OpenFlightsOperatorSource)
+              sources.concat(Source::Operator::OpenFlightsOperatorSource.includable.where(icao_code: identifier).to_a)
+            end
           when :iata
             sources.concat(Source::Operator::VRSDataOperatorSource.includable.where(iata_code: identifier).to_a)
             sources.concat(Source::Operator::OpenTravelOperatorSource.includable.where(iata_code: identifier).to_a)
-            sources.concat(Source::Operator::OpenFlightsOperatorSource.includable.where(iata_code: identifier).to_a) if defined?(Source::Operator::OpenFlightsOperatorSource)
+            if defined?(Source::Operator::OpenFlightsOperatorSource)
+              sources.concat(Source::Operator::OpenFlightsOperatorSource.includable.where(iata_code: identifier).to_a)
+            end
           when :name
             # Case-insensitive name search
-            sources.concat(Source::Operator::VRSDataOperatorSource.includable.where("LOWER(name) = ?", identifier.downcase).to_a)
-            sources.concat(Source::Operator::OpenTravelOperatorSource.includable.where("LOWER(name) = ?", identifier.downcase).to_a)
+            sources.concat(Source::Operator::VRSDataOperatorSource.includable.where('LOWER(name) = ?',
+                                                                                    identifier.downcase).to_a)
+            sources.concat(Source::Operator::OpenTravelOperatorSource.includable.where('LOWER(name) = ?',
+                                                                                       identifier.downcase).to_a)
           end
 
           sources
@@ -307,7 +323,7 @@ module Processors
           case by
           when :icao then ::Operator.find_by(icao_code: identifier)
           when :iata then ::Operator.find_by(iata_code: identifier)
-          when :name then ::Operator.find_by("LOWER(name) = ?", identifier.downcase)
+          when :name then ::Operator.find_by('LOWER(name) = ?', identifier.downcase)
           end
         end
 
@@ -324,7 +340,7 @@ module Processors
         # @param triggered_by [User, nil] The user who triggered the run
         # @return [StagedBatch] The batch containing staged changes
         def combine_sources(triggered_by: nil)
-          with_staged_batch(entity_type: "Operator", triggered_by: triggered_by) do
+          with_staged_batch(entity_type: 'Operator', triggered_by: triggered_by) do
             preload_reference_data
 
             # Declare indexed fields for staged record lookups.
@@ -365,9 +381,7 @@ module Processors
             log_conflicts(conflicts) if conflicts.any?
 
             # Store errors in batch notes if any
-            if errors.any?
-              current_batch.notes = "Processing completed with #{errors.count} errors"
-            end
+            current_batch.notes = "Processing completed with #{errors.count} errors" if errors.any?
           end
         ensure
           clear_caches
@@ -594,8 +608,12 @@ module Processors
           else
             # Update fields if source has better data
             operator.name = source_record.name if source_record.name.present?
-            operator.icao_code = source_record.icao_code if source_record.icao_code.present? && operator.icao_code.blank?
-            operator.iata_code = source_record.iata_code if source_record.iata_code.present? && operator.iata_code.blank?
+            if source_record.icao_code.present? && operator.icao_code.blank?
+              operator.icao_code = source_record.icao_code
+            end
+            if source_record.iata_code.present? && operator.iata_code.blank?
+              operator.iata_code = source_record.iata_code
+            end
           end
 
           # Set provenance for all fields from this source
@@ -665,7 +683,7 @@ module Processors
             return operator if operator
 
             # Fall back to case-insensitive database lookup
-            operator = ::Operator.where("LOWER(name) = ?", name.downcase).first
+            operator = ::Operator.where('LOWER(name) = ?', name.downcase).first
             return operator if operator
           end
 
@@ -679,7 +697,9 @@ module Processors
           Rails.logger.info "Operator combine completed with #{conflicts.count} field conflicts"
           conflicts.each do |conflict|
             Rails.logger.debug "Conflict on #{conflict[:field]}: " \
-                               "#{conflict[:candidates].map { |c| "#{c[:source_type]}=#{c[:value].inspect}" }.join(' vs ')}"
+                               "#{conflict[:candidates].map do |c|
+                                 "#{c[:source_type]}=#{c[:value].inspect}"
+                               end.join(' vs ')}"
           end
         end
 

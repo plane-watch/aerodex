@@ -59,11 +59,11 @@ module Processors
         def import_missing_countries
           # Find operators without country that have ICAO codes
           problem_icao_codes = ::Operator
-            .where(country_id: nil)
-            .where.not(icao_code: [nil, ''])
-            .pluck(:icao_code)
-            .compact
-            .uniq
+                               .where(country_id: nil)
+                               .where.not(icao_code: [nil, ''])
+                               .pluck(:icao_code)
+                               .compact
+                               .uniq
 
           Rails.logger.info "Found #{problem_icao_codes.count} operators without country"
 
@@ -81,9 +81,7 @@ module Processors
 
           data = scrape_airline_page(icao_code)
 
-          if data[:error]
-            return { error: data[:error], icao_code: icao_code }
-          end
+          return { error: data[:error], icao_code: icao_code } if data[:error]
 
           source = create_or_update_source(icao_code, data)
           { source: source, data: data }
@@ -103,7 +101,7 @@ module Processors
 
           icao_codes.each_with_index do |icao_code, index|
             # Rate limiting - be polite to the server
-            sleep(REQUEST_DELAY) if index > 0
+            sleep(REQUEST_DELAY) if index.positive?
 
             begin
               data = scrape_airline_page(icao_code)
@@ -173,9 +171,7 @@ module Processors
 
           data = { source_url: "#{BASE_URL}/#{icao_code}" }
 
-          if meta_desc
-            data.merge!(parse_meta_description(meta_desc))
-          end
+          data.merge!(parse_meta_description(meta_desc)) if meta_desc
 
           # Fall back to / supplement with table data
           table_data = parse_data_table(doc)
@@ -247,7 +243,7 @@ module Processors
         # @return [Source::Operator::AirlineCodesOperatorSource] The source record
         def create_or_update_source(icao_code, data, import_timestamp = Time.current)
           source = Source::Operator::AirlineCodesOperatorSource
-            .find_or_initialize_by(icao_code: icao_code)
+                   .find_or_initialize_by(icao_code: icao_code)
 
           source.assign_attributes(
             name: data[:name],

@@ -108,7 +108,7 @@ module Search
     #
     # @return [Boolean]
     def boolean_operator?
-      type == :boolean_and || type == :boolean_or
+      %i[boolean_and boolean_or].include?(type)
     end
 
     # Returns the display value for UI rendering.

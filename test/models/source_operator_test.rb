@@ -14,7 +14,7 @@
 #
 #  index_source_operators_on_data  (data) USING gin
 #
-require "test_helper"
+require 'test_helper'
 
 class SourceOperatorTest < ActiveSupport::TestCase
   # test "the truth" do

@@ -1,19 +1,24 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require 'test_helper'
 
 class ProcessorJobTest < ActiveJob::TestCase
   # We test this with a mock processor since real processors
   # require database fixtures
 
   class MockProcessor
+    # ProcessorJob calls `combine_sources(triggered_by: triggered_by)`, so the
+    # keyword has to be accepted here even though the double ignores it.
+    # Prefixing it with an underscore would rename the keyword and break the call.
+    # rubocop:disable Lint/UnusedMethodArgument
     def self.combine_sources(triggered_by: nil)
       StagedBatch.create!(
         processor_type: name,
-        entity_type: "Mock",
+        entity_type: 'Mock',
         status: :pending
       )
     end
+    # rubocop:enable Lint/UnusedMethodArgument
   end
 
   def setup
@@ -25,109 +30,107 @@ class ProcessorJobTest < ActiveJob::TestCase
   def teardown
     # Clean up any constants we stubbed
     @stubbed_constants.each do |name|
-      parts = name.split("::")
+      parts = name.split('::')
       parent = parts[0..-2].inject(Object) { |mod, part| mod.const_get(part) }
       parent.send(:remove_const, parts.last) if parent.const_defined?(parts.last, false)
     end
   end
 
-  test "perform creates a staged batch" do
+  test 'perform creates a staged batch' do
     # Register the mock processor
-    stub_const("Processors::Mock::Mock", MockProcessor)
+    stub_const('Processors::Mock::Mock', MockProcessor)
 
-    assert_difference "StagedBatch.count", 1 do
-      ProcessorJob.perform_now("Processors::Mock::Mock")
+    assert_difference 'StagedBatch.count', 1 do
+      ProcessorJob.perform_now('Processors::Mock::Mock')
     end
   end
 
-  test "perform sets job_id on the batch" do
-    stub_const("Processors::Mock::Mock", MockProcessor)
+  test 'perform sets job_id on the batch' do
+    stub_const('Processors::Mock::Mock', MockProcessor)
 
-    job = ProcessorJob.new("Processors::Mock::Mock")
+    job = ProcessorJob.new('Processors::Mock::Mock')
     job.perform_now
 
     batch = StagedBatch.last
     assert_equal job.job_id, batch.job_id
   end
 
-  test "perform marks batch as failed when processor raises error" do
+  test 'perform marks batch as failed when processor raises error' do
     # Use a processor that properly uses with_staged_batch (which handles errors)
     failing_processor = Class.new(Processors::Base) do
       def self.combine_sources(triggered_by: nil)
-        with_staged_batch(entity_type: "Mock", triggered_by: triggered_by) do
-          raise StandardError, "Processing failed"
+        with_staged_batch(entity_type: 'Mock', triggered_by: triggered_by) do
+          raise StandardError, 'Processing failed'
         end
       end
 
       def self.name
-        "ProcessorJobTest::FailingProcessor"
+        'ProcessorJobTest::FailingProcessor'
       end
     end
 
-    stub_const("ProcessorJobTest::FailingProcessor", failing_processor)
+    stub_const('ProcessorJobTest::FailingProcessor', failing_processor)
 
     # Should mark batch as failed AND re-raise
     assert_raises(StandardError) do
-      ProcessorJob.perform_now("ProcessorJobTest::FailingProcessor")
+      ProcessorJob.perform_now('ProcessorJobTest::FailingProcessor')
     end
 
     batch = StagedBatch.last
-    assert_equal "failed", batch.status
-    assert_includes batch.error_message, "StandardError: Processing failed"
+    assert_equal 'failed', batch.status
+    assert_includes batch.error_message, 'StandardError: Processing failed'
   end
 
-  test "perform re-raises when processor class cannot be loaded" do
+  test 'perform re-raises when processor class cannot be loaded' do
     assert_raises(NameError) do
-      ProcessorJob.perform_now("NonExistent::Processor")
+      ProcessorJob.perform_now('NonExistent::Processor')
     end
 
     # Should not create any batches
     assert_equal 0, StagedBatch.count
   end
 
-  test "error message includes class and message" do
+  test 'error message includes class and message' do
     # Use a processor that properly uses with_staged_batch (which handles errors)
     failing_processor = Class.new(Processors::Base) do
       def self.combine_sources(triggered_by: nil)
-        with_staged_batch(entity_type: "Mock", triggered_by: triggered_by) do
-          raise StandardError, "Test error"
+        with_staged_batch(entity_type: 'Mock', triggered_by: triggered_by) do
+          raise StandardError, 'Test error'
         end
       end
 
       def self.name
-        "ProcessorJobTest::BacktraceProcessor"
+        'ProcessorJobTest::BacktraceProcessor'
       end
     end
 
-    stub_const("ProcessorJobTest::BacktraceProcessor", failing_processor)
+    stub_const('ProcessorJobTest::BacktraceProcessor', failing_processor)
 
     # Should mark batch as failed AND re-raise
     assert_raises(StandardError) do
-      ProcessorJob.perform_now("ProcessorJobTest::BacktraceProcessor")
+      ProcessorJob.perform_now('ProcessorJobTest::BacktraceProcessor')
     end
 
     batch = StagedBatch.last
-    assert_includes batch.error_message, "StandardError: Test error"
+    assert_includes batch.error_message, 'StandardError: Test error'
   end
 
   private
 
   def stub_const(name, value)
-    parts = name.split("::")
+    parts = name.split('::')
 
     # Build parent module hierarchy
     parent = parts[0..-2].inject(Object) do |mod, part|
-      begin
-        mod.const_get(part)
-      rescue NameError
-        mod.const_set(part, Module.new)
-      end
+      mod.const_get(part)
+    rescue NameError
+      mod.const_set(part, Module.new)
     end
 
     # Set the constant
-    unless parent.const_defined?(parts.last, false)
-      parent.const_set(parts.last, value)
-      @stubbed_constants << name
-    end
+    return if parent.const_defined?(parts.last, false)
+
+    parent.const_set(parts.last, value)
+    @stubbed_constants << name
   end
 end

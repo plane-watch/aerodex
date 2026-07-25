@@ -1,3 +1,3 @@
-class Fixnum; end unless defined?(Fixnum)
+class Integer; end unless defined?(Integer)
 
-class Bignum; end unless defined?(Bignum)
+class Integer; end unless defined?(Integer)

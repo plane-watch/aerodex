@@ -8,7 +8,7 @@ class CreateCountrySources < ActiveRecord::Migration[7.1]
       t.string :capital
       t.string :type
       t.datetime :import_date, null: false
-      t.jsonb  :data, null: false, default: '{}'
+      t.jsonb :data, null: false, default: '{}'
 
       t.timestamps
     end

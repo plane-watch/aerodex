@@ -4,7 +4,7 @@
 class OperatorsController < ApplicationController
   include FieldSearchable
 
-  before_action :set_operator, only: [:show, :edit, :update, :destroy]
+  before_action :set_operator, only: %i[show edit update destroy]
 
   def index
     @pagy, @operators = field_search(Operator, params[:search], includes: [:country])
@@ -33,8 +33,7 @@ class OperatorsController < ApplicationController
     end
   end
 
-  def edit
-  end
+  def edit; end
 
   def update
     if @operator.update(operator_params)
@@ -65,5 +64,4 @@ class OperatorsController < ApplicationController
       partial: partial, collection: collection
     )
   end
-
 end
