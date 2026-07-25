@@ -53,7 +53,7 @@ class AircraftTypeNameCanonicalisationTest < ActiveSupport::TestCase
   end
 
   test 'canonical_name_key removes non-alphanumeric characters' do
-    assert_equal 'superag', TestCanonicaliser.canonical_name_key("Super Ag!")
+    assert_equal 'superag', TestCanonicaliser.canonical_name_key('Super Ag!')
     assert_equal 'test123', TestCanonicaliser.canonical_name_key('Test@123#')
   end
 

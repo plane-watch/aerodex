@@ -24,8 +24,8 @@ module Processors
         #   result[:country]  # => <Country iso_2char_code: "AU">
         def combine_one(iso_code)
           iso_code = iso_code.to_s.strip.upcase
-          raise ArgumentError, "ISO 2-character code is required" if iso_code.blank?
-          raise ArgumentError, "ISO code must be 2 characters" if iso_code.length != 2
+          raise ArgumentError, 'ISO 2-character code is required' if iso_code.blank?
+          raise ArgumentError, 'ISO code must be 2 characters' if iso_code.length != 2
 
           # Gather sources for this country
           sources = gather_sources_for_iso_code(iso_code)
@@ -70,7 +70,7 @@ module Processors
         # @param triggered_by [User, nil] The user who triggered the run
         # @return [StagedBatch] The batch containing staged changes
         def combine_sources(triggered_by: nil)
-          with_staged_batch(entity_type: "Country", triggered_by: triggered_by) do
+          with_staged_batch(entity_type: 'Country', triggered_by: triggered_by) do
             sources_by_iso = group_sources_by_iso
             conflicts = []
 
@@ -108,7 +108,7 @@ module Processors
                 record.last_combined_at = Time.current
                 stage_change(record, operation: :update, identifier: iso_code)
               else
-                current_batch.summary["unchanged"] += 1
+                current_batch.summary['unchanged'] += 1
               end
 
               progress_bar.increment!

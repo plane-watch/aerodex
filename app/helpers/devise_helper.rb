@@ -9,7 +9,7 @@ module DeviseHelper
     messages = resource.errors.full_messages.map { |msg| content_tag(:p, "- #{msg}.") }
                        .join
     sentence = I18n.t(
-      "errors.messages.not_saved",
+      'errors.messages.not_saved',
       count: resource.errors.count,
       resource: resource.class.model_name.human.downcase
     )
@@ -27,7 +27,7 @@ module DeviseHelper
   def devise_simple_error_messages!
     return if resource.errors.empty?
 
-    sentence = "Ooops!"
+    sentence = 'Ooops!'
     if resource.errors.count == 1
       message =  resource.errors.full_messages[0]
       html = <<-HTML

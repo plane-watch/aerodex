@@ -37,7 +37,7 @@ module Processors
         #   result[:updated]   # => true
         def combine_one(icao)
           icao = icao.to_s.upcase.strip
-          raise ArgumentError, "ICAO code is required" if icao.blank?
+          raise ArgumentError, 'ICAO code is required' if icao.blank?
 
           # Gather sources for this specific ICAO
           sources = gather_sources_for_icao(icao)
@@ -100,7 +100,7 @@ module Processors
         def combine_sources(triggered_by: nil)
           @created_stub_operators = []
 
-          aircraft_batch = with_staged_batch(entity_type: "Aircraft", triggered_by: triggered_by) do
+          aircraft_batch = with_staged_batch(entity_type: 'Aircraft', triggered_by: triggered_by) do
             # Collect all sources grouped by icao (the unique identifier)
             sources_by_icao = group_sources_by_icao
             errors = []
@@ -121,7 +121,7 @@ module Processors
                 stage_aircraft_change(result[:record], is_new: result[:new_record])
               else
                 # No changes needed
-                current_batch.summary["unchanged"] += 1
+                current_batch.summary['unchanged'] += 1
               end
 
               progress_bar.increment!
@@ -161,38 +161,38 @@ module Processors
         def create_stub_operators_batch(triggered_by, aircraft_batch)
           stub_batch = StagedBatch.create!(
             processor_type: name,
-            entity_type: "Operator",
-            status: "applied", # Already applied - these are informational records
+            entity_type: 'Operator',
+            status: 'applied', # Already applied - these are informational records
             created_by_id: triggered_by&.id,
             applied_at: Time.current,
             reviewed_by_id: triggered_by&.id,
             reviewed_at: Time.current,
             summary: {
-              "created" => @created_stub_operators.size,
-              "updated" => 0,
-              "unchanged" => 0
+              'created' => @created_stub_operators.size,
+              'updated' => 0,
+              'unchanged' => 0
             },
             notes: "Stub operators auto-created during Aircraft processing (batch ##{aircraft_batch.id}). " \
-                   "These records have names from source data and low confidence - may need enrichment."
+                   'These records have names from source data and low confidence - may need enrichment.'
           )
 
           # Create StagedChange records for each stub (for audit trail)
           @created_stub_operators.each do |operator|
             StagedChange.create!(
               staged_batch: stub_batch,
-              record_type: "Operator",
+              record_type: 'Operator',
               record_id: operator.id,
               record_identifier: operator.name,
-              operation: "create",
+              operation: 'create',
               diff: {
-                "name" => [nil, operator.name],
-                "country_id" => [nil, operator.country_id]
+                'name' => [nil, operator.name],
+                'country_id' => [nil, operator.country_id]
               }
             )
           end
 
           # Add reference to the stub batch in the aircraft batch notes
-          aircraft_batch.notes ||= ""
+          aircraft_batch.notes ||= ''
           aircraft_batch.notes += "#{@created_stub_operators.size} stub operator(s) were auto-created " \
                                   "(see batch ##{stub_batch.id} for details).\n"
           aircraft_batch.save!

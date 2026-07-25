@@ -35,7 +35,7 @@ module Processors
         #   result = Processors::Airport::Airport.combine_one("SYD", by: :iata)
         def combine_one(identifier, by: nil)
           identifier = identifier.to_s.strip.upcase
-          raise ArgumentError, "Identifier is required" if identifier.blank?
+          raise ArgumentError, 'Identifier is required' if identifier.blank?
 
           # Auto-detect identifier type if not specified
           by ||= identifier.length == 4 ? :icao : :iata
@@ -100,7 +100,7 @@ module Processors
         # @param triggered_by [User, nil] The user who triggered the run
         # @return [StagedBatch] The batch containing staged changes
         def combine_sources(triggered_by: nil)
-          with_staged_batch(entity_type: "Airport", triggered_by: triggered_by) do
+          with_staged_batch(entity_type: 'Airport', triggered_by: triggered_by) do
             preload_reference_data
 
             sources_by_identifier = group_sources_by_identifier
@@ -118,7 +118,7 @@ module Processors
 
             # Store conflict count in batch notes if any
             if conflicts.any?
-              current_batch.notes ||= ""
+              current_batch.notes ||= ''
               current_batch.notes += "Processing completed with #{conflicts.count} field conflicts\n"
             end
           end
@@ -198,7 +198,7 @@ module Processors
           # Link to country first - skip if no valid country (required field)
           country = find_country_for_sources(sources)
           unless country
-            current_batch.notes ||= ""
+            current_batch.notes ||= ''
             current_batch.notes += "Error: No valid country found for airport #{identifier[:code]}\n"
             return { error: "No valid country found for airport #{identifier[:code]}" }
           end
@@ -255,7 +255,7 @@ module Processors
             stage_change(record, operation: :update, identifier: human_identifier)
             { record: record, updated: true }
           else
-            current_batch.summary["unchanged"] += 1
+            current_batch.summary['unchanged'] += 1
             { record: record, unchanged: true }
           end
         end

@@ -71,15 +71,15 @@ gem 'pagy', '~> 6.4'
 gem 'paper_trail', '~> 17.0'
 gem 'table_print', '~> 1.5'
 # for string comparison distance calculation
-gem "jaro_winkler", "~> 1.5"
+gem 'jaro_winkler', '~> 1.5'
 
-gem "countries", "~> 8.0"
+gem 'countries', '~> 8.0'
 
-gem "progress_bar", "~> 1.3"
+gem 'progress_bar', '~> 1.3'
 
 # State machine for user contributions workflow
-gem "aasm", "~> 5.5"
+gem 'aasm', '~> 5.5'
 
 # Offline timezone lookup from coordinates
-gem "wheretz", "~> 0.0.6"
-gem "parallel"
+gem 'wheretz', '~> 0.0.6'
+gem 'parallel'

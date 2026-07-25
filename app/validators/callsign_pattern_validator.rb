@@ -3,7 +3,7 @@ class CallsignPatternValidator < ActiveModel::EachValidator
     begin
       Regexp.new(value)
     rescue RegexpError
-      record.errors.add(attribute, "is not a valid regular expression")
+      record.errors.add(attribute, 'is not a valid regular expression')
     end
   end
 end

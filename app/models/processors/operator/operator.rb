@@ -83,7 +83,7 @@ module Processors
         #   Processors::Operator::Operator.add_auto_inserted_provenance
         def add_auto_inserted_provenance
           # Find operators without provenance
-          operators = ::Operator.where("field_provenance IS NULL OR field_provenance = ?", "{}")
+          operators = ::Operator.where('field_provenance IS NULL OR field_provenance = ?', '{}')
           total = operators.count
 
           Rails.logger.info "Adding provenance to #{total} auto-inserted operators"
@@ -219,7 +219,7 @@ module Processors
         #   result = Processors::Operator::Operator.combine_one("Qantas", by: :name)
         def combine_one(identifier, by: nil)
           identifier = identifier.to_s.strip
-          raise ArgumentError, "Identifier is required" if identifier.blank?
+          raise ArgumentError, 'Identifier is required' if identifier.blank?
 
           # Auto-detect identifier type if not specified
           by ||= case identifier.length
@@ -291,8 +291,8 @@ module Processors
             sources.concat(Source::Operator::OpenFlightsOperatorSource.includable.where(iata_code: identifier).to_a) if defined?(Source::Operator::OpenFlightsOperatorSource)
           when :name
             # Case-insensitive name search
-            sources.concat(Source::Operator::VRSDataOperatorSource.includable.where("LOWER(name) = ?", identifier.downcase).to_a)
-            sources.concat(Source::Operator::OpenTravelOperatorSource.includable.where("LOWER(name) = ?", identifier.downcase).to_a)
+            sources.concat(Source::Operator::VRSDataOperatorSource.includable.where('LOWER(name) = ?', identifier.downcase).to_a)
+            sources.concat(Source::Operator::OpenTravelOperatorSource.includable.where('LOWER(name) = ?', identifier.downcase).to_a)
           end
 
           sources
@@ -307,7 +307,7 @@ module Processors
           case by
           when :icao then ::Operator.find_by(icao_code: identifier)
           when :iata then ::Operator.find_by(iata_code: identifier)
-          when :name then ::Operator.find_by("LOWER(name) = ?", identifier.downcase)
+          when :name then ::Operator.find_by('LOWER(name) = ?', identifier.downcase)
           end
         end
 
@@ -324,7 +324,7 @@ module Processors
         # @param triggered_by [User, nil] The user who triggered the run
         # @return [StagedBatch] The batch containing staged changes
         def combine_sources(triggered_by: nil)
-          with_staged_batch(entity_type: "Operator", triggered_by: triggered_by) do
+          with_staged_batch(entity_type: 'Operator', triggered_by: triggered_by) do
             preload_reference_data
 
             # Declare indexed fields for staged record lookups.
@@ -665,7 +665,7 @@ module Processors
             return operator if operator
 
             # Fall back to case-insensitive database lookup
-            operator = ::Operator.where("LOWER(name) = ?", name.downcase).first
+            operator = ::Operator.where('LOWER(name) = ?', name.downcase).first
             return operator if operator
           end
 

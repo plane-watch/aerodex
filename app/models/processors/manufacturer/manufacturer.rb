@@ -24,7 +24,7 @@ module Processors
         #   result[:manufacturer]  # => <Manufacturer icao_code: "BOEING">
         def combine_one(icao_code)
           icao_code = icao_code.to_s.strip.upcase
-          raise ArgumentError, "ICAO code is required" if icao_code.blank?
+          raise ArgumentError, 'ICAO code is required' if icao_code.blank?
 
           # Gather sources for this manufacturer
           sources = gather_sources_for_icao_code(icao_code)
@@ -70,7 +70,7 @@ module Processors
         # @param triggered_by [User, nil] The user who triggered the run
         # @return [StagedBatch] The batch containing staged changes
         def combine_sources(triggered_by: nil)
-          with_staged_batch(entity_type: "Manufacturer", triggered_by: triggered_by) do
+          with_staged_batch(entity_type: 'Manufacturer', triggered_by: triggered_by) do
             sources_by_icao = group_sources_by_icao
             conflicts = []
 
@@ -111,7 +111,7 @@ module Processors
                 record.last_combined_at = Time.current
                 stage_change(record, operation: :update, identifier: icao_code)
               else
-                current_batch.summary["unchanged"] += 1
+                current_batch.summary['unchanged'] += 1
               end
 
               progress_bar.increment!

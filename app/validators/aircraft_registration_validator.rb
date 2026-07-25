@@ -418,7 +418,7 @@ class AircraftRegistrationValidator < ActiveModel::EachValidator
 
   def validate_each(record, attribute, value)
     unless value =~ Regexp.union(REGISTRATION_PATTERNS)
-      record.errors[attribute] << (options[:message] || "is not a valid aircraft registration")
+      record.errors[attribute] << (options[:message] || 'is not a valid aircraft registration')
     end
   end
 end
