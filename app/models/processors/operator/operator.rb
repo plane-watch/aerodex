@@ -66,7 +66,8 @@ module Processors
             progress_bar.increment!
           end
 
-          Rails.logger.info "Merge complete: #{stats[:merged]} merged, #{stats[:skipped]} skipped, #{stats[:errors].count} errors"
+          Rails.logger.info "Merge complete: #{stats[:merged]} merged, #{stats[:skipped]} skipped, " \
+                            "#{stats[:errors].count} errors"
 
           # Reindex after merging
           ::Operator.reindex! unless dry_run

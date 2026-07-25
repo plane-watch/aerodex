@@ -180,8 +180,9 @@ module Processors
               'updates' => 0,
               'unchanged' => 0
             },
-            notes: "Stub manufacturers auto-created during AircraftType processing (batch ##{aircraft_type_batch.id}). " \
-                   'These records have placeholder names derived from ICAO codes and need enrichment.'
+            notes: 'Stub manufacturers auto-created during AircraftType processing ' \
+                   "(batch ##{aircraft_type_batch.id}). These records have placeholder " \
+                   'names derived from ICAO codes and need enrichment.'
           )
 
           # Create StagedChange records for each stub (for audit trail)
@@ -206,7 +207,8 @@ module Processors
                                         "(see batch ##{stub_batch.id} for details).\n"
           aircraft_type_batch.save!
 
-          Rails.logger.info "Created stub manufacturers batch ##{stub_batch.id} with #{@created_stub_manufacturers.size} records"
+          Rails.logger.info "Created stub manufacturers batch ##{stub_batch.id} " \
+                            "with #{@created_stub_manufacturers.size} records"
         end
 
         # Preloads all reference data needed for combining into memory.

@@ -191,7 +191,8 @@ module Processors
                                   "(see batch ##{stub_batch.id} for details).\n"
           aircraft_batch.save!
 
-          Rails.logger.info "Created stub operators batch ##{stub_batch.id} with #{@created_stub_operators.size} records"
+          Rails.logger.info "Created stub operators batch ##{stub_batch.id} " \
+                            "with #{@created_stub_operators.size} records"
         end
 
         private
@@ -658,7 +659,8 @@ module Processors
           return if @unmatched_operators.blank? || @unmatched_operators.empty?
 
           total_aircraft = @unmatched_operators.values.sum { |data| data[:aircraft].size }
-          Rails.logger.info "=== Unmatched Operators (#{@unmatched_operators.size} unique names, #{total_aircraft} aircraft) ==="
+          Rails.logger.info "=== Unmatched Operators (#{@unmatched_operators.size} unique names, " \
+                            "#{total_aircraft} aircraft) ==="
 
           # Show top 50 by aircraft count
           @unmatched_operators

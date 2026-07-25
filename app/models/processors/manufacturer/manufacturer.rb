@@ -54,7 +54,9 @@ module Processors
         # @return [Array<ApplicationRecord>] All source records matching the code
         def gather_sources_for_icao_code(icao_code)
           sources = []
-          sources.concat(Source::Manufacturer::CfappsICAOIntManufacturerSource.includable.where(icao_code: icao_code).to_a)
+          sources.concat(
+            Source::Manufacturer::CfappsICAOIntManufacturerSource.includable.where(icao_code: icao_code).to_a
+          )
           if defined?(Source::Manufacturer::OpenskyManufacturerSource)
             sources.concat(Source::Manufacturer::OpenskyManufacturerSource.includable.where(icao_code: icao_code).to_a)
           end

@@ -51,7 +51,8 @@ module Processors
             response = Rails.cache.fetch("Processors::Aircraft::CAANZ::Registry#search/#{search_param}") do
               Excon.get(url,
                         headers: {
-                          'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:122.0) Gecko/20100101 Firefox/122.0',
+                          'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:122.0) ' \
+                                          'Gecko/20100101 Firefox/122.0',
                           'Referer' => "https://caanz.cwp.govt.nz/aircraft/aircraft-registration/aircraft-register-search/querymark?Mark=#{search_param}"
                         }, debug: true, omit_default_port: true)
             end

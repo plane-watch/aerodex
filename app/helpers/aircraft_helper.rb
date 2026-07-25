@@ -36,6 +36,7 @@ module AircraftHelper
                 'bg-gray-50 text-gray-400 ring-gray-600/20'
               end
     content_tag :span, status.capitalize,
-                class: "ml-2 inline-flex items-center rounded-md px-2 py-0.5 shadow text-xs font-medium ring-1 ring-inset #{classes}"
+                class: 'ml-2 inline-flex items-center rounded-md px-2 py-0.5 shadow text-xs ' \
+                       "font-medium ring-1 ring-inset #{classes}"
   end
 end

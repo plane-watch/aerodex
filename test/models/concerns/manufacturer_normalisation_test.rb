@@ -84,13 +84,19 @@ class ManufacturerNormalisationTest < ActiveSupport::TestCase
   test 'normalise_manufacturer_name applies pattern matching for Russian manufacturers' do
     assert_equal 'Antonov', TestNormaliser.normalise_manufacturer_name('Antonov OKB')
     assert_equal 'Tupolev',
-                 TestNormaliser.normalise_manufacturer_name('Aviatsionny Nauchno-Tekhnishesky Kompleks Imeni A N Tupoleva OAO')
+                 TestNormaliser.normalise_manufacturer_name(
+                   'Aviatsionny Nauchno-Tekhnishesky Kompleks Imeni A N Tupoleva OAO'
+                 )
     assert_equal 'Ilyushin', TestNormaliser.normalise_manufacturer_name('Aviatsionnyi Kompleks Imeni S.V.Ilyushina OAO')
     assert_equal 'Sukhoi',
-                 TestNormaliser.normalise_manufacturer_name('Gosudarstvennoye Unitarnoye Predpriyatie Aviatsionnyi Voyenno-Promyshlennyi Komplex Sukhoi')
+                 TestNormaliser.normalise_manufacturer_name(
+                   'Gosudarstvennoye Unitarnoye Predpriyatie Aviatsionnyi Voyenno-Promyshlennyi Komplex Sukhoi'
+                 )
     assert_equal 'MiG', TestNormaliser.normalise_manufacturer_name('Aviatsionnyi Nauchno-Promyshlennyi Kompleks MiG')
     assert_equal 'Yakovlev',
-                 TestNormaliser.normalise_manufacturer_name('Moskovskii Mashinostroitelnyy Zavod "Skorost" Imeni A.S.Yakovleva')
+                 TestNormaliser.normalise_manufacturer_name(
+                   'Moskovskii Mashinostroitelnyy Zavod "Skorost" Imeni A.S.Yakovleva'
+                 )
     assert_equal 'Mil', TestNormaliser.normalise_manufacturer_name('Mil OKB')
     assert_equal 'Kamov', TestNormaliser.normalise_manufacturer_name('Kamov OAO')
     assert_equal 'Beriev', TestNormaliser.normalise_manufacturer_name('Beriev OKB')

@@ -99,3 +99,8 @@ Style/TrailingCommaInArrayLiteral:
 
 Layout/LineLength:
   Max: 120
+  Exclude:
+    # Written by the Devise installer. The long lines are commented-out example
+    # values holding 128 character keys, which cannot be wrapped, and any edit
+    # made here is lost the next time the initializer is regenerated.
+    - 'config/initializers/devise.rb'
