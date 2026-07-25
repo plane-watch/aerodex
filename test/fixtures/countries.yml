@@ -36,3 +36,12 @@ australia:
   iso_num_code: 036
   name: Australia
   capital: Canberra
+
+# A formerly-assigned ISO 3166-1 code with no bundled flag asset, used to
+# exercise the missing-flag fallback (see issue #18).
+serbia_and_montenegro:
+  iso_2char_code: CS
+  iso_3char_code: SCG
+  iso_num_code: 891
+  name: Serbia and Montenegro
+  capital: Belgrade

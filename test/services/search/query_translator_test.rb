@@ -121,24 +121,24 @@ class SearchQueryTranslatorTest < ActiveSupport::TestCase
     assert_nil options[:filter]
   end
 
-  test 'has_field_filters? returns true for valid field tokens' do
+  test 'field_filters? returns true for valid field tokens' do
     tokens = [
       Search::SearchToken.new(type: :field_value, field: 'aircraft_manufacturer', value: 'Boeing', exact: true)
     ]
 
     translator = Search::QueryTranslator.new(tokens, 'Aircraft')
 
-    assert translator.has_field_filters?
+    assert translator.field_filters?
   end
 
-  test 'has_field_filters? returns false for unknown fields' do
+  test 'field_filters? returns false for unknown fields' do
     tokens = [
       Search::SearchToken.new(type: :field_value, field: 'bogus', value: 'test', exact: true)
     ]
 
     translator = Search::QueryTranslator.new(tokens, 'Aircraft')
 
-    assert_not translator.has_field_filters?
+    assert_not translator.field_filters?
   end
 
   # Edge cases

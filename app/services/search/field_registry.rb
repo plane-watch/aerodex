@@ -6,13 +6,18 @@ module Search
   # This dynamically reads filterable_attributes from each model's meilisearch
   # configuration, eliminating the need for manual registration.
   #
+  # Field names are the model's filterable attributes verbatim; no aliasing of
+  # user-friendly names to physical attributes is performed. Aircraft therefore
+  # exposes the manufacturer as `aircraft_manufacturer`, not `manufacturer`.
+  #
   # @example Getting fields for a model
   #   fields = FieldRegistry.fields_for('Aircraft')
-  #   # => [:icao, :registration, :manufacturer, ...]
+  #   # => [:icao, :registration, :serial_number, ...]
   #
   # @example Checking if a field is valid
-  #   FieldRegistry.valid_field?('Aircraft', 'manufacturer')  # => true
-  #   FieldRegistry.valid_field?('Aircraft', 'bogus')         # => false
+  #   FieldRegistry.valid_field?('Aircraft', 'aircraft_manufacturer')  # => true
+  #   FieldRegistry.valid_field?('Aircraft', 'manufacturer')           # => false
+  #   FieldRegistry.valid_field?('Aircraft', 'bogus')                  # => false
   class FieldRegistry
     # Models that support field-specific search.
     # These must include MeiliSearch::Rails and define filterable_attributes.
@@ -33,7 +38,7 @@ module Search
       # @return [Array<Symbol>] Array of field names
       def fields_for(model_name)
         model_class = model_name.safe_constantize
-        return [] unless model_class&.respond_to?(:meilisearch_settings)
+        return [] unless model_class.respond_to?(:meilisearch_settings)
 
         settings = model_class.meilisearch_settings
         return [] unless settings
@@ -83,12 +88,7 @@ module Search
 
         fields_for(model_name)
           .select { |name| name.to_s.start_with?(prefix) }
-          .map do |name|
-            {
-              value: name.to_s,
-              display: humanize_field_name(name)
-            }
-          end
+          .map { |name| { value: name.to_s, display: humanize_field_name(name) } }
           .sort_by { |suggestion| suggestion[:value] }
       end
 
