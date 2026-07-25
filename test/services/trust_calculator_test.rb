@@ -3,8 +3,6 @@
 require 'test_helper'
 
 class TrustCalculatorTest < ActiveSupport::TestCase
-  FakeClass = Struct.new(:name)
-
   setup do
     SourceTrustScore.delete_all
     SourceTrustScore.clear_cache!
@@ -53,10 +51,15 @@ class TrustCalculatorTest < ActiveSupport::TestCase
 
   private
 
+  # Builds a lightweight fake source record whose real class reports the
+  # given name via `class.name`. Overriding `Object#class` directly would
+  # break `is_a?`, `case..when`, and pattern matching on the fake, so we
+  # use an anonymous class with a custom `.name` instead.
   def fake_source(class_name)
-    source = Object.new
+    klass = Class.new
+    klass.define_singleton_method(:name) { class_name }
+    source = klass.new
     source.define_singleton_method(:id) { 1 }
-    source.define_singleton_method(:class) { FakeClass.new(class_name) }
     source
   end
 end
