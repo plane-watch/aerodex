@@ -82,7 +82,7 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
 
   test 'combine_sources returns a staged batch' do
-    airport = create_test_airport
+    create_test_airport
 
     create_runway_source(
       le_ident: '99L',
@@ -152,7 +152,7 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
     airport = create_test_airport
 
     # Create an existing runway record
-    existing_runway = AirportRunway.create!(
+    AirportRunway.create!(
       airport: airport,
       le_ident: '99L',
       he_ident: '17R',
@@ -509,7 +509,7 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
   test 'combine_sources accepts triggered_by parameter' do
     user = users(:admin)
 
-    airport = create_test_airport
+    create_test_airport
 
     create_runway_source(
       le_ident: '99L',
@@ -619,7 +619,7 @@ class Processors::Runway::RunwayTest < ActiveSupport::TestCase
   end
 
   test 'combine_one combines all runways at airport when le_ident is nil' do
-    airport = create_test_airport
+    create_test_airport
 
     # Create multiple runway sources
     create_runway_source(le_ident: '16L', he_ident: '34R')

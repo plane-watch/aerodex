@@ -254,7 +254,7 @@ class Processors::Aircraft::AircraftTest < ActiveSupport::TestCase
 
   test 'combine_sources creates stub operators batch when operators are auto-created' do
     # Create a country for the source (CASA defaults to AU)
-    australia = Country.find_or_create_by!(iso_2char_code: 'AU') do |c|
+    Country.find_or_create_by!(iso_2char_code: 'AU') do |c|
       c.iso_3char_code = 'AUS'
       c.name = 'Australia'
     end
@@ -266,7 +266,7 @@ class Processors::Aircraft::AircraftTest < ActiveSupport::TestCase
       operator_name: 'Auto Created Operator ZZ'
     )
 
-    batch = Processors::Aircraft::Aircraft.combine_sources
+    Processors::Aircraft::Aircraft.combine_sources
 
     # Check that a stub operators batch was created
     stub_batch = StagedBatch.where(entity_type: 'Operator', status: 'applied').last
@@ -286,7 +286,7 @@ class Processors::Aircraft::AircraftTest < ActiveSupport::TestCase
 
   test 'combine_sources does not create stub batch when no operators auto-created' do
     # Create an operator that already exists
-    operator = create_test_operator(name: 'Test Operator ZZ')
+    create_test_operator(name: 'Test Operator ZZ')
 
     # Create source referencing the existing operator
     create_casa_source(

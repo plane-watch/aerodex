@@ -24,7 +24,7 @@ class Admin::StagedBatchesControllerTest < ActionDispatch::IntegrationTest
   # Index tests
   test 'index lists staged batches' do
     sign_in @admin
-    batch = StagedBatch.create!(
+    StagedBatch.create!(
       processor_type: 'Processors::Test::Test',
       entity_type: 'Test',
       status: :pending

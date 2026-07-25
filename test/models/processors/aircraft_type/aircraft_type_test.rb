@@ -40,7 +40,7 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
 
   test 'combine_sources returns a staged batch' do
-    manufacturer = Manufacturer.create!(
+    Manufacturer.create!(
       icao_code: 'ZZMANUF',
       name: 'Test Manufacturer'
     )
@@ -60,7 +60,7 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
   end
 
   test 'combine_sources stages aircraft type creation' do
-    manufacturer = Manufacturer.create!(
+    Manufacturer.create!(
       icao_code: 'ZZMANUF',
       name: 'Test Manufacturer'
     )
@@ -150,7 +150,7 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
   test 'combine_sources accepts triggered_by parameter' do
     user = users(:admin)
 
-    manufacturer = Manufacturer.create!(
+    Manufacturer.create!(
       icao_code: 'WWMANUF',
       name: 'Triggered By Manufacturer'
     )
@@ -234,7 +234,7 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
   end
 
   test 'combine_sources merges multiple sources using trust scores' do
-    manufacturer = Manufacturer.create!(
+    Manufacturer.create!(
       icao_code: 'XXMANUF',
       name: 'Merge Test Manufacturer'
     )
@@ -267,7 +267,7 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
   end
 
   test 'combine_sources sets provenance for fields' do
-    manufacturer = Manufacturer.create!(
+    Manufacturer.create!(
       icao_code: 'ZZMANUF',
       name: 'Provenance Manufacturer'
     )
@@ -296,7 +296,7 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
   end
 
   test 'combine_sources excludes records marked as excluded' do
-    manufacturer = Manufacturer.create!(
+    Manufacturer.create!(
       icao_code: 'ZZMANUF',
       name: 'Exclusion Manufacturer'
     )
@@ -329,7 +329,7 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
   end
 
   test 'combine_sources handles all three source types' do
-    manufacturer = Manufacturer.create!(
+    Manufacturer.create!(
       icao_code: 'ZZMANUF',
       name: 'Multi-Source Manufacturer'
     )
@@ -431,7 +431,7 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
   end
 
   test 'combine_sources skips sources with blank type_code' do
-    manufacturer = Manufacturer.create!(
+    Manufacturer.create!(
       icao_code: 'ZZMANUF',
       name: 'Blank Code Manufacturer'
     )
@@ -461,7 +461,7 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
   end
 
   test 'combine_sources skips sources with blank name' do
-    manufacturer = Manufacturer.create!(
+    Manufacturer.create!(
       icao_code: 'ZZMANUF',
       name: 'Blank Name Manufacturer'
     )
@@ -529,7 +529,7 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
 
   test 'combine_one creates aircraft type for specific type code and name' do
-    manufacturer = Manufacturer.create!(
+    Manufacturer.create!(
       icao_code: 'ZZMANUF',
       name: 'Combine One Manufacturer'
     )
@@ -583,7 +583,7 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
   end
 
   test 'combine_one returns all variants when name is not specified' do
-    manufacturer = Manufacturer.create!(
+    Manufacturer.create!(
       icao_code: 'ZZMANUF',
       name: 'Multi-Variant Manufacturer'
     )
@@ -621,7 +621,7 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
   end
 
   test 'combine_one normalises type code to uppercase' do
-    manufacturer = Manufacturer.create!(
+    Manufacturer.create!(
       icao_code: 'ZZMANUF',
       name: 'Uppercase Test Manufacturer'
     )
@@ -640,7 +640,7 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
   end
 
   test 'combine_one trims whitespace from type code' do
-    manufacturer = Manufacturer.create!(
+    Manufacturer.create!(
       icao_code: 'ZZMANUF',
       name: 'Whitespace Test Manufacturer'
     )
@@ -663,7 +663,7 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
 
   test 'combine_sources merges sources with different name formats for same aircraft' do
-    manufacturer = Manufacturer.create!(
+    Manufacturer.create!(
       icao_code: 'ZZMANUF',
       name: 'Antonov'
     )
@@ -695,7 +695,7 @@ class Processors::AircraftType::AircraftTypeTest < ActiveSupport::TestCase
   end
 
   test 'combine_sources keeps different variants separate' do
-    manufacturer = Manufacturer.create!(
+    Manufacturer.create!(
       icao_code: 'ZZMANUF',
       name: 'Boeing'
     )

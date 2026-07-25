@@ -45,7 +45,7 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
 
   test 'combine_sources returns a staged batch' do
-    country = Country.create!(
+    Country.create!(
       iso_2char_code: 'ZZ',
       iso_3char_code: 'ZZZ',
       name: 'Test Country'
@@ -69,7 +69,7 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
   end
 
   test 'combine_sources stages airport creation' do
-    country = Country.create!(
+    Country.create!(
       iso_2char_code: 'ZZ',
       iso_3char_code: 'ZZZ',
       name: 'Test Country'
@@ -172,7 +172,7 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
   test 'combine_sources accepts triggered_by parameter' do
     user = users(:admin)
 
-    country = Country.create!(
+    Country.create!(
       iso_2char_code: 'WW',
       iso_3char_code: 'WWW',
       name: 'Triggered By Country'
@@ -274,7 +274,7 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
   end
 
   test 'combine_sources merges multiple sources using trust scores' do
-    country = Country.create!(
+    Country.create!(
       iso_2char_code: 'XX',
       iso_3char_code: 'XXX',
       name: 'Merge Test Country'
@@ -314,7 +314,7 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
   end
 
   test 'combine_sources sets provenance for fields' do
-    country = Country.create!(
+    Country.create!(
       iso_2char_code: 'ZZ',
       iso_3char_code: 'ZZZ',
       name: 'Provenance Test Country'
@@ -346,7 +346,7 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
   end
 
   test 'combine_sources excludes records marked as excluded' do
-    country = Country.create!(
+    Country.create!(
       iso_2char_code: 'ZZ',
       iso_3char_code: 'ZZZ',
       name: 'Exclusion Test Country'
@@ -383,7 +383,7 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
   end
 
   test 'combine_sources handles both source types' do
-    country = Country.create!(
+    Country.create!(
       iso_2char_code: 'ZZ',
       iso_3char_code: 'ZZZ',
       name: 'Multi-Source Country'
@@ -463,7 +463,7 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
   end
 
   test 'combine_sources handles airports with IATA code only' do
-    country = Country.create!(
+    Country.create!(
       iso_2char_code: 'ZZ',
       iso_3char_code: 'ZZZ',
       name: 'IATA Only Country'
@@ -490,7 +490,7 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
   end
 
   test 'combine_sources sets timezone from coordinates' do
-    country = Country.create!(
+    Country.create!(
       iso_2char_code: 'ZZ',
       iso_3char_code: 'ZZZ',
       name: 'Timezone Test Country'
@@ -519,7 +519,7 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
 
   test 'combine_one creates airport for specific ICAO code' do
-    country = Country.create!(
+    Country.create!(
       iso_2char_code: 'ZZ',
       iso_3char_code: 'ZZZ',
       name: 'Combine One Country'
@@ -595,7 +595,7 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
   end
 
   test 'combine_one normalises identifier to uppercase' do
-    country = Country.create!(
+    Country.create!(
       iso_2char_code: 'ZZ',
       iso_3char_code: 'ZZZ',
       name: 'Uppercase Test Country'
@@ -618,7 +618,7 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
   end
 
   test 'combine_one auto-detects ICAO identifier' do
-    country = Country.create!(
+    Country.create!(
       iso_2char_code: 'ZZ',
       iso_3char_code: 'ZZZ',
       name: 'Auto-detect ICAO Country'
@@ -641,7 +641,7 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
   end
 
   test 'combine_one auto-detects IATA identifier' do
-    country = Country.create!(
+    Country.create!(
       iso_2char_code: 'ZZ',
       iso_3char_code: 'ZZZ',
       name: 'Auto-detect IATA Country'
@@ -665,7 +665,7 @@ class Processors::Airport::AirportTest < ActiveSupport::TestCase
   end
 
   test 'combine_one returns unchanged for existing airport with no changes' do
-    country = Country.create!(
+    Country.create!(
       iso_2char_code: 'ZZ',
       iso_3char_code: 'ZZZ',
       name: 'Unchanged Test Country'
