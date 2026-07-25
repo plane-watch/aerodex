@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: countries
@@ -16,6 +18,9 @@
 #  operators_count  :integer          default(0), not null
 #
 
+# Represents a country from the ISO 3166 standard, identified canonically by its
+# three-character alpha code. The full set is synced from the `countries` gem by
+# .sync_from_iso3166!; airports and operators then reference these records.
 class Country < ApplicationRecord
   include MeiliSearch::Rails
   include HasFieldProvenance
@@ -44,9 +49,12 @@ class Country < ApplicationRecord
   def self.sync_from_iso3166!
     ISO3166::Country.all.each do |country|
       Country.find_or_create_by!(iso_3char_code: country.alpha3) do |c|
-        c.name = country.name
+        # The countries gem exposes the English short name as `iso_short_name`
+        # and the ISO 3166-1 numeric code as `number`; the latter is a string so
+        # that its leading zeroes are preserved (Australia is "036").
+        c.name = country.iso_short_name
         c.iso_2char_code = country.alpha2
-        c.iso_num_code = country.numeric
+        c.iso_num_code = country.number
       end
     end
     reindex!
