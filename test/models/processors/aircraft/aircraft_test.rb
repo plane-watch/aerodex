@@ -299,6 +299,8 @@ class Processors::Aircraft::AircraftTest < ActiveSupport::TestCase
     Processors::Aircraft::Aircraft.combine_sources
 
     # Only the aircraft batch should be created, not a stub operators batch
+    assert_equal initial_batch_count + 1, StagedBatch.count,
+                 'Expected exactly one new batch, for the aircraft themselves'
     operator_batches = StagedBatch.where(entity_type: 'Operator')
     assert_equal 0, operator_batches.count, 'Expected no stub operators batch when operators already exist'
   end

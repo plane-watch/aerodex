@@ -50,12 +50,27 @@ class Admin::StagedBatchesControllerTest < ActionDispatch::IntegrationTest
 
     get admin_staged_batches_path(status: 'pending')
     assert_response :success
+    assert_select 'a[href=?]', admin_staged_batch_path(pending_batch)
+    assert_select 'a[href=?]', admin_staged_batch_path(applied_batch), count: 0
   end
 
   test 'index filters by entity_type' do
     sign_in @admin
+    aircraft_batch = StagedBatch.create!(
+      processor_type: 'Processors::Test::Test',
+      entity_type: 'Aircraft',
+      status: :pending
+    )
+    country_batch = StagedBatch.create!(
+      processor_type: 'Processors::Test::Test',
+      entity_type: 'Country',
+      status: :pending
+    )
+
     get admin_staged_batches_path(entity_type: 'Aircraft')
     assert_response :success
+    assert_select 'a[href=?]', admin_staged_batch_path(aircraft_batch)
+    assert_select 'a[href=?]', admin_staged_batch_path(country_batch), count: 0
   end
 
   # Apply tests
