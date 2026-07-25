@@ -7,6 +7,10 @@ class ProcessorJobTest < ActiveJob::TestCase
   # require database fixtures
 
   class MockProcessor
+    # ProcessorJob calls `combine_sources(triggered_by: triggered_by)`, so the
+    # keyword has to be accepted here even though the double ignores it.
+    # Prefixing it with an underscore would rename the keyword and break the call.
+    # rubocop:disable Lint/UnusedMethodArgument
     def self.combine_sources(triggered_by: nil)
       StagedBatch.create!(
         processor_type: name,
@@ -14,6 +18,7 @@ class ProcessorJobTest < ActiveJob::TestCase
         status: :pending
       )
     end
+    # rubocop:enable Lint/UnusedMethodArgument
   end
 
   def setup

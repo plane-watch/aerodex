@@ -16,6 +16,11 @@ module Processors
 
         # Field mappings for CSV columns to source table fields
         # Note: CSV converters may cast values to Integer/Date, so functions must handle multiple types
+        # Every entry in this table is a lambda, including those whose body is a
+        # single method call. Rewriting only those few as symbol-to-proc would make
+        # them read differently from their neighbours for no gain, and the table is
+        # easier to scan when each transform has the same shape.
+        # rubocop:disable Style/SymbolProc
         @transform_data = {
           'model' => {
             function: ->(model) { normalise_model(model.to_s) },
@@ -50,6 +55,7 @@ module Processors
             field: :engine_model
           }
         }
+        # rubocop:enable Style/SymbolProc
 
         class << self
           # Imports aircraft data from a CASA CSV file into the source table.

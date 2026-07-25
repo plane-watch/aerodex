@@ -51,7 +51,7 @@ module Processors
 
           progress_bar = create_progress_bar(duplicates.count)
 
-          duplicates.each do |_key, operators|
+          duplicates.each_value do |operators|
             result = merge_duplicate_group(operators, dry_run: dry_run)
 
             case result[:status]
@@ -149,6 +149,12 @@ module Processors
             [normalised_name, op.country_id]
           end
 
+          # rubocop:disable Metrics/BlockLength -- the body below decides whether
+          # a group of same-named operators is a genuine set of siblings and, if
+          # so, builds the parent-child links between them. Extracting it would
+          # mean threading `stats`, `dry_run` and the group key through a new
+          # method, and `create_parent_child_relationships` currently has no test
+          # coverage to catch a mistake in doing so.
           groups.each do |(name, country_id), operators|
             # Skip single operators or empty names
             next if operators.size < 2
@@ -203,6 +209,7 @@ module Processors
               end
             end
           end
+          # rubocop:enable Metrics/BlockLength
 
           Rails.logger.info "Parent-child relationships: #{stats[:groups_found]} groups found, " \
                             "#{stats[:parents_created]} parents created, " \

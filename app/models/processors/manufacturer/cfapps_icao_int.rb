@@ -98,14 +98,15 @@ module Processors
 
           # Normalise all names and pick the shortest as canonical.
           # This helps avoid picking "Airbus Defence and Space" over "Airbus".
-          normalised_candidates = filtered_names.map do |name|
+          candidates = filtered_names.map do |name|
             cleaned = remove_country_annotation(name)
             {
               original: name,
               cleaned: cleaned,
               normalised: normalise_manufacturer_name(cleaned)
             }
-          end.reject { |c| c[:normalised].blank? }
+          end
+          normalised_candidates = candidates.reject { |c| c[:normalised].blank? }
 
           # Skip if we couldn't normalise any names
           return { skipped: true, code: code, reason: 'Could not normalise any names' } if normalised_candidates.empty?

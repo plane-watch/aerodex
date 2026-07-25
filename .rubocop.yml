@@ -35,6 +35,16 @@ AllCops:
     - 'bin/**/*'
 
 Metrics/BlockLength:
+  # These methods take a block that wraps the body of the method calling them
+  # rather than a unit of logic of its own. `meilisearch` is a declarative index
+  # definition whose length tracks the number of indexed attributes, while
+  # `with_staged_batch` and `transaction` wrap a whole processing run. Measuring
+  # them as blocks re-imposes the limit that `Metrics/MethodLength`, disabled
+  # above, deliberately lifts.
+  AllowedMethods:
+    - meilisearch
+    - with_staged_batch
+    - transaction
   Exclude:
     - 'test/**/*'
     - 'lib/tasks/**/*'
@@ -82,6 +92,21 @@ Style/FrozenStringLiteralComment:
 # here beyond constant lookup, which the compact form makes explicit.
 Style/ClassAndModuleChildren:
   Enabled: false
+
+# Forbids the `has_` prefix on predicates, so `has_conflict?` would become
+# `conflict?`. The prefix reads as ordinary English, is unambiguous, and is
+# widespread in Rails codebases. Renaming the four methods involved would touch
+# roughly thirty call sites across the application and its tests for no change
+# in behaviour or clarity.
+Naming/PredicatePrefix:
+  Enabled: false
+
+# This migration was installed from the ActiveStorage engine rather than written
+# here, and is reproduced verbatim. It has already been applied everywhere, so
+# editing it would gain nothing and would diverge from upstream.
+Lint/AssignmentInCondition:
+  Exclude:
+    - 'db/migrate/*.active_storage.rb'
 
 Style/StringLiterals:
   Enabled: true

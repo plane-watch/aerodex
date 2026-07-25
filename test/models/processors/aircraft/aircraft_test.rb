@@ -222,7 +222,7 @@ class Processors::Aircraft::AircraftTest < ActiveSupport::TestCase
     batch = Processors::Aircraft::Aircraft.combine_sources
 
     assert_nil Aircraft.find_by(icao: 'FFFFFF')
-    assert batch.staged_changes.creates.count > 0, 'Expected staged changes to create aircraft'
+    assert batch.staged_changes.creates.count.positive?, 'Expected staged changes to create aircraft'
 
     batch.apply!(by: nil)
 
@@ -241,7 +241,7 @@ class Processors::Aircraft::AircraftTest < ActiveSupport::TestCase
 
     # Registration should still be old before applying
     assert_equal 'VH-OLD', Aircraft.find_by(icao: 'CCCCCC').registration
-    assert batch.staged_changes.updates.count > 0, 'Expected staged changes to update aircraft'
+    assert batch.staged_changes.updates.count.positive?, 'Expected staged changes to update aircraft'
 
     batch.apply!(by: nil)
 
@@ -315,7 +315,7 @@ class Processors::Aircraft::AircraftTest < ActiveSupport::TestCase
     )
 
     batch = Processors::Aircraft::Aircraft.combine_sources
-    assert batch.staged_changes.creates.count > 0, 'Expected staged changes to create aircraft'
+    assert batch.staged_changes.creates.count.positive?, 'Expected staged changes to create aircraft'
 
     batch.apply!(by: nil)
 

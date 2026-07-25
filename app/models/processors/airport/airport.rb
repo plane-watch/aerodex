@@ -476,6 +476,9 @@ module Processors
         # Skips lookup if coordinates haven't changed and we already have a timezone.
         #
         # @param record [Airport] The airport record to update
+        # rubocop:disable Naming/AccessorMethodName -- the cop guards against
+        # `set_x` being used where an `x=` writer is meant. This takes a record
+        # and derives a value for it, so it cannot be mistaken for a writer.
         def set_timezone_from_coordinates(record)
           return if record.latitude.blank? || record.longitude.blank?
 
@@ -500,6 +503,7 @@ module Processors
           # Log error but don't fail the import - timezone is not critical
           Rails.logger.warn "WhereTZ lookup failed for airport #{record.icao_code || record.iata_code}: #{e.message}"
         end
+        # rubocop:enable Naming/AccessorMethodName
       end
     end
   end

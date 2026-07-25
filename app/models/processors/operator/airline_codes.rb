@@ -101,7 +101,7 @@ module Processors
 
           icao_codes.each_with_index do |icao_code, index|
             # Rate limiting - be polite to the server
-            sleep(REQUEST_DELAY) if index > 0
+            sleep(REQUEST_DELAY) if index.positive?
 
             begin
               data = scrape_airline_page(icao_code)

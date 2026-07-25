@@ -52,7 +52,7 @@ module Source
       serialize :data, coder: JsonbSerializer
 
       validates :name, presence: true
-      validate :has_identifier
+      validate :identifier_must_be_present
 
       # Scopes for querying by identifier
       scope :with_icao, ->(icao_code) { where(icao_code: icao_code) if icao_code.present? }
@@ -90,7 +90,7 @@ module Source
       private
 
       # Validates that at least one identifier is present
-      def has_identifier
+      def identifier_must_be_present
         return if icao_code.present? || iata_code.present? || ident.present?
 
         errors.add(:base, 'Airport must have at least one identifier (ICAO code, IATA code, or ident)')

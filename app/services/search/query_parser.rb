@@ -54,6 +54,14 @@ module Search
     # All recognised boolean keywords.
     BOOLEAN_KEYWORDS = [BOOLEAN_AND, BOOLEAN_OR, BOOLEAN_NOT].freeze
 
+    # Token type produced by each standalone boolean keyword. NOT is absent
+    # because it is a negation prefix applied to the following token rather
+    # than a token in its own right.
+    BOOLEAN_TOKEN_TYPES = {
+      BOOLEAN_AND => :boolean_and,
+      BOOLEAN_OR => :boolean_or
+    }.freeze
+
     attr_reader :query
 
     # Creates a new parser for the given query string.
@@ -85,9 +93,7 @@ module Search
             pending_negation = true
           else
             # AND/OR are standalone boolean operators
-            tokens << SearchToken.new(
-              type: keyword == BOOLEAN_AND ? :boolean_and : :boolean_or
-            )
+            tokens << SearchToken.new(type: BOOLEAN_TOKEN_TYPES.fetch(keyword))
           end
 
           remaining = remaining[boolean_match[0].length..].to_s

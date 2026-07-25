@@ -413,7 +413,7 @@ class AircraftRegistrationValidator < ActiveModel::EachValidator
     # Isle of Man (Aircraft Registry)
     /\AM-[A-Z0-9]{4}\z/i,
 
-  ]
+  ].freeze
 
   def validate_each(record, attribute, value)
     return if value =~ Regexp.union(REGISTRATION_PATTERNS)
