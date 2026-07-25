@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: airports
@@ -26,6 +28,9 @@
 #  index_airports_on_country_id  (country_id)
 #
 
+# An airport or aerodrome, identified by its ICAO and IATA codes. Holds the
+# runways it operates, the country and flight information region it sits in,
+# and the route segments that call at it.
 class Airport < ApplicationRecord
   include MeiliSearch::Rails
   include HasFieldProvenance

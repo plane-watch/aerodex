@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: flight_information_regions
@@ -15,7 +17,7 @@
 #  index_flight_information_regions_on_country_id  (country_id)
 #
 
-require "test_helper"
+require 'test_helper'
 
 class FlightInformationRegionTest < ActiveSupport::TestCase
   # test "the truth" do

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: operators
@@ -21,7 +23,7 @@
 #  index_operators_on_parent_operator_id  (parent_operator_id)
 #
 
-require "test_helper"
+require 'test_helper'
 
 class OperatorTest < ActiveSupport::TestCase
   # ==========================================================================

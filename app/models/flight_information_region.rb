@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: flight_information_regions
@@ -15,6 +17,9 @@
 #  index_flight_information_regions_on_country_id  (country_id)
 #
 
+# A flight information region: the block of airspace within which a country
+# provides flight information and alerting services. Groups the airports, and
+# through them the runways, that fall inside it.
 class FlightInformationRegion < ApplicationRecord
   include MeiliSearch::Rails
   belongs_to :country

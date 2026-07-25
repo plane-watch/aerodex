@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: operator_match_decisions
@@ -68,7 +70,7 @@ class OperatorMatchDecision < ApplicationRecord
   # @param decided_by [String, nil] Who made the decision (username, etc.)
   # @param notes [String, nil] Optional notes about the decision
   # @return [OperatorMatchDecision] The created or updated decision record
-  def self.record_decision(operator:, name:, icao_code: nil, decision:, decided_by: nil, notes: nil)
+  def self.record_decision(operator:, name:, decision:, icao_code: nil, decided_by: nil, notes: nil)
     find_or_initialize_by(
       matched_name: name.downcase,
       matched_icao_code: icao_code

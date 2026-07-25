@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: airports
@@ -26,7 +28,7 @@
 #  index_airports_on_country_id  (country_id)
 #
 
-require "test_helper"
+require 'test_helper'
 
 class AirportTest < ActiveSupport::TestCase
   # test "the truth" do

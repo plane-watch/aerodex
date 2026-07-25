@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: countries
@@ -16,7 +18,7 @@
 #  operators_count  :integer          default(0), not null
 #
 
-require "test_helper"
+require 'test_helper'
 
 class CountryTest < ActiveSupport::TestCase
   # test "the truth" do

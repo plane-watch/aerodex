@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: aircraft_types
@@ -22,6 +24,8 @@
 #  index_aircraft_types_on_type_code_and_name  (type_code,name) UNIQUE
 #
 
+# A type of aircraft, such as a Boeing 737-800, identified by its ICAO type
+# designator. Groups the individual Aircraft of that type under a Manufacturer.
 class AircraftType < ApplicationRecord
   include MeiliSearch::Rails
   include HasFieldProvenance

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: aircraft
@@ -30,6 +32,9 @@
 #  index_aircraft_on_registration_country_id  (registration_country_id)
 #
 
+# An individual airframe, identified by its ICAO 24-bit address and registration.
+# Belongs to an AircraftType (and through it a Manufacturer), optionally to the
+# Operator flying it, and to the Country of registration.
 class Aircraft < ApplicationRecord
   include MeiliSearch::Rails
   include HasFieldProvenance

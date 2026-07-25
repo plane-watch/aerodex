@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: manufacturers
@@ -19,6 +21,8 @@
 #  index_manufacturers_on_country_id  (country_id)
 #
 
+# An aircraft manufacturer, such as Boeing or Airbus. Owns the AircraftTypes it
+# builds, and through them the individual Aircraft.
 class Manufacturer < ApplicationRecord
   include MeiliSearch::Rails
   include HasFieldProvenance

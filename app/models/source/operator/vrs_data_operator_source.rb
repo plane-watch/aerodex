@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: operator_sources
@@ -24,6 +26,7 @@
 
 module Source
   module Operator
+    # Operator records imported from the Virtual Radar Server standing data.
     class VRSDataOperatorSource < OperatorSource
       meilisearch do
         attribute :name

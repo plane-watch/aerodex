@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: airport_runways
@@ -19,7 +21,7 @@
 #  last_combined_at :datetime
 #
 
-require "test_helper"
+require 'test_helper'
 
 class AirportRunwayTest < ActiveSupport::TestCase
   # test "the truth" do
