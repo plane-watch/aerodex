@@ -1,6 +1,7 @@
 module AircraftHelper
   def cabin_configuration(config)
-    [] if config.nil? || config.blank?
+    return [] if config.blank?
+
     classes = []
     config&.split(/(?=[A-Z])/)&.each do |section|
       class_type, count = section.scan(/([A-Z])(\d+)/).flatten
@@ -11,14 +12,7 @@ module AircraftHelper
                    "#{count} Business Class"
                  when 'W', 'P'
                    "#{count} Premium Economy"
-                 # TODO: `'N,' 'Q'` is implicit string concatenation, so this
-                 # branch tests for the single value 'N,Q'. As `class_type` is
-                 # always one character it can never match, and configurations
-                 # using 'N' or 'Q' fall through to 'Other' rather than
-                 # 'Economy'. The intent was almost certainly `'N', 'Q'`.
-                 # Left as-is because correcting it changes rendered output,
-                 # which is outside the scope of a formatting change.
-                 when 'Y', 'H', 'K', 'M', 'L', 'G', 'V', 'S', 'N,' 'Q', 'O', 'E'
+                 when 'Y', 'H', 'K', 'M', 'L', 'G', 'V', 'S', 'N', 'Q', 'O', 'E'
                    "#{count} Economy"
                  when 'B'
                    "#{count} Basic Economy"
