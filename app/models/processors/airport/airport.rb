@@ -17,7 +17,7 @@ module Processors
 
       # Source fields that map to different canonical field names
       SOURCE_FIELD_MAP = {
-        altitude: :elevation  # Sources use 'elevation', canonical uses 'altitude'
+        altitude: :elevation # Sources use 'elevation', canonical uses 'altitude'
       }.freeze
 
       class << self
@@ -43,9 +43,7 @@ module Processors
           # Gather sources for this airport
           sources = gather_sources_for_identifier(identifier, by)
 
-          if sources.empty?
-            return { error: "No sources found for #{by}: #{identifier}" }
-          end
+          return { error: "No sources found for #{by}: #{identifier}" } if sources.empty?
 
           # Load caches for lookups
           preload_reference_data
@@ -55,9 +53,7 @@ module Processors
           conflicts = []
           result = merge_sources_for_airport(key, sources, conflicts)
 
-          if result[:error]
-            return { error: result[:error] }
-          end
+          return { error: result[:error] } if result[:error]
 
           if result[:attributes].blank?
             airport = case by
@@ -223,11 +219,11 @@ module Processors
               provenance_updates << { field: field, source: merger.best_source, confidence: merger.best_confidence }
             end
 
-            if merger.has_conflict?
-              conflict = merger.conflict_details
-              conflict[:identifier] = identifier[:code] if conflict
-              conflicts << conflict
-            end
+            next unless merger.has_conflict?
+
+            conflict = merger.conflict_details
+            conflict[:identifier] = identifier[:code] if conflict
+            conflicts << conflict
           end
 
           # Calculate timezone from coordinates using WhereTZ for accuracy.
@@ -300,11 +296,11 @@ module Processors
               provenance_updates << { field: field, source: merger.best_source, confidence: merger.best_confidence }
             end
 
-            if merger.has_conflict?
-              conflict = merger.conflict_details
-              conflict[:identifier] = identifier[:code] if conflict
-              conflicts << conflict
-            end
+            next unless merger.has_conflict?
+
+            conflict = merger.conflict_details
+            conflict[:identifier] = identifier[:code] if conflict
+            conflicts << conflict
           end
 
           # Calculate timezone from coordinates using WhereTZ for accuracy.

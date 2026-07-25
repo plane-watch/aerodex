@@ -112,7 +112,7 @@ module Processors
             end
 
             # convert the decimal value to hex, 0 padded to 4 characters
-            sprintf('7C%04X', dec)
+            format('7C%04X', dec)
           end
         end
       end

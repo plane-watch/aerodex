@@ -158,7 +158,7 @@ namespace :sources do
   # @param klass [Class] The source class to dump
   # @param dump_dir [Pathname] The directory to write to
   # @param timestamp [String] Timestamp for the filename
-  def dump_source_class(klass, dump_dir, timestamp)
+  def dump_source_class(klass, dump_dir, _timestamp)
     count = klass.count
     return puts "  #{klass.name.demodulize}: 0 records (skipped)" if count.zero?
 

@@ -51,7 +51,7 @@ module Processors
 
           progress_bar = create_progress_bar(duplicates.count)
 
-          duplicates.each do |key, operators|
+          duplicates.each do |_key, operators|
             result = merge_duplicate_group(operators, dry_run: dry_run)
 
             case result[:status]
@@ -96,12 +96,18 @@ module Processors
             operator.set_derived_provenance(
               :name,
               source_name: AUTO_INSERTED_SOURCE,
-              confidence: 30  # Low confidence - not from authoritative source
+              confidence: 30 # Low confidence - not from authoritative source
             )
 
             # Also set for any other fields that have values
-            operator.set_derived_provenance(:icao_code, source_name: AUTO_INSERTED_SOURCE, confidence: 30) if operator.icao_code.present?
-            operator.set_derived_provenance(:iata_code, source_name: AUTO_INSERTED_SOURCE, confidence: 30) if operator.iata_code.present?
+            if operator.icao_code.present?
+              operator.set_derived_provenance(:icao_code, source_name: AUTO_INSERTED_SOURCE,
+                                                          confidence: 30)
+            end
+            if operator.iata_code.present?
+              operator.set_derived_provenance(:iata_code, source_name: AUTO_INSERTED_SOURCE,
+                                                          confidence: 30)
+            end
 
             operator.last_combined_at ||= Time.current
             operator.save!
@@ -231,9 +237,7 @@ module Processors
           # Gather sources for this operator
           sources = gather_sources_for_identifier(identifier, by)
 
-          if sources.empty?
-            return { error: "No sources found for #{by}: #{identifier}" }
-          end
+          return { error: "No sources found for #{by}: #{identifier}" } if sources.empty?
 
           # Ensure trust scores are cached
           SourceTrustScore.send(:ensure_cache_loaded)
@@ -259,9 +263,7 @@ module Processors
 
           operator.last_combined_at = Time.current
 
-          unless operator.valid?
-            return { error: operator.errors.full_messages, operator: operator }
-          end
+          return { error: operator.errors.full_messages, operator: operator } unless operator.valid?
 
           operator.save!
 
@@ -284,15 +286,21 @@ module Processors
           when :icao
             sources.concat(Source::Operator::VRSDataOperatorSource.includable.where(icao_code: identifier).to_a)
             sources.concat(Source::Operator::OpenTravelOperatorSource.includable.where(icao_code: identifier).to_a)
-            sources.concat(Source::Operator::OpenFlightsOperatorSource.includable.where(icao_code: identifier).to_a) if defined?(Source::Operator::OpenFlightsOperatorSource)
+            if defined?(Source::Operator::OpenFlightsOperatorSource)
+              sources.concat(Source::Operator::OpenFlightsOperatorSource.includable.where(icao_code: identifier).to_a)
+            end
           when :iata
             sources.concat(Source::Operator::VRSDataOperatorSource.includable.where(iata_code: identifier).to_a)
             sources.concat(Source::Operator::OpenTravelOperatorSource.includable.where(iata_code: identifier).to_a)
-            sources.concat(Source::Operator::OpenFlightsOperatorSource.includable.where(iata_code: identifier).to_a) if defined?(Source::Operator::OpenFlightsOperatorSource)
+            if defined?(Source::Operator::OpenFlightsOperatorSource)
+              sources.concat(Source::Operator::OpenFlightsOperatorSource.includable.where(iata_code: identifier).to_a)
+            end
           when :name
             # Case-insensitive name search
-            sources.concat(Source::Operator::VRSDataOperatorSource.includable.where('LOWER(name) = ?', identifier.downcase).to_a)
-            sources.concat(Source::Operator::OpenTravelOperatorSource.includable.where('LOWER(name) = ?', identifier.downcase).to_a)
+            sources.concat(Source::Operator::VRSDataOperatorSource.includable.where('LOWER(name) = ?',
+                                                                                    identifier.downcase).to_a)
+            sources.concat(Source::Operator::OpenTravelOperatorSource.includable.where('LOWER(name) = ?',
+                                                                                       identifier.downcase).to_a)
           end
 
           sources
@@ -365,9 +373,7 @@ module Processors
             log_conflicts(conflicts) if conflicts.any?
 
             # Store errors in batch notes if any
-            if errors.any?
-              current_batch.notes = "Processing completed with #{errors.count} errors"
-            end
+            current_batch.notes = "Processing completed with #{errors.count} errors" if errors.any?
           end
         ensure
           clear_caches
@@ -594,8 +600,12 @@ module Processors
           else
             # Update fields if source has better data
             operator.name = source_record.name if source_record.name.present?
-            operator.icao_code = source_record.icao_code if source_record.icao_code.present? && operator.icao_code.blank?
-            operator.iata_code = source_record.iata_code if source_record.iata_code.present? && operator.iata_code.blank?
+            if source_record.icao_code.present? && operator.icao_code.blank?
+              operator.icao_code = source_record.icao_code
+            end
+            if source_record.iata_code.present? && operator.iata_code.blank?
+              operator.iata_code = source_record.iata_code
+            end
           end
 
           # Set provenance for all fields from this source
@@ -679,7 +689,9 @@ module Processors
           Rails.logger.info "Operator combine completed with #{conflicts.count} field conflicts"
           conflicts.each do |conflict|
             Rails.logger.debug "Conflict on #{conflict[:field]}: " \
-                               "#{conflict[:candidates].map { |c| "#{c[:source_type]}=#{c[:value].inspect}" }.join(' vs ')}"
+                               "#{conflict[:candidates].map do |c|
+                                 "#{c[:source_type]}=#{c[:value].inspect}"
+                               end.join(' vs ')}"
           end
         end
 

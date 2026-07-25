@@ -57,7 +57,7 @@ module Processors
 
           new_import_report(import_errors, manufacturer_rows.count)
 
-          import_errors.empty? ? true : import_errors
+          import_errors.empty? || import_errors
         end
 
         private
@@ -94,9 +94,7 @@ module Processors
           filtered_names = names.reject { |n| n.strip.match?(/^see\s+/i) }
 
           # If all names were cross-references, skip this entry
-          if filtered_names.empty?
-            return { skipped: true, code: code, reason: 'Cross-reference only' }
-          end
+          return { skipped: true, code: code, reason: 'Cross-reference only' } if filtered_names.empty?
 
           # Normalise all names and pick the shortest as canonical.
           # This helps avoid picking "Airbus Defence and Space" over "Airbus".
@@ -110,9 +108,7 @@ module Processors
           end.reject { |c| c[:normalised].blank? }
 
           # Skip if we couldn't normalise any names
-          if normalised_candidates.empty?
-            return { skipped: true, code: code, reason: 'Could not normalise any names' }
-          end
+          return { skipped: true, code: code, reason: 'Could not normalise any names' } if normalised_candidates.empty?
 
           # Pick the shortest normalised name as canonical
           best_candidate = normalised_candidates.min_by { |c| c[:normalised].length }
@@ -123,9 +119,9 @@ module Processors
 
           # All other normalised names become alternatives
           alt_names = normalised_candidates
-            .map { |c| c[:normalised] }
-            .reject { |n| n.downcase == canonical_name.downcase }
-            .uniq
+                      .map { |c| c[:normalised] }
+                      .reject { |n| n.downcase == canonical_name.downcase }
+                      .uniq
 
           # Also store the original names (cleaned of country) for matching
           original_names = filtered_names.map { |n| remove_country_annotation(n) }.compact.uniq

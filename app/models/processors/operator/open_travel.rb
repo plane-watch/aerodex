@@ -150,7 +150,7 @@ module Processors
             junk.append(idx + 1) if name.include? 'sign'
             junk.append(idx + 1) if name.include? 'abbr'
           end
-          junk.each { |idx| alt_names.delete_at (idx) }
+          junk.each { |idx| alt_names.delete_at(idx) }
 
           # remove other junk or tokens smaller than 3 chars
           alt_names.delete_if { |name| name.include? '=' }

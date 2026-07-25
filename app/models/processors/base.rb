@@ -106,7 +106,7 @@ module Processors
     #
     # @yield The block to execute with silenced logging
     # @return The result of the block
-    def self.silence_active_record(&block)
+    def self.silence_active_record
       old_logger = ActiveRecord::Base.logger
       ActiveRecord::Base.logger = nil
       yield

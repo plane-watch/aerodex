@@ -80,6 +80,7 @@ gem 'progress_bar', '~> 1.3'
 # State machine for user contributions workflow
 gem 'aasm', '~> 5.5'
 
+gem 'parallel'
+
 # Offline timezone lookup from coordinates
 gem 'wheretz', '~> 0.0.6'
-gem 'parallel'

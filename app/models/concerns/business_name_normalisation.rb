@@ -32,7 +32,7 @@ module BusinessNameNormalisation
   # - Nordic: AB, A/S, OY, AS
   # - Eastern European: sro, spol, doo, Kft, OAO, OOO, JSC
   # - Other: Sdn Bhd (Malaysia), CC (South Africa), bvba (Belgium)
-  CORPORATE_SUFFIXES = /\s+(
+  CORPORATE_SUFFIXES = %r{\s+(
     S\.?A\.?S\.?|
     S\.?A\.?R\.?L\.?|
     S\.?A\.?|
@@ -55,7 +55,7 @@ module BusinessNameNormalisation
     N\.?V\.?|
     B\.?V\.?|
     A\.?G\.?|
-    A\/S|
+    A/S|
     AB|
     AS|
     OY|
@@ -78,7 +78,7 @@ module BusinessNameNormalisation
     VOF|
     CC|
     Enr
-  )\s*$/ix.freeze
+  )\s*$}ix
 
   # Common airline/operator business terms that can be stripped for matching.
   # These are often included in the legal name but not the trading name.
@@ -97,7 +97,7 @@ module BusinessNameNormalisation
     Operations?|
     Holdings?|
     Group
-  )\s*$/ix.freeze
+  )\s*$/ix
 
   # Strips corporate suffixes from a business name.
   #
@@ -160,8 +160,7 @@ module BusinessNameNormalisation
     return nil if name.blank?
 
     result = strip_corporate_suffixes(name)
-    result = normalise_case(result)
-    result
+    normalise_case(result)
   end
 
   # Normalises a business name aggressively for operator matching.
@@ -178,8 +177,7 @@ module BusinessNameNormalisation
 
     result = strip_corporate_suffixes(name)
     result = strip_airline_terms(result)
-    result = normalise_case(result)
-    result
+    normalise_case(result)
   end
 
   # Normalises case for display.

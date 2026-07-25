@@ -44,7 +44,7 @@ module Search
         |
         (?<unquoted_value>[^\s"]+)        # Unquoted value (no spaces)
       )
-    /xi.freeze
+    /xi
 
     # Boolean operators that can combine field:value pairs.
     BOOLEAN_AND = 'AND'

@@ -42,9 +42,7 @@ module Processors
           # Gather sources for this specific ICAO
           sources = gather_sources_for_icao(icao)
 
-          if sources.empty?
-            return { error: "No sources found for ICAO: #{icao}" }
-          end
+          return { error: "No sources found for ICAO: #{icao}" } if sources.empty?
 
           # Load caches (for lookups)
           load_lookup_caches
@@ -52,9 +50,7 @@ module Processors
           conflicts = []
           result = merge_sources_for_icao(icao, sources, conflicts)
 
-          if result[:error]
-            return { error: result[:error] }
-          end
+          return { error: result[:error] } if result[:error]
 
           if result[:record].nil?
             # No changes needed
@@ -138,9 +134,7 @@ module Processors
           end
 
           # Create a separate batch for stub operators if any were created
-          if @created_stub_operators.any?
-            create_stub_operators_batch(triggered_by, aircraft_batch)
-          end
+          create_stub_operators_batch(triggered_by, aircraft_batch) if @created_stub_operators.any?
 
           # Log a summary of operators we couldn't match for later review
           report_unmatched_operators
@@ -328,11 +322,11 @@ module Processors
             end
 
             # Collect conflict information for logging
-            if merger.has_conflict?
-              conflict = merger.conflict_details
-              conflict[:identifier] = icao
-              conflicts << conflict
-            end
+            next unless merger.has_conflict?
+
+            conflict = merger.conflict_details
+            conflict[:identifier] = icao
+            conflicts << conflict
           end
 
           # Handle related records separately (require lookups, not simple field merge)
@@ -388,8 +382,11 @@ module Processors
         def assign_aircraft_type(record, sources)
           # Find the highest-trust source with a type code
           source_with_type = sources
-            .select { |s| s.type_code.present? }
-            .max_by { |s| TrustCalculator.new(s, field: :type_code, entity_type: ENTITY_TYPE).calculate }
+                             .select { |s| s.type_code.present? }
+                             .max_by do |s|
+                               TrustCalculator.new(s, field: :type_code,
+                                                      entity_type: ENTITY_TYPE).calculate
+          end
 
           return unless source_with_type
 
@@ -529,8 +526,11 @@ module Processors
         def assign_operator(record, sources)
           # Find the highest-trust source with operator data
           source_with_operator = sources
-            .select { |s| s.operator_name.present? || s.operator_icao.present? }
-            .max_by { |s| TrustCalculator.new(s, field: :operator_name, entity_type: ENTITY_TYPE).calculate }
+                                 .select { |s| s.operator_name.present? || s.operator_icao.present? }
+                                 .max_by do |s|
+                                   TrustCalculator.new(s, field: :operator_name,
+                                                          entity_type: ENTITY_TYPE).calculate
+          end
 
           return unless source_with_operator
 
@@ -673,10 +673,10 @@ module Processors
               )
             end
 
-          if @unmatched_operators.size > 50
-            remaining = @unmatched_operators.size - 50
-            Rails.logger.info "  ... and #{remaining} more unmatched operators"
-          end
+          return unless @unmatched_operators.size > 50
+
+          remaining = @unmatched_operators.size - 50
+          Rails.logger.info "  ... and #{remaining} more unmatched operators"
         end
 
         # Assigns the registration country to an aircraft based on source data.
@@ -714,9 +714,7 @@ module Processors
         # @return [::Country, nil]
         def cached_country_for_source(source)
           # Try explicit country code first
-          if source.registration_country_code.present?
-            return @countries_by_iso[source.registration_country_code]
-          end
+          return @countries_by_iso[source.registration_country_code] if source.registration_country_code.present?
 
           # Fall back to registration prefix lookup
           return nil unless source.registration.present?

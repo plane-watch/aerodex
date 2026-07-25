@@ -167,7 +167,7 @@ module ManufacturerNormalisation
     [/Robinson Helicopter/i, 'Robinson'],
     [/Embraer.*$/i, 'Embraer'],
     [/Empresa Brasileira de Aeron[aá]utica/i, 'Embraer'],
-    [/Empresa Brasileira de AeronÃ¡utica/i, 'Embraer'],  # Handles mojibake encoding
+    [/Empresa Brasileira de AeronÃ¡utica/i, 'Embraer'], # Handles mojibake encoding
     [/Mooney Aircraft Corp/i, 'Mooney'],
     [/Mooney Aircraft/i, 'Mooney'],
     [/American Champion.*$/i, 'American Champion'],
@@ -256,9 +256,7 @@ module ManufacturerNormalisation
     result = strip_corporate_suffixes(result)
 
     # Titleize if all caps (but not short acronyms)
-    result = normalise_case(result)
-
-    result
+    normalise_case(result)
   end
 
   # Removes country annotation from a name (e.g., "(France)" or "(France/Germany)")

@@ -117,17 +117,15 @@ class ProcessorJobTest < ActiveJob::TestCase
 
     # Build parent module hierarchy
     parent = parts[0..-2].inject(Object) do |mod, part|
-      begin
-        mod.const_get(part)
-      rescue NameError
-        mod.const_set(part, Module.new)
-      end
+      mod.const_get(part)
+    rescue NameError
+      mod.const_set(part, Module.new)
     end
 
     # Set the constant
-    unless parent.const_defined?(parts.last, false)
-      parent.const_set(parts.last, value)
-      @stubbed_constants << name
-    end
+    return if parent.const_defined?(parts.last, false)
+
+    parent.const_set(parts.last, value)
+    @stubbed_constants << name
   end
 end

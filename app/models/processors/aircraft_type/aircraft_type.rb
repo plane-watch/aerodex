@@ -151,9 +151,7 @@ module Processors
           end
 
           # Create a separate batch for stub manufacturers if any were created
-          if @created_stub_manufacturers.any?
-            create_stub_manufacturers_batch(triggered_by, aircraft_type_batch)
-          end
+          create_stub_manufacturers_batch(triggered_by, aircraft_type_batch) if @created_stub_manufacturers.any?
 
           aircraft_type_batch
         ensure
@@ -312,12 +310,12 @@ module Processors
                 !different_variants?(name1, name2)
               end
 
-              if should_merge
-                group1.concat(group2)
-                groups.delete(group2)
-                merged = true
-                break
-              end
+              next unless should_merge
+
+              group1.concat(group2)
+              groups.delete(group2)
+              merged = true
+              break
             end
           end
 
@@ -387,11 +385,11 @@ module Processors
               provenance_updates << { field: field, source: merger.best_source, confidence: merger.best_confidence }
             end
 
-            if merger.has_conflict?
-              conflict = merger.conflict_details
-              conflict[:identifier] = "#{type_code} - #{name}"
-              conflicts << conflict
-            end
+            next unless merger.has_conflict?
+
+            conflict = merger.conflict_details
+            conflict[:identifier] = "#{type_code} - #{name}"
+            conflicts << conflict
           end
 
           # Check for meaningful changes (content fields, not just metadata like provenance)
@@ -483,11 +481,11 @@ module Processors
               provenance_updates << { field: field, source: merger.best_source, confidence: merger.best_confidence }
             end
 
-            if merger.has_conflict?
-              conflict = merger.conflict_details
-              conflict[:identifier] = "#{type_code} - #{name}"
-              conflicts << conflict
-            end
+            next unless merger.has_conflict?
+
+            conflict = merger.conflict_details
+            conflict[:identifier] = "#{type_code} - #{name}"
+            conflicts << conflict
           end
 
           # Check for changes BEFORE setting provenance
