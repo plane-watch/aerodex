@@ -31,7 +31,7 @@ module Processors
 
       class << self
         def import
-          puts 'Importing manufacturer data from ICAO'
+          Rails.logger.info 'Importing manufacturer data from ICAO'
           @default_url = 'https://cfapps.icao.int/doc8643/MnfctrerList.cfm'
 
           source_data = get_source_from_url(@default_url)
