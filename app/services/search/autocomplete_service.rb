@@ -7,14 +7,17 @@ module Search
   # 1. Field suggestions: Returns field names matching a prefix
   # 2. Value suggestions: Returns distinct values for a field from Meilisearch facets
   #
+  # Field names are the model's filterable attributes verbatim; Aircraft
+  # exposes the manufacturer as `aircraft_manufacturer`, not `manufacturer`.
+  #
   # @example Field suggestions
   #   service = AutocompleteService.new('Aircraft')
-  #   service.suggest_fields('man')
-  #   # => [{ value: 'manufacturer', display: 'Manufacturer' }]
+  #   service.suggest_fields('air')
+  #   # => [{ value: 'aircraft_manufacturer', display: 'Aircraft Manufacturer' }, ...]
   #
   # @example Value suggestions
   #   service = AutocompleteService.new('Aircraft')
-  #   service.suggest_values('manufacturer', 'Boe')
+  #   service.suggest_values('aircraft_manufacturer', 'Boe')
   #   # => [{ value: 'Boeing', hits: 150 }]
   class AutocompleteService
     # Maximum number of facet values to return.
