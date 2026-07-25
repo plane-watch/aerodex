@@ -108,7 +108,7 @@ module Search
     # Returns true if there are any valid field-qualified tokens.
     #
     # @return [Boolean]
-    def has_field_filters?
+    def field_filters?
       tokens.any? { |t| t.field_qualified? && valid_field?(t.field) }
     end
 
