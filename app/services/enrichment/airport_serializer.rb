@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Enrichment
-  # Serialises an Airport into the v2.enrich.airport response body's `airport`
+  # Serialises an Airport into the v2.enrich.airports response body's `airport`
   # object, including its runways and (shallow) flight information region. The
   # opt-in provenance block is added by the handler, not here.
   class AirportSerializer

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Enrichment
-  # Serialises a Route into the v2.enrich.route response body's `route` object.
+  # Serialises a Route into the v2.enrich.routes response body's `route` object.
   # Segments are ordered by their `order` column and embed the lean
   # airport_summary (no runways) plus the scheduled times. Times are formatted as
   # HH:MM:SS strings (the underlying column is a time-of-day, not a full datetime).

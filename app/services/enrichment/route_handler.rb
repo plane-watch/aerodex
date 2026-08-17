@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Enrichment
-  # Handles v2.enrich.route: looks up a route by callsign and returns its
+  # Handles v2.enrich.routes: looks up a route by callsign and returns its
   # serialised record. Routes do not carry field-level provenance, so the
   # provenance include is not honoured here.
   class RouteHandler < Handler

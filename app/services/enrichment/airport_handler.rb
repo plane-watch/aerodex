@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Enrichment
-  # Handles v2.enrich.airport: looks up an airport by ICAO or IATA code and
+  # Handles v2.enrich.airports: looks up an airport by ICAO or IATA code and
   # returns its serialised record (including runways), optionally with a
   # provenance block.
   class AirportHandler < Handler

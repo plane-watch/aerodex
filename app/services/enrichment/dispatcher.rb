@@ -9,8 +9,8 @@ module Enrichment
     # Subject string => handler class.
     SUBJECTS = {
       'v2.enrich.aircraft' => AircraftHandler,
-      'v2.enrich.route' => RouteHandler,
-      'v2.enrich.airport' => AirportHandler
+      'v2.enrich.routes' => RouteHandler,
+      'v2.enrich.airports' => AirportHandler
     }.freeze
 
     def initialize

@@ -3,7 +3,7 @@
 module Enrichment
   # Serialises an Airport into the lean `airport_summary` object embedded in
   # route segments. Deliberately omits runways to keep route responses small;
-  # full runways are available via the v2.enrich.airport subject.
+  # full runways are available via the v2.enrich.airports subject.
   class AirportSummarySerializer
     # @param airport [Airport, nil]
     # @return [Hash, nil]

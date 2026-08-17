@@ -90,14 +90,14 @@ Returns the aircraft with nested `type`, `operator` and `registration_country`.
 With `"include": ["provenance"]`, a top-level `provenance` block reports the
 source and confidence for each tracked field.
 
-### `v2.enrich.route`
+### `v2.enrich.routes`
 
 Request: `{ "callsign": "QFA123" }`.
 
 Returns the route with its `operator` and ordered `segments`; each segment embeds
 a lean airport summary (no runways) and the scheduled times.
 
-### `v2.enrich.airport`
+### `v2.enrich.airports`
 
 Request: `{ "icao": "YPPH" }` or `{ "iata": "PER" }` (ICAO takes precedence).
 

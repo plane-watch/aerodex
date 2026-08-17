@@ -12,7 +12,7 @@ class EnrichmentDispatcherTest < ActiveSupport::TestCase
   end
 
   test 'routes the airport subject to its handler' do
-    reply = JSON.parse(@dispatcher.dispatch('v2.enrich.airport', { icao: 'YSSY' }.to_json))
+    reply = JSON.parse(@dispatcher.dispatch('v2.enrich.airports', { icao: 'YSSY' }.to_json))
 
     assert_equal 'YSSY', reply['airport']['icao_code']
   end
@@ -25,7 +25,7 @@ class EnrichmentDispatcherTest < ActiveSupport::TestCase
   end
 
   test 'exposes the set of supported subjects' do
-    assert_equal %w[v2.enrich.aircraft v2.enrich.route v2.enrich.airport].sort,
+    assert_equal %w[v2.enrich.aircraft v2.enrich.routes v2.enrich.airports].sort,
                  Enrichment::Dispatcher::SUBJECTS.keys.sort
   end
 end

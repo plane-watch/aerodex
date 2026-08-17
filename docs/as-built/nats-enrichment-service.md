@@ -10,8 +10,8 @@ The API is read-only. There is no subject that mutates aerodex data.
 | Subject | Looks up | Key |
 |---|---|---|
 | `v2.enrich.aircraft` | An aircraft | ICAO 24-bit Mode-S hex |
-| `v2.enrich.route` | A route and its segments | Callsign |
-| `v2.enrich.airport` | An airport and its runways | ICAO or IATA code |
+| `v2.enrich.routes` | A route and its segments | Callsign |
+| `v2.enrich.airports` | An airport and its runways | ICAO or IATA code |
 
 The `v2.` prefix is the contract version. Fields may be **added** to a reply
 without a version change, so parse permissively and ignore unknown keys. A
@@ -126,7 +126,7 @@ it belongs to.
 
 ---
 
-## 3. `v2.enrich.route`
+## 3. `v2.enrich.routes`
 
 ### Request
 
@@ -182,11 +182,11 @@ The scheduled times are times of day, not timestamps: there is no date and no
 offset. Interpret them against the relevant airport's `timezone`.
 
 Segment airports are the lean summary. For runways, follow up with
-`v2.enrich.airport` using the segment's `icao_code`.
+`v2.enrich.airports` using the segment's `icao_code`.
 
 ---
 
-## 4. `v2.enrich.airport`
+## 4. `v2.enrich.airports`
 
 ### Request
 
@@ -369,7 +369,7 @@ minus `wmo_code`, `flight_information_region` and `runways`.
 
 ## 6. The `provenance` include
 
-Send `"include": ["provenance"]` on `v2.enrich.aircraft` or `v2.enrich.airport`
+Send `"include": ["provenance"]` on `v2.enrich.aircraft` or `v2.enrich.airports`
 to add a **top-level** `provenance` block to the reply, reporting where each
 tracked field's value came from and how confident aerodex is in it.
 
@@ -409,7 +409,7 @@ Three things to know before you rely on this:
    with a key taken from the entity object.
 2. **Only tracked fields appear.** The block is not a complete mirror of the
    entity, and it is `{}` for a record with no provenance recorded.
-3. **`v2.enrich.route` has no provenance.** Requesting it there is not an error;
+3. **`v2.enrich.routes` has no provenance.** Requesting it there is not an error;
    the block is simply absent.
 
 The block is opt-in because it is comparatively large. Do not request it on a
@@ -447,10 +447,10 @@ Using the [`nats` CLI](https://github.com/nats-io/natscli):
 nats req v2.enrich.aircraft '{"icao":"7C1469","include":["provenance"]}'
 
 # A route
-nats req v2.enrich.route '{"callsign":"QFA123"}'
+nats req v2.enrich.routes '{"callsign":"QFA123"}'
 
 # An airport by IATA code
-nats req v2.enrich.airport '{"iata":"PER"}'
+nats req v2.enrich.airports '{"iata":"PER"}'
 
 # A miss
 nats req v2.enrich.aircraft '{"icao":"000000"}'
