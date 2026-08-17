@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: operator_sources
@@ -11,7 +13,7 @@
 #  data             :jsonb            default("\"{}\""), not null
 #  created_at       :datetime         not null
 #  updated_at       :datetime         not null
-#  excluded         :boolean          default("false"), not null
+#  excluded         :boolean          default(FALSE), not null
 #  exclusion_reason :string
 #  excluded_at      :datetime
 #  excluded_by      :string
@@ -24,10 +26,15 @@
 
 module Source
   module Operator
+    # The base class for raw operator records as imported from an upstream source,
+    # before they are combined into canonical Operator records. Subclasses are
+    # single-table-inheritance types, one per source.
+    #
+    # An operator source must carry at least one of an ICAO or IATA code to be valid.
     class OperatorSource < ApplicationRecord
       include MeiliSearch::Rails
       include HasSourceExclusion
-      
+
       validate :icao_or_iata_code
       serialize :data, coder: JsonbSerializer
 

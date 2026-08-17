@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: aircraft
@@ -17,7 +19,7 @@
 #  updated_at              :datetime         not null
 #  cabin_configuration     :string
 #  aircraft_name           :string
-#  status                  :integer          default("0")
+#  status                  :integer          default(0)
 #  model                   :string
 #  registration_country_id :integer          not null
 #  field_provenance        :jsonb            default("{}"), not null
@@ -30,7 +32,7 @@
 #  index_aircraft_on_registration_country_id  (registration_country_id)
 #
 
-require "test_helper"
+require 'test_helper'
 
 class AircraftTest < ActiveSupport::TestCase
   # test "the truth" do

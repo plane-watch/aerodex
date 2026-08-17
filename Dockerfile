@@ -72,5 +72,9 @@ RUN addgroup --system --gid 1000 rails && \
 USER 1000:1000
 
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
-EXPOSE 3000
+
+# The image serves two roles: the Puma web server on 3000 (the default command)
+# and the NATS enrichment consumer, whose Prometheus metrics are on 9602 when
+# the command is overridden to ./bin/enrichment-server.
+EXPOSE 3000 9602
 CMD ["./bin/rails", "server", "-b", "0.0.0.0"]

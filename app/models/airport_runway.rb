@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: airport_runways
@@ -13,12 +15,14 @@
 #  le_ident         :string
 #  he_ident         :string
 #  surface          :string
-#  lighted          :boolean          default("false")
-#  closed           :boolean          default("false")
+#  lighted          :boolean          default(FALSE)
+#  closed           :boolean          default(FALSE)
 #  field_provenance :jsonb            default("{}"), not null
 #  last_combined_at :datetime
 #
 
+# A single runway at an Airport. Each end is recorded separately: `le_` fields
+# describe the lower-numbered end and `he_` fields the higher-numbered one.
 class AirportRunway < ApplicationRecord
   include MeiliSearch::Rails
   include HasFieldProvenance
@@ -62,4 +66,3 @@ class AirportRunway < ApplicationRecord
     end
   end
 end
-

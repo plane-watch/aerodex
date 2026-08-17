@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: source_trust_scores
@@ -7,7 +8,7 @@
 #  entity_type :string           not null
 #  source_type :string           not null
 #  field_name  :string
-#  base_trust  :integer          default("50"), not null
+#  base_trust  :integer          default(50), not null
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
 #

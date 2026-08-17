@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: airport_sources
@@ -21,7 +22,7 @@
 #  data             :jsonb            default("\"{}\""), not null
 #  created_at       :datetime         not null
 #  updated_at       :datetime         not null
-#  excluded         :boolean          default("false"), not null
+#  excluded         :boolean          default(FALSE), not null
 #  exclusion_reason :string
 #  excluded_at      :datetime
 #  excluded_by      :string
@@ -51,7 +52,7 @@ module Source
       serialize :data, coder: JsonbSerializer
 
       validates :name, presence: true
-      validate :has_identifier
+      validate :ensure_identifier_present
 
       # Scopes for querying by identifier
       scope :with_icao, ->(icao_code) { where(icao_code: icao_code) if icao_code.present? }
@@ -89,7 +90,7 @@ module Source
       private
 
       # Validates that at least one identifier is present
-      def has_identifier
+      def ensure_identifier_present
         return if icao_code.present? || iata_code.present? || ident.present?
 
         errors.add(:base, 'Airport must have at least one identifier (ICAO code, IATA code, or ident)')

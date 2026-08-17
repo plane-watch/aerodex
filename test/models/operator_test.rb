@@ -1,9 +1,12 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: operators
 #
 #  id                 :integer          not null, primary key
 #  name               :string
+#  country            :string
 #  icao_code          :string
 #  iata_code          :string
 #  created_at         :datetime         not null
@@ -11,7 +14,7 @@
 #  country_id         :integer
 #  field_provenance   :jsonb            default("{}"), not null
 #  last_combined_at   :datetime
-#  aircraft_count     :integer          default("0"), not null
+#  aircraft_count     :integer          default(0), not null
 #  parent_operator_id :integer
 #
 # Indexes
@@ -20,7 +23,7 @@
 #  index_operators_on_parent_operator_id  (parent_operator_id)
 #
 
-require "test_helper"
+require 'test_helper'
 
 class OperatorTest < ActiveSupport::TestCase
   # ==========================================================================

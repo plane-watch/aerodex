@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: airport_runways
@@ -13,13 +15,13 @@
 #  le_ident         :string
 #  he_ident         :string
 #  surface          :string
-#  lighted          :boolean          default("false")
-#  closed           :boolean          default("false")
+#  lighted          :boolean          default(FALSE)
+#  closed           :boolean          default(FALSE)
 #  field_provenance :jsonb            default("{}"), not null
 #  last_combined_at :datetime
 #
 
-require "test_helper"
+require 'test_helper'
 
 class AirportRunwayTest < ActiveSupport::TestCase
   # test "the truth" do

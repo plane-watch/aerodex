@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: manufacturers
@@ -11,14 +13,16 @@
 #  country_id           :integer
 #  field_provenance     :jsonb            default("{}"), not null
 #  last_combined_at     :datetime
-#  aircraft_types_count :integer          default("0"), not null
-#  aircraft_count       :integer          default("0"), not null
+#  aircraft_types_count :integer          default(0), not null
+#  aircraft_count       :integer          default(0), not null
 #
 # Indexes
 #
 #  index_manufacturers_on_country_id  (country_id)
 #
 
+# An aircraft manufacturer, such as Boeing or Airbus. Owns the AircraftTypes it
+# builds, and through them the individual Aircraft.
 class Manufacturer < ApplicationRecord
   include MeiliSearch::Rails
   include HasFieldProvenance

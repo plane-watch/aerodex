@@ -12,6 +12,17 @@ External Data Sources are implemented as a `Processor`, which are classes that i
 ### Flight Routes
 Flight routes are imported from the VRS [`standing-data`](https://github.com/vradarserver/standing-data/tree/main/routes/schema-01) GitHub repository. `Processors::Route::VRS` imports the raw route data into the `route_sources` table, and `Processors::Route::Route` combines those sources into canonical `Route` records by resolving the airline and airport codes against the operators and airports already in the database. See [docs/processors/route_importer.md](docs/processors/route_importer.md) for details.
 
+### NATS Enrichment Service
+
+Aerodex can serve its reference data over a NATS message bus for the
+flight-tracking pipeline, via a dedicated consumer process (`bin/enrichment-server`)
+that answers `v2.enrich.*` request-reply RPCs for aircraft, routes and airports.
+It runs as the `enrich` service in the Compose stack, against an external broker
+in production and a bundled one in development.
+See [the NATS enrichment service documentation](docs/as-built/nats-enrichment.md) for
+running and operating it, and [the client reference](docs/as-built/nats-enrichment-service.md)
+for the wire contract.
+
 
 ## Getting Started
 TODO: Add instructions for getting started

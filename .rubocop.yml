@@ -17,6 +17,10 @@ AllCops:
     - 'db/schema.rb'
 
 Metrics/BlockLength:
+  # The `meilisearch` block is a declarative index definition, not logic; its
+  # length tracks the number of indexed attributes rather than any complexity.
+  AllowedMethods:
+    - meilisearch
   Exclude:
     - 'test/**/*'
     - 'lib/tasks/**/*'
