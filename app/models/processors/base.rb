@@ -106,7 +106,7 @@ module Processors
     #
     # @yield The block to execute with silenced logging
     # @return The result of the block
-    def self.silence_active_record(&block)
+    def self.silence_active_record
       old_logger = ActiveRecord::Base.logger
       ActiveRecord::Base.logger = nil
       yield
@@ -342,7 +342,7 @@ module Processors
         status: :processing,
         created_by: triggered_by,
         started_at: Time.current,
-        summary: { "created" => 0, "updated" => 0, "unchanged" => 0 }
+        summary: { 'created' => 0, 'updated' => 0, 'unchanged' => 0 }
       )
       self.staged_records_cache = {}
 
@@ -380,7 +380,7 @@ module Processors
     # @raise [RuntimeError] If called outside of a with_staged_batch block
     # @raise [ArgumentError] If an unknown operation is specified
     def self.stage_change(record, operation:, identifier:)
-      raise "No current batch - call within with_staged_batch block" unless current_batch
+      raise 'No current batch - call within with_staged_batch block' unless current_batch
 
       # If we're staging an UPDATE but there's already a staged CREATE for this record,
       # merge the updates into the existing CREATE rather than staging a separate UPDATE.
@@ -433,7 +433,7 @@ module Processors
       cache_staged_record(record)
 
       # Update summary counts
-      key = operation == :create ? "created" : "updated"
+      key = operation == :create ? 'created' : 'updated'
       current_batch.summary[key] += 1
     end
 
@@ -450,7 +450,7 @@ module Processors
 
       # For now, we block. TODO: Make this configurable (block vs supersede)
       raise "Pending batch exists for #{entity_type} (ID: #{pending.id}). " \
-            "Approve or reject it before running again."
+            'Approve or reject it before running again.'
     end
   end
 end

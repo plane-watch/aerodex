@@ -51,7 +51,7 @@ class Operator < ApplicationRecord
   validates :name, presence: true, allow_blank: false,
                    uniqueness: { scope: %i[country_id icao_code], case_sensitive: false }
   validates :icao_code, allow_blank: true, format: { with: /\A[A-Z0-9]{3}\z/ },
-                        uniqueness: { case_sensitive: false } # , scope: :active }
+                        uniqueness: { case_sensitive: false }
   validates :iata_code, allow_blank: true, format: { with: /\A[A-Z0-9]{2}\z/ }
 
   after_create :index!

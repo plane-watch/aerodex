@@ -140,8 +140,6 @@ module AircraftModelNormalisation
       series = ::Regexp.last_match(2)
       "737 MAX #{series}"
 
-    else
-      nil
     end
   end
 
@@ -178,8 +176,6 @@ module AircraftModelNormalisation
     when /\A(A3[12][890])[\s-]?\d*[\s-]?(neo)\z/i
       "#{::Regexp.last_match(1).upcase}neo"
 
-    else
-      nil
     end
   end
 end

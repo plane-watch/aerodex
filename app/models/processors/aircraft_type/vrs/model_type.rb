@@ -88,9 +88,7 @@ module Processors
           # @return [Hash] Import results
           def import_letter(letter)
             letter = letter.upcase unless letter == '-'
-            unless LETTERS.include?(letter)
-              raise ArgumentError, "Invalid letter: #{letter}. Must be A-Z or -."
-            end
+            raise ArgumentError, "Invalid letter: #{letter}. Must be A-Z or -." unless LETTERS.include?(letter)
 
             url = "#{GITHUB_RAW_BASE}/#{letter}.csv"
             csv_data = fetch_url(url)
@@ -108,14 +106,10 @@ module Processors
           # @param directory_path [String] Path to schema-01 directory
           # @return [Hash] Import results
           def import(directory_path)
-            unless File.directory?(directory_path)
-              raise ArgumentError, "Directory not found: #{directory_path}"
-            end
+            raise ArgumentError, "Directory not found: #{directory_path}" unless File.directory?(directory_path)
 
             csv_files = Dir.glob(File.join(directory_path, '*.csv')).sort
-            if csv_files.empty?
-              raise ArgumentError, "No CSV files found in #{directory_path}"
-            end
+            raise ArgumentError, "No CSV files found in #{directory_path}" if csv_files.empty?
 
             total_success = 0
             total_errors = 0
@@ -198,13 +192,9 @@ module Processors
             name = row['Model']&.strip
 
             # Skip rows without required fields
-            if type_code.blank?
-              return { error: { name: name, errors: ['Missing ICAO type code'] } }
-            end
+            return { error: { name: name, errors: ['Missing ICAO type code'] } } if type_code.blank?
 
-            if name.blank?
-              return { error: { type_code: type_code, errors: ['Missing model name'] } }
-            end
+            return { error: { type_code: type_code, errors: ['Missing model name'] } } if name.blank?
 
             attributes = build_attributes(row, type_code, name, batch_timestamp)
 
@@ -227,9 +217,7 @@ module Processors
             species_code = row['SpeciesCode']&.strip
 
             # Parse engines - handle 'C' for combined configurations
-            engines = if engines_raw.present? && engines_raw.match?(/\A\d+\z/)
-                        engines_raw.to_i
-                      end
+            engines = (engines_raw.to_i if engines_raw.present? && engines_raw.match?(/\A\d+\z/))
 
             # Convert species code to category
             category = SPECIES_TO_CATEGORY[species_code]

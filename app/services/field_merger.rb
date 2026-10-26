@@ -111,9 +111,7 @@ class FieldMerger
     return false if values.length <= 1
 
     # For coordinate fields, use tolerance-based comparison
-    if COORDINATE_FIELDS.include?(field)
-      return values_differ_beyond_tolerance?(values)
-    end
+    return values_differ_beyond_tolerance?(values) if COORDINATE_FIELDS.include?(field)
 
     # For other fields, simple uniqueness check
     values.uniq.length > 1
@@ -185,9 +183,7 @@ class FieldMerger
     return nil if value.nil?
 
     # Apply data quality filters
-    value = apply_data_quality_filters(value)
-
-    value
+    apply_data_quality_filters(value)
   end
 
   # Applies data quality filters to a value based on the field type.
@@ -198,9 +194,7 @@ class FieldMerger
   def apply_data_quality_filters(value)
     # For elevation/altitude fields, treat zero as missing data
     # (zero is almost never a valid airport elevation - it would mean exactly at sea level)
-    if ZERO_IS_MISSING_FIELDS.include?(field)
-      return nil if value.respond_to?(:zero?) && value.zero?
-    end
+    return nil if ZERO_IS_MISSING_FIELDS.include?(field) && value.respond_to?(:zero?) && value.zero?
 
     value
   end

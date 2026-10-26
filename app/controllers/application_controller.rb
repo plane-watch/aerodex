@@ -10,5 +10,4 @@ class ApplicationController < ActionController::Base
 
   # Ensure that all we set the whodunnit in paper_trail to the current user
   before_action :set_paper_trail_whodunnit
-
 end

@@ -18,7 +18,7 @@ class CreateOperatorMatchDecisions < ActiveRecord::Migration[8.0]
     add_index :operator_match_decisions, :matched_icao_code
 
     # Unique constraint: one decision per (matched_name, matched_icao_code) pair
-    add_index :operator_match_decisions, [:matched_name, :matched_icao_code],
+    add_index :operator_match_decisions, %i[matched_name matched_icao_code],
               unique: true,
               name: 'idx_match_decisions_unique_name_icao'
   end

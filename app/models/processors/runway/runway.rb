@@ -29,20 +29,19 @@ module Processors
         #   result[:runways]  # => [<AirportRunway>, ...]
         def combine_one(airport_icao, le_ident = nil)
           airport_icao = airport_icao.to_s.strip.upcase
-          raise ArgumentError, "Airport ICAO code is required" if airport_icao.blank?
+          raise ArgumentError, 'Airport ICAO code is required' if airport_icao.blank?
 
           # Preload reference data
           preload_reference_data
 
           # Find the canonical airport
           airport = @airports_by_icao[airport_icao]
-          unless airport
-            return { error: "Airport not found: #{airport_icao}" }
-          end
+          return { error: "Airport not found: #{airport_icao}" } unless airport
 
           # Gather sources for this airport's runways
           sources = if le_ident.present?
-                      Source::Runway::OurAirportsRunwaySource.includable.where(airport_ident: airport_icao, le_ident: le_ident).to_a
+                      Source::Runway::OurAirportsRunwaySource.includable.where(airport_ident: airport_icao,
+                                                                               le_ident: le_ident).to_a
                     else
                       Source::Runway::OurAirportsRunwaySource.includable.where(airport_ident: airport_icao).to_a
                     end
@@ -80,7 +79,7 @@ module Processors
         # @param triggered_by [User, nil] The user who triggered the run
         # @return [StagedBatch] The batch containing staged changes
         def combine_sources(triggered_by: nil)
-          with_staged_batch(entity_type: "Runway", triggered_by: triggered_by) do
+          with_staged_batch(entity_type: 'Runway', triggered_by: triggered_by) do
             preload_reference_data
 
             # Group runway sources by airport (only includable/non-excluded sources)
@@ -185,7 +184,7 @@ module Processors
             record.last_combined_at = Time.current
             stage_change(record, operation: :update, identifier: human_identifier)
           else
-            current_batch.summary["unchanged"] += 1
+            current_batch.summary['unchanged'] += 1
           end
         end
 

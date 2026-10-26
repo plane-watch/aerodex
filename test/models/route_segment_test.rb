@@ -17,7 +17,7 @@
 #  index_route_segments_on_route_id    (route_id)
 #
 
-require "test_helper"
+require 'test_helper'
 
 class RouteSegmentTest < ActiveSupport::TestCase
   # test "the truth" do

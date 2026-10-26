@@ -92,9 +92,7 @@ class TrustCalculator
 
     # Check for a field-specific modifier
     field_modifier = modifiers[field.to_sym]
-    if field_modifier
-      adjusted_score = apply_single_modifier(adjusted_score, field_modifier)
-    end
+    adjusted_score = apply_single_modifier(adjusted_score, field_modifier) if field_modifier
 
     # Also check for general modifiers that might apply
     modifiers.each do |modifier_field, modifier_config|
@@ -102,9 +100,7 @@ class TrustCalculator
       next if modifier_field == field.to_sym
 
       # Apply general modifiers that match their filter
-      if modifier_config[:filter].call(source_record)
-        adjusted_score = modifier_config[:adjust].call(adjusted_score)
-      end
+      adjusted_score = modifier_config[:adjust].call(adjusted_score) if modifier_config[:filter].call(source_record)
     end
 
     # Ensure the score stays within bounds

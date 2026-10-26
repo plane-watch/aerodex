@@ -54,7 +54,6 @@
 # The class length sits above the default limit because a batch's apply/reject
 # lifecycle, progress broadcasting and per-change application are one cohesive
 # responsibility; splitting them would scatter tightly-coupled logic.
-# rubocop:disable Metrics/ClassLength
 class StagedBatch < ApplicationRecord
   # Associations
   belongs_to :created_by, class_name: 'User', optional: true
@@ -393,4 +392,3 @@ class StagedBatch < ApplicationRecord
     # TODO: Consider adding a 'reindex_failed' flag to the batch
   end
 end
-# rubocop:enable Metrics/ClassLength

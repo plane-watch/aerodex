@@ -50,7 +50,7 @@ module Processors
 
           new_import_report(import_errors, records_processed)
 
-          import_errors.empty? ? true : import_errors
+          import_errors.empty? || import_errors
         end
 
         private
@@ -64,9 +64,7 @@ module Processors
           return { skipped: true, reason: 'No name' } if name.blank?
 
           # Skip entries without either code
-          if icao_code.blank? && iata_code.blank?
-            return { skipped: true, reason: 'No ICAO or IATA code' }
-          end
+          return { skipped: true, reason: 'No ICAO or IATA code' } if icao_code.blank? && iata_code.blank?
 
           # Find existing record or create new one
           record = find_or_initialize_record(icao_code, iata_code, name)
