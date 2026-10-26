@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: aircraft_types
@@ -14,7 +16,7 @@
 #  engine_type      :string
 #  field_provenance :jsonb            default("{}"), not null
 #  last_combined_at :datetime
-#  aircraft_count   :integer          default("0"), not null
+#  aircraft_count   :integer          default(0), not null
 #
 # Indexes
 #
@@ -22,6 +24,8 @@
 #  index_aircraft_types_on_type_code_and_name  (type_code,name) UNIQUE
 #
 
+# A type of aircraft, such as a Boeing 737-800, identified by its ICAO type
+# designator. Groups the individual Aircraft of that type under a Manufacturer.
 class AircraftType < ApplicationRecord
   include MeiliSearch::Rails
   include HasFieldProvenance

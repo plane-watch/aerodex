@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Entry point for the NATS enrichment service. Boots the full Rails environment
+# (eager loaded) so ActiveRecord models are available, then runs the long-lived
+# NATS consumer. Run as its own process type, separate from the Puma web server.
+#
+# Configuration (environment variables):
+#   NATS_URL          NATS server URL, e.g. nats://user:pass@host:4222 (required)
+#   NATS_QUEUE_GROUP  Queue group name (default: aerodex-enrich-v2)
+#   METRICS_PORT      Prometheus metrics port (default: 9602)
+
+require_relative '../config/environment'
+
+# Eager load so every model and service is loaded before we start serving,
+# rather than autoloading lazily on the callback threads.
+Rails.application.eager_load!
+
+Enrichment::NatsServer.new.run

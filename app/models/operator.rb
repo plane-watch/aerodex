@@ -1,9 +1,12 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: operators
 #
 #  id                 :integer          not null, primary key
 #  name               :string
+#  country            :string
 #  icao_code          :string
 #  iata_code          :string
 #  created_at         :datetime         not null
@@ -11,7 +14,7 @@
 #  country_id         :integer
 #  field_provenance   :jsonb            default("{}"), not null
 #  last_combined_at   :datetime
-#  aircraft_count     :integer          default("0"), not null
+#  aircraft_count     :integer          default(0), not null
 #  parent_operator_id :integer
 #
 # Indexes
@@ -47,11 +50,8 @@ class Operator < ApplicationRecord
 
   validates :name, presence: true, allow_blank: false,
                    uniqueness: { scope: %i[country_id icao_code], case_sensitive: false }
-  # TODO: a `scope: :active` option was drafted for this uniqueness check but
-  # never enabled, and was left behind as a commented fragment. Decide whether
-  # an ICAO code may be reused once an operator is no longer active, then
-  # either apply the scope or remove this note.
-  validates :icao_code, allow_blank: true, format: { with: /\A[A-Z0-9]{3}\z/ }, uniqueness: { case_sensitive: false }
+  validates :icao_code, allow_blank: true, format: { with: /\A[A-Z0-9]{3}\z/ },
+                        uniqueness: { case_sensitive: false }
   validates :iata_code, allow_blank: true, format: { with: /\A[A-Z0-9]{2}\z/ }
 
   after_create :index!

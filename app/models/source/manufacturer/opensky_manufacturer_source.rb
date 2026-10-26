@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: manufacturer_sources
@@ -12,7 +14,7 @@
 #  created_at       :datetime         not null
 #  updated_at       :datetime         not null
 #  alt_names        :jsonb
-#  excluded         :boolean          default("false"), not null
+#  excluded         :boolean          default(FALSE), not null
 #  exclusion_reason :string
 #  excluded_at      :datetime
 #  excluded_by      :string

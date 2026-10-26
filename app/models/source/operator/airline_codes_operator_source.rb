@@ -13,7 +13,7 @@
 #  data             :jsonb            default("\"{}\""), not null
 #  created_at       :datetime         not null
 #  updated_at       :datetime         not null
-#  excluded         :boolean          default("false"), not null
+#  excluded         :boolean          default(FALSE), not null
 #  exclusion_reason :string
 #  excluded_at      :datetime
 #  excluded_by      :string

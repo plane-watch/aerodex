@@ -11,8 +11,8 @@
 #  country_id           :integer
 #  field_provenance     :jsonb            default("{}"), not null
 #  last_combined_at     :datetime
-#  aircraft_types_count :integer          default("0"), not null
-#  aircraft_count       :integer          default("0"), not null
+#  aircraft_types_count :integer          default(0), not null
+#  aircraft_count       :integer          default(0), not null
 #
 # Indexes
 #

@@ -1,21 +1,39 @@
 # Production compose configuration for Aerodex
+#
+# The NATS broker is external: it is shared with the flight-tracking pipeline
+# and is not run by this stack, so NATS_URL must be supplied.
+
+# The build shared by every service that runs the Rails application image.
+x-app-build: &app-build
+  context: .
+  dockerfile: Dockerfile
+
+# The environment common to every service built from the Rails application
+# image; service-specific variables are merged in below. This is a union rather
+# than a per-role contract: the enrichment consumer never contacts Meilisearch
+# or Redis, but inherits their settings so that the one Rails boot path is
+# configured the same way in every container.
+#
+# RAILS_MASTER_KEY is required by both roles, including the consumer: Devise's
+# `devise.secret_key` initialiser resolves secret_key_base from the encrypted
+# credentials during boot, and production raises without it.
+x-app-environment: &app-environment
+  RAILS_ENV: production
+  DATABASE_URL: "${DATABASE_URL:-postgres://aerodex:${AERODEX_DATABASE_PASSWORD}@postgres:5432/aerodex_production}"
+  REDIS_URL: "${REDIS_URL:-redis://redis:6379/1}"
+  RAILS_MASTER_KEY: "${RAILS_MASTER_KEY:?set RAILS_MASTER_KEY}"
+  MEILISEARCH_URL: "${MEILISEARCH_URL:-http://meilisearch:7700}"
+  MEILI_MASTER_KEY: "${MEILI_MASTER_KEY:?set MEILI_MASTER_KEY}"
+  RAILS_LOG_TO_STDOUT: "true"
 
 services:
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: *app-build
     ports:
       - "3000:3000"
     environment:
-      RAILS_ENV: production
-      DATABASE_URL: "${DATABASE_URL:-postgres://aerodex:${AERODEX_DATABASE_PASSWORD}@postgres:5432/aerodex_production}"
-      REDIS_URL: "${REDIS_URL:-redis://redis:6379/1}"
-      RAILS_MASTER_KEY: "${RAILS_MASTER_KEY:?set RAILS_MASTER_KEY}"
-      MEILISEARCH_URL: "${MEILISEARCH_URL:-http://meilisearch:7700}"
-      MEILI_MASTER_KEY: "${MEILI_MASTER_KEY:?set MEILI_MASTER_KEY}"
+      <<: *app-environment
       RAILS_SERVE_STATIC_FILES: "true"
-      RAILS_LOG_TO_STDOUT: "true"
     depends_on:
       postgres:
         condition: service_healthy
@@ -23,6 +41,58 @@ services:
         condition: service_healthy
       meilisearch:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/up"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      # Allow time for the entrypoint to run migrations before the first probe.
+      start_period: 60s
+    restart: unless-stopped
+
+  # The NATS enrichment consumer. Runs the same image as `web` with the command
+  # overridden to the consumer entry point, answering `v2.enrich.*`
+  # request-reply RPCs. See docs/as-built/nats-enrichment.md.
+  #
+  # Scale with `docker compose up --scale enrich=N`: every replica joins the
+  # same queue group, so NATS load-balances requests across them.
+  enrich:
+    build: *app-build
+    command: ["./bin/enrichment-server"]
+    environment:
+      <<: *app-environment
+      # The external broker shared with the flight-tracking pipeline.
+      NATS_URL: "${NATS_URL:?set NATS_URL}"
+      # `web` owns migrations; this service must not race it on db:prepare.
+      SKIP_MIGRATIONS: "true"
+      # Pinned rather than left to the code default, because the healthcheck
+      # below addresses this port literally and the two must agree. Note that
+      # the port is read with ENV.fetch(name, default), so setting this to an
+      # empty string is not the same as leaving it unset: it would bind an
+      # arbitrary port and the healthcheck would then never pass.
+      METRICS_PORT: "9602"
+    # The metrics port is deliberately not published: the endpoint carries no
+    # authentication, and a fixed host binding would prevent `--scale enrich=N`.
+    # Scrape it on the compose network at enrich:9602/metrics.
+    depends_on:
+      postgres:
+        condition: service_healthy
+      # Wait for the migrations that `web` runs from its entrypoint, so the
+      # consumer never queries a schema that has not been loaded yet.
+      web:
+        condition: service_healthy
+    healthcheck:
+      # The metrics server is only started once the NATS connection and
+      # subscription are established, so a 200 here also proves the consumer
+      # is connected to the broker and serving.
+      test: ["CMD", "curl", "-f", "http://localhost:9602/metrics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    # nats-pure's drain timeout is 30s. Allow the drain to finish flushing
+    # in-flight replies before Docker escalates to SIGKILL.
+    stop_grace_period: 45s
     restart: unless-stopped
 
   postgres:

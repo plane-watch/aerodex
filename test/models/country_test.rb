@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: countries
@@ -12,8 +14,8 @@
 #  updated_at       :datetime         not null
 #  field_provenance :jsonb            default("{}"), not null
 #  last_combined_at :datetime
-#  airports_count   :integer          default("0"), not null
-#  operators_count  :integer          default("0"), not null
+#  airports_count   :integer          default(0), not null
+#  operators_count  :integer          default(0), not null
 #
 
 require 'test_helper'

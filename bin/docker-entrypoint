@@ -7,12 +7,24 @@ rm -f tmp/pids/server.pid
 # NOTE: This is safe for single-replica deployments. For multi-replica
 # production setups, run migrations as a separate one-shot command
 # (e.g., docker compose run web bin/rails db:prepare) before starting.
+#
+# Set SKIP_MIGRATIONS=true for any container running this image in a role other
+# than the web server, so that only one container owns schema changes. The
+# `enrich` service in compose.yaml does exactly that, and orders itself after
+# the web server's healthcheck: because this script runs db:prepare before it
+# execs the given command, a web server answering /up has necessarily finished
+# migrating.
 if [ "${SKIP_MIGRATIONS}" != "true" ]; then
   ./bin/rails db:prepare
 fi
 
 # Run seeds and data import on first run (development only).
 # The marker file prevents re-running on subsequent container starts.
+#
+# Only one container per stack may run this block: the marker lives in the
+# bind-mounted tmp/, so two containers would race on it and import twice. This
+# is why the development stack runs the enrichment consumer inside the web
+# container under foreman, rather than as a second service.
 if [ "${RAILS_ENV}" = "development" ] && [ ! -f tmp/.docker_seeded ]; then
   echo "==> First run detected: seeding database..."
   ./bin/rails db:seed

@@ -1,4 +1,11 @@
+# frozen_string_literal: true
+
 Rails.application.routes.draw do
+  # Health check endpoint used by container orchestrators to probe liveness.
+  # Referenced by `config.silence_healthcheck_path` in the production
+  # environment, so that these probes do not clog the logs.
+  get 'up' => 'rails/health#show', as: :rails_health_check
+
   devise_for :users
 
   # Search autocomplete suggestions API

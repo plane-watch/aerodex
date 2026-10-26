@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: operator_match_decisions
@@ -6,7 +8,7 @@
 #  operator_id       :integer          not null
 #  matched_name      :string           not null
 #  matched_icao_code :string
-#  decision_type     :integer          default("0"), not null
+#  decision_type     :integer          default(0), not null
 #  decided_by        :string
 #  notes             :text
 #  created_at        :datetime         not null

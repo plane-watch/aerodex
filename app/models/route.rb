@@ -9,7 +9,7 @@
 #  created_at           :datetime         not null
 #  updated_at           :datetime         not null
 #  operator_id          :integer          not null
-#  route_segments_count :integer          default("0"), not null
+#  route_segments_count :integer          default(0), not null
 #
 # Indexes
 #

@@ -16,7 +16,7 @@
 #  iata_code        :string
 #  import_date      :datetime         not null
 #  data             :jsonb            default("{}"), not null
-#  excluded         :boolean          default("false"), not null
+#  excluded         :boolean          default(FALSE), not null
 #  exclusion_reason :string
 #  excluded_at      :datetime
 #  excluded_by      :string

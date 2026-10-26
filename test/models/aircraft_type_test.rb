@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: aircraft_types
@@ -14,7 +16,7 @@
 #  engine_type      :string
 #  field_provenance :jsonb            default("{}"), not null
 #  last_combined_at :datetime
-#  aircraft_count   :integer          default("0"), not null
+#  aircraft_count   :integer          default(0), not null
 #
 # Indexes
 #

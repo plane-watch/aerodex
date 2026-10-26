@@ -17,7 +17,7 @@
 #  updated_at              :datetime         not null
 #  cabin_configuration     :string
 #  aircraft_name           :string
-#  status                  :integer          default("0")
+#  status                  :integer          default(0)
 #  model                   :string
 #  registration_country_id :integer          not null
 #  field_provenance        :jsonb            default("{}"), not null

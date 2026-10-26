@@ -1,10 +1,11 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: flight_information_regions
 #
 #  id         :integer          not null, primary key
 #  icao_code  :string
-#  country    :string
 #  region     :string
 #  bounds     :polygon
 #  created_at :datetime         not null

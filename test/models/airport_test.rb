@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # == Schema Information
 #
 # Table name: airports
@@ -19,7 +21,7 @@
 #  country_id                   :integer          not null
 #  field_provenance             :jsonb            default("{}"), not null
 #  last_combined_at             :datetime
-#  airport_runways_count        :integer          default("0"), not null
+#  airport_runways_count        :integer          default(0), not null
 #
 # Indexes
 #

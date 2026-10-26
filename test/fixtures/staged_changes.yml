@@ -10,12 +10,14 @@
 #  operation         :integer          not null
 #  diff              :jsonb            default("{}"), not null
 #  created_at        :datetime         not null
+#  applied_at        :datetime
 #
 # Indexes
 #
-#  index_staged_changes_on_record_identifier          (record_identifier)
-#  index_staged_changes_on_record_type_and_record_id  (record_type,record_id)
-#  index_staged_changes_on_staged_batch_id            (staged_batch_id)
+#  index_staged_changes_on_record_identifier               (record_identifier)
+#  index_staged_changes_on_record_type_and_record_id       (record_type,record_id)
+#  index_staged_changes_on_staged_batch_id                 (staged_batch_id)
+#  index_staged_changes_on_staged_batch_id_and_applied_at  (staged_batch_id,applied_at)
 #
 
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html

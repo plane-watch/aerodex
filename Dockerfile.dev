@@ -37,5 +37,8 @@ RUN yarn install --frozen-lockfile
 COPY . .
 
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
-EXPOSE 4000
+
+# Foreman runs the whole of Procfile.dev in this one container: the Rails server
+# on 4000 and the NATS enrichment consumer's Prometheus metrics on 9602.
+EXPOSE 4000 9602
 CMD ["foreman", "start", "-f", "Procfile.dev"]

@@ -15,6 +15,8 @@ services:
       dockerfile: Dockerfile.dev
     ports:
       - "4000:4000"
+      # The enrichment consumer's Prometheus metrics, for local inspection.
+      - "127.0.0.1:9602:9602"
     volumes:
       - .:/rails
       - bundle_cache:/usr/local/bundle
@@ -25,12 +27,21 @@ services:
       REDIS_URL: "redis://redis:6379/1"
       MEILISEARCH_URL: "http://meilisearch:7700"
       BINDING: "0.0.0.0"
+      # The enrichment consumer runs under foreman in this container, as the
+      # `enrich` entry in Procfile.dev. Point it at the bundled broker.
+      NATS_URL: "nats://nats:4222"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       meilisearch:
+        condition: service_healthy
+      # Not optional: foreman terminates the whole formation when any process
+      # exits, and the consumer raises if the broker is not accepting
+      # connections at start-up. Without this gate a slow broker takes the web
+      # server and asset watchers down with it.
+      nats:
         condition: service_healthy
     stdin_open: true
     tty: true
@@ -73,6 +84,32 @@ services:
       MEILI_ENV: development
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # The NATS broker for the enrichment service. Production uses an external
+  # broker shared with the flight-tracking pipeline, so this service exists only
+  # in the development stack.
+  #
+  # `-m 8222` replaces the image's bundled configuration (which already serves
+  # monitoring on 8222) so that the monitoring port is explicit here and the
+  # unused cluster listener on 6222 is not started. JetStream is deliberately
+  # left off: the enrichment service uses core request-reply only, so the broker
+  # holds no state and needs no volume.
+  nats:
+    image: nats:2.11-alpine
+    command: ["-m", "8222"]
+    ports:
+      - "127.0.0.1:4222:4222"
+      # The monitoring endpoint: /healthz backs the probe below, and
+      # /subsz?subs=1 confirms which subjects the consumer has subscribed to.
+      - "127.0.0.1:8222:8222"
+    healthcheck:
+      # The -alpine tag is required: the plain `nats` image is a bare binary
+      # with no shell and no HTTP client, so it cannot be probed at all. This
+      # variant ships BusyBox wget, but no curl.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8222/healthz"]
       interval: 5s
       timeout: 5s
       retries: 5
