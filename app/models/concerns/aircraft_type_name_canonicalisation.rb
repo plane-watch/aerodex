@@ -73,7 +73,7 @@ module AircraftTypeNameCanonicalisation
     key = key.sub(DESIGNATION_PREFIXES, '')
 
     # Normalize to lowercase, remove hyphens/spaces
-    key = key.downcase.gsub(/[\s\-]/, '')
+    key = key.downcase.gsub(/[\s-]/, '')
 
     # Remove non-alphanumeric
     key.gsub(/[^a-z0-9]/, '')
@@ -145,18 +145,14 @@ module AircraftTypeNameCanonicalisation
     variant2 = extract_variant_number(name2)
 
     # If both have variant numbers and they differ, these are different variants
-    if variant1 && variant2 && variant1 != variant2
-      return true
-    end
+    return true if variant1 && variant2 && variant1 != variant2
 
     # Check for variant indicators that differ (BBJ, ACJ, Freighter, etc.)
     variants1 = extract_variant_indicators(name1)
     variants2 = extract_variant_indicators(name2)
 
     # If one has BBJ/ACJ/etc and the other doesn't, they're different
-    if variants1.any? || variants2.any?
-      return true if variants1.sort != variants2.sort
-    end
+    return true if (variants1.any? || variants2.any?) && (variants1.sort != variants2.sort)
 
     false
   end

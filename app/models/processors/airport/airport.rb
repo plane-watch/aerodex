@@ -17,7 +17,7 @@ module Processors
 
       # Source fields that map to different canonical field names
       SOURCE_FIELD_MAP = {
-        altitude: :elevation  # Sources use 'elevation', canonical uses 'altitude'
+        altitude: :elevation # Sources use 'elevation', canonical uses 'altitude'
       }.freeze
 
       class << self
@@ -35,7 +35,7 @@ module Processors
         #   result = Processors::Airport::Airport.combine_one("SYD", by: :iata)
         def combine_one(identifier, by: nil)
           identifier = identifier.to_s.strip.upcase
-          raise ArgumentError, "Identifier is required" if identifier.blank?
+          raise ArgumentError, 'Identifier is required' if identifier.blank?
 
           # Auto-detect identifier type if not specified
           by ||= identifier.length == 4 ? :icao : :iata
@@ -43,9 +43,7 @@ module Processors
           # Gather sources for this airport
           sources = gather_sources_for_identifier(identifier, by)
 
-          if sources.empty?
-            return { error: "No sources found for #{by}: #{identifier}" }
-          end
+          return { error: "No sources found for #{by}: #{identifier}" } if sources.empty?
 
           # Load caches for lookups
           preload_reference_data
@@ -55,9 +53,7 @@ module Processors
           conflicts = []
           result = merge_sources_for_airport(key, sources, conflicts)
 
-          if result[:error]
-            return { error: result[:error] }
-          end
+          return { error: result[:error] } if result[:error]
 
           if result[:attributes].blank?
             airport = case by
@@ -100,7 +96,7 @@ module Processors
         # @param triggered_by [User, nil] The user who triggered the run
         # @return [StagedBatch] The batch containing staged changes
         def combine_sources(triggered_by: nil)
-          with_staged_batch(entity_type: "Airport", triggered_by: triggered_by) do
+          with_staged_batch(entity_type: 'Airport', triggered_by: triggered_by) do
             preload_reference_data
 
             sources_by_identifier = group_sources_by_identifier
@@ -118,7 +114,7 @@ module Processors
 
             # Store conflict count in batch notes if any
             if conflicts.any?
-              current_batch.notes ||= ""
+              current_batch.notes ||= ''
               current_batch.notes += "Processing completed with #{conflicts.count} field conflicts\n"
             end
           end
@@ -198,7 +194,7 @@ module Processors
           # Link to country first - skip if no valid country (required field)
           country = find_country_for_sources(sources)
           unless country
-            current_batch.notes ||= ""
+            current_batch.notes ||= ''
             current_batch.notes += "Error: No valid country found for airport #{identifier[:code]}\n"
             return { error: "No valid country found for airport #{identifier[:code]}" }
           end
@@ -223,11 +219,11 @@ module Processors
               provenance_updates << { field: field, source: merger.best_source, confidence: merger.best_confidence }
             end
 
-            if merger.has_conflict?
-              conflict = merger.conflict_details
-              conflict[:identifier] = identifier[:code] if conflict
-              conflicts << conflict
-            end
+            next unless merger.has_conflict?
+
+            conflict = merger.conflict_details
+            conflict[:identifier] = identifier[:code] if conflict
+            conflicts << conflict
           end
 
           # Calculate timezone from coordinates using WhereTZ for accuracy.
@@ -255,7 +251,7 @@ module Processors
             stage_change(record, operation: :update, identifier: human_identifier)
             { record: record, updated: true }
           else
-            current_batch.summary["unchanged"] += 1
+            current_batch.summary['unchanged'] += 1
             { record: record, unchanged: true }
           end
         end
@@ -300,11 +296,11 @@ module Processors
               provenance_updates << { field: field, source: merger.best_source, confidence: merger.best_confidence }
             end
 
-            if merger.has_conflict?
-              conflict = merger.conflict_details
-              conflict[:identifier] = identifier[:code] if conflict
-              conflicts << conflict
-            end
+            next unless merger.has_conflict?
+
+            conflict = merger.conflict_details
+            conflict[:identifier] = identifier[:code] if conflict
+            conflicts << conflict
           end
 
           # Calculate timezone from coordinates using WhereTZ for accuracy.
@@ -480,6 +476,9 @@ module Processors
         # Skips lookup if coordinates haven't changed and we already have a timezone.
         #
         # @param record [Airport] The airport record to update
+        # rubocop:disable Naming/AccessorMethodName -- the cop guards against
+        # `set_x` being used where an `x=` writer is meant. This takes a record
+        # and derives a value for it, so it cannot be mistaken for a writer.
         def set_timezone_from_coordinates(record)
           return if record.latitude.blank? || record.longitude.blank?
 
@@ -504,6 +503,7 @@ module Processors
           # Log error but don't fail the import - timezone is not critical
           Rails.logger.warn "WhereTZ lookup failed for airport #{record.icao_code || record.iata_code}: #{e.message}"
         end
+        # rubocop:enable Naming/AccessorMethodName
       end
     end
   end

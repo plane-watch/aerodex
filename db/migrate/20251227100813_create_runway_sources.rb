@@ -45,4 +45,3 @@ class CreateRunwaySources < ActiveRecord::Migration[8.0]
     add_index :runway_sources, :data, using: :gin
   end
 end
-

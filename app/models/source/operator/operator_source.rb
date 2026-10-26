@@ -27,7 +27,7 @@ module Source
     class OperatorSource < ApplicationRecord
       include MeiliSearch::Rails
       include HasSourceExclusion
-      
+
       validate :icao_or_iata_code
       serialize :data, coder: JsonbSerializer
 

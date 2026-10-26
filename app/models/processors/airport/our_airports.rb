@@ -78,7 +78,7 @@ module Processors
 
           new_import_report(import_errors, records_processed)
 
-          import_errors.empty? ? true : import_errors
+          import_errors.empty? || import_errors
         end
 
         private

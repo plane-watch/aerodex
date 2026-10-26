@@ -6,7 +6,7 @@ class CreateManufacturerSources < ActiveRecord::Migration[7.1]
       t.string :type, null: false
       t.string :country, null: true
       t.datetime :import_date, null: false
-      t.jsonb  :data, null: false, default: '{}'
+      t.jsonb :data, null: false, default: '{}'
 
       t.timestamps
     end

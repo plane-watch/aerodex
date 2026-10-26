@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require 'test_helper'
 
 class Admin::BaseControllerTest < ActionDispatch::IntegrationTest
-  test "redirects non-admin users to root" do
+  test 'redirects non-admin users to root' do
     user = users(:one)
     sign_in user
 

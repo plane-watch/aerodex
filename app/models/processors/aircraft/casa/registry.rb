@@ -6,6 +6,11 @@ module Processors
       class Registry < Processors::Aircraft::Base
         CHARACTER_SET = ('A'..'Z').to_a + ('0'..'9').to_a
 
+        # Every entry in this table is a lambda, including those whose body is a
+        # single method call. Rewriting only those few as symbol-to-proc would make
+        # them read differently from their neighbours for no gain, and the table is
+        # easier to scan when each transform has the same shape.
+        # rubocop:disable Style/SymbolProc
         @transform_data = {
           'Aircraft model' => {
             function: ->(model) { normalise_model(model) },
@@ -39,11 +44,12 @@ module Processors
             field: :engine_model,
           },
         }
+        # rubocop:enable Style/SymbolProc
 
         class << self
-          def transform_row(a, b)
-            key = a&.text&.strip&.gsub(/:$/, '')
-            value = b&.text&.strip
+          def transform_row(key_cell, value_cell)
+            key = key_cell&.text&.strip&.gsub(/:$/, '')
+            value = value_cell&.text&.strip
 
             return nil if key.nil? || value.nil?
             return nil if @transform_data[key].nil?
@@ -107,12 +113,12 @@ module Processors
             # step through each character in the registration
             # and add the value of the character to the
             # decimal value, multiplied by the factor
-            registration[3..-1].chars.each_with_index do |char, index|
+            registration[3..].chars.each_with_index do |char, index|
               dec += CHARACTER_SET.index(char) * factors[index]
             end
 
             # convert the decimal value to hex, 0 padded to 4 characters
-            sprintf("7C%04X", dec)
+            format('7C%04X', dec)
           end
         end
       end

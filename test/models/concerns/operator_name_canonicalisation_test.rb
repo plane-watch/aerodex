@@ -62,7 +62,7 @@ class OperatorNameCanonicalisationTest < ActiveSupport::TestCase
   end
 
   test 'canonical_name_key removes punctuation' do
-    assert_equal 'testagencies', TestCanonicaliser.canonical_name_key("Test Agencies!")
+    assert_equal 'testagencies', TestCanonicaliser.canonical_name_key('Test Agencies!')
     # "Co." and "Company" are stripped as corporate suffixes
     assert_equal 'test', TestCanonicaliser.canonical_name_key('Test & Co.')
     assert_equal 'test', TestCanonicaliser.canonical_name_key('Test Company')

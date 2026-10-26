@@ -25,10 +25,10 @@ module Aerodex
     #
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
-    
+
     # Configure timezone behavior for Rails 8.1 compatibility
     config.active_support.to_time_preserves_timezone = :zone
-    
+
     # Enable detailed backtraces for deprecation warnings
     config.active_support.deprecation = :log
     config.active_support.deprecation_debug = true

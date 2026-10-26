@@ -158,7 +158,7 @@ namespace :sources do
   # @param klass [Class] The source class to dump
   # @param dump_dir [Pathname] The directory to write to
   # @param timestamp [String] Timestamp for the filename
-  def dump_source_class(klass, dump_dir, timestamp)
+  def dump_source_class(klass, dump_dir, _timestamp)
     count = klass.count
     return puts "  #{klass.name.demodulize}: 0 records (skipped)" if count.zero?
 
@@ -283,7 +283,9 @@ namespace :sources do
     unique_index = indexes.find(&:unique)
     return unique_index.columns.map(&:to_sym) if unique_index
 
-    # Fall back to known natural keys by source type pattern
+    # Fall back to known natural keys by source type pattern. A source type
+    # matching none of the patterns below has no natural key, and the case
+    # returns nil so that all of its records are inserted.
     class_name = klass.name.demodulize
 
     case class_name
@@ -301,9 +303,6 @@ namespace :sources do
       %i[type iso_2char_code]
     when /ManufacturerSource$/
       %i[type icao_code]
-    else
-      # No natural key - will insert all records
-      nil
     end
   end
 

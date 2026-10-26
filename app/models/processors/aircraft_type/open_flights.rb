@@ -44,7 +44,7 @@ module Processors
 
           new_import_report(import_errors, records_processed)
 
-          import_errors.empty? ? true : import_errors
+          import_errors.empty? || import_errors
         end
 
         private
@@ -57,9 +57,7 @@ module Processors
           return { skipped: true, reason: 'No name' } if name.blank?
 
           # Skip if no usable code
-          if iata_code.blank? && icao_code.blank?
-            return { skipped: true, reason: 'No IATA or ICAO code' }
-          end
+          return { skipped: true, reason: 'No IATA or ICAO code' } if iata_code.blank? && icao_code.blank?
 
           # Use ICAO code as type_code if available, otherwise IATA
           type_code = icao_code.presence || iata_code

@@ -62,4 +62,3 @@ class AirportRunway < ApplicationRecord
     end
   end
 end
-

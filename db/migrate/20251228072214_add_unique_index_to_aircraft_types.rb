@@ -8,6 +8,6 @@
 # The unique constraint ensures each variant is only recorded once.
 class AddUniqueIndexToAircraftTypes < ActiveRecord::Migration[8.0]
   def change
-    add_index :aircraft_types, [:type_code, :name], unique: true, name: 'index_aircraft_types_on_type_code_and_name'
+    add_index :aircraft_types, %i[type_code name], unique: true, name: 'index_aircraft_types_on_type_code_and_name'
   end
 end

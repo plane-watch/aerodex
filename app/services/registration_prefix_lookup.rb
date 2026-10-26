@@ -37,11 +37,8 @@ class RegistrationPrefixLookup
         next unless reg_upper.start_with?(prefix)
 
         # Verify with regex if available
-        if prefix_data[:regex]
-          return prefix_data[:country] if registration.upcase.match?(prefix_data[:regex])
-        else
-          return prefix_data[:country]
-        end
+        return prefix_data[:country] unless prefix_data[:regex]
+        return prefix_data[:country] if registration.upcase.match?(prefix_data[:regex])
       end
 
       nil

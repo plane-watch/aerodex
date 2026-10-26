@@ -16,7 +16,7 @@
 #  operators_count  :integer          default("0"), not null
 #
 
-require "test_helper"
+require 'test_helper'
 
 class CountryTest < ActiveSupport::TestCase
   # test "the truth" do

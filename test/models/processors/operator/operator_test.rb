@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "test_helper"
+require 'test_helper'
 
 class Processors::Operator::OperatorTest < ActiveSupport::TestCase
   # Test ICAO codes that won't conflict with real data
@@ -29,25 +29,25 @@ class Processors::Operator::OperatorTest < ActiveSupport::TestCase
   # Duplicate ICAO code handling (the "AYD" scenario)
   # ---------------------------------------------------------------------------
 
-  test "combine_sources does not create duplicates for same ICAO with different names" do
+  test 'combine_sources does not create duplicates for same ICAO with different names' do
     # This reproduces the bug where VRS "Aladia Airlines" and OTD "AB Aviation"
     # both have ICAO "AYD" but different names, resulting in two CREATE operations.
 
     # Create VRS source with one name
     Source::Operator::VRSDataOperatorSource.create!(
-      icao_code: "ZAY",
-      name: "Aladia Airlines",
+      icao_code: 'ZAY',
+      name: 'Aladia Airlines',
       import_date: Time.current,
-      data: { "source" => "test" }
+      data: { 'source' => 'test' }
     )
 
     # Create OTD source with SAME ICAO but DIFFERENT name
     Source::Operator::OpenTravelOperatorSource.create!(
-      icao_code: "ZAY",
-      iata_code: "Y6",
-      name: "AB Aviation",
+      icao_code: 'ZAY',
+      iata_code: 'Y6',
+      name: 'AB Aviation',
       import_date: Time.current,
-      data: { "source" => "test" }
+      data: { 'source' => 'test' }
     )
 
     batch = Processors::Operator::Operator.combine_sources
@@ -56,29 +56,29 @@ class Processors::Operator::OperatorTest < ActiveSupport::TestCase
     creates = batch.staged_changes.creates.count
     updates = batch.staged_changes.updates.count
 
-    assert_equal 1, creates, "Expected exactly 1 CREATE for ICAO ZAY"
-    assert updates <= 1, "Expected at most 1 UPDATE for ICAO ZAY"
+    assert_equal 1, creates, 'Expected exactly 1 CREATE for ICAO ZAY'
+    assert updates <= 1, 'Expected at most 1 UPDATE for ICAO ZAY'
 
     # All staged changes should reference the same ICAO
     icao_identifiers = batch.staged_changes.pluck(:record_identifier)
-    assert icao_identifiers.all? { |id| id == "ZAY" },
+    assert icao_identifiers.all? { |id| id == 'ZAY' },
            "Expected all changes to reference ZAY, got: #{icao_identifiers.inspect}"
   end
 
-  test "combine_sources correctly merges sources with same ICAO and similar names" do
+  test 'combine_sources correctly merges sources with same ICAO and similar names' do
     # When names are similar enough to match, they should merge cleanly
     Source::Operator::VRSDataOperatorSource.create!(
-      icao_code: "ZTS",
-      name: "Test Airways",
+      icao_code: 'ZTS',
+      name: 'Test Airways',
       import_date: Time.current,
-      data: { "source" => "test" }
+      data: { 'source' => 'test' }
     )
 
     Source::Operator::OpenTravelOperatorSource.create!(
-      icao_code: "ZTS",
-      name: "Test Airways", # Same name
+      icao_code: 'ZTS',
+      name: 'Test Airways', # Same name
       import_date: Time.current,
-      data: { "source" => "test" }
+      data: { 'source' => 'test' }
     )
 
     batch = Processors::Operator::Operator.combine_sources
@@ -88,22 +88,22 @@ class Processors::Operator::OperatorTest < ActiveSupport::TestCase
     assert_equal 0, batch.staged_changes.updates.count
   end
 
-  test "combine_sources finds staged operator in phase 2" do
+  test 'combine_sources finds staged operator in phase 2' do
     # VRS + OTD with same ICAO but different names
     # Phase 1 processes VRS, Phase 2 should find staged record for OTD
 
     Source::Operator::VRSDataOperatorSource.create!(
-      icao_code: "ZDP",
-      name: "First Name",
+      icao_code: 'ZDP',
+      name: 'First Name',
       import_date: Time.current,
-      data: { "source" => "test" }
+      data: { 'source' => 'test' }
     )
 
     Source::Operator::OpenTravelOperatorSource.create!(
-      icao_code: "ZDP",
-      name: "Second Name",
+      icao_code: 'ZDP',
+      name: 'Second Name',
       import_date: Time.current,
-      data: { "source" => "test" }
+      data: { 'source' => 'test' }
     )
 
     batch = Processors::Operator::Operator.combine_sources
