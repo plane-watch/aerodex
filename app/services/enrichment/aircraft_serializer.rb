@@ -23,7 +23,7 @@ module Enrichment
         engine_count: aircraft.engine_count,
         engine_model: aircraft.engine_model,
         cabin_configuration: aircraft.cabin_configuration,
-        type: AircraftTypeSerializer.call(aircraft.aircraft_type),
+        aircraft_type: AircraftTypeSerializer.call(aircraft.aircraft_type),
         operator: OperatorSerializer.call(aircraft.operator),
         registration_country: CountrySerializer.call(aircraft.registration_country)
       }

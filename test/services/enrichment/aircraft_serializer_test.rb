@@ -15,7 +15,7 @@ class EnrichmentAircraftSerializerTest < ActiveSupport::TestCase
     assert_equal 'active', result[:status] # enum label, default 0
     assert_equal 2, result[:engine_count]
     assert_equal 'CFM56-7B27', result[:engine_model]
-    assert_equal 'B737', result[:type][:type_code]
+    assert_equal 'B737', result[:aircraft_type][:type_code]
     assert_equal 'American Airlines', result[:operator][:name]
     assert_equal 'United States', result[:registration_country][:name]
   end
